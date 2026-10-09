@@ -1,4 +1,4 @@
-# LexRadar MVP v0.2 — Evidence Collector
+# LexRadar MVP v0.3 — Independent AI Auditors
 
 Технический фундамент юридико-технического аудита сайтов по законодательству РФ
 о персональных данных. Обработка полностью локальная, вход и выход — JSON.
@@ -44,3 +44,14 @@ lexradar examples/input.json --output work/report.json
 [Установка, защита SSRF, лимиты и ограничения](docs/collector.md).
 Для браузерных тестов установите Chromium: `python -m playwright install --with-deps chromium`.
 Collector не подключён к Gateway, не формирует юридические выводы и не отправляет сообщения.
+
+## Independent AI Auditors
+
+`lexradar analyze work/audit --output work/analysis` по умолчанию работает offline без LLM.
+[Архитектура, настройка OpenRouter, бюджет и ограничения](docs/auditors.md).
+Реальный запуск требует конфигурации, `OPENROUTER_API_KEY` в окружении и
+`--mode openrouter --allow-external-transfer --packet-approval work/review/approval.json`.
+Перед этим обязателен локальный `lexradar preflight`: проверка человеком точного пакета
+по SHA-256 и блокировка при признаках чувствительных данных. Эвристики не гарантируют
+отсутствие ПДн. A/B получают одинаковые доказательства
+в отдельных запросах с разными промптами. Результаты не подключены к Gateway.

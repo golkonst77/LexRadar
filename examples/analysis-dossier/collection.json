@@ -1,0 +1,49 @@
+{
+  "schema_version": "0.2",
+  "target_url": "https://clinic.example/",
+  "started_at": "2026-01-01T00:00:00Z",
+  "limits": {
+    "max_pages": 10,
+    "max_documents": 10,
+    "max_file_bytes": 5000000,
+    "max_total_bytes": 50000000,
+    "timeout_seconds": 10.0,
+    "max_redirects": 3,
+    "max_links_per_page": 200,
+    "max_pdf_pages": 100
+  },
+  "pages": [
+    {
+      "requested_url": "https://clinic.example/",
+      "final_url": null,
+      "captured_at": "2026-01-01T00:00:00Z",
+      "http_status": null,
+      "title": null,
+      "text": null,
+      "categories": [],
+      "document_links": [],
+      "forms": [],
+      "evidence_id": "page-0001"
+    }
+  ],
+  "documents": [],
+  "entities": [],
+  "evidence": [
+    {
+      "id": "page-0001",
+      "source": "https://clinic.example/",
+      "captured_at": "2026-01-01T00:00:00Z",
+      "observed_fact": "Page could not be checked",
+      "available": false,
+      "artifact_path": null,
+      "sha256": null,
+      "signal": "substantive",
+      "status": "unavailable",
+      "collection_errors": [],
+      "unavailable_reason": "Synthetic timeout example",
+      "artifacts": []
+    }
+  ],
+  "warnings": [],
+  "requires_independent_review": true
+}
