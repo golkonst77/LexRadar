@@ -21,3 +21,6 @@ jobs:
       - run: diff examples/result.json /tmp/report.json
       - run: lexradar analyze examples/analysis-dossier --output /tmp/lexradar-analysis
       - run: lexradar preflight examples/analysis-dossier --output /tmp/lexradar-preflight
+      - run: lexradar verify examples/analysis-dossier --registry examples/legal-registry.json --output /tmp/lexradar-verifier-one
+      - run: lexradar verify-compare examples/analysis-dossier --registry examples/legal-registry.json --stage-one /tmp/lexradar-verifier-one --analysis /tmp/lexradar-analysis/analysis.json --output /tmp/lexradar-verifier-final
+      - run: lexradar verify-preflight examples/analysis-dossier --registry examples/legal-registry.json --output /tmp/lexradar-verifier-preflight

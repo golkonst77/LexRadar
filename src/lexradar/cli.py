@@ -9,6 +9,11 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] in {"verify", "verify-compare", "verify-preflight"}:
+        from .verifier.cli import verifier_main
+
+        verifier_main(sys.argv[1], sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "preflight":
         from .auditors.evidence import load_packet
         from .auditors.preflight import write_preflight
