@@ -4,7 +4,8 @@ Collector → Auditor A + Auditor B → Verifier / Arbiter → Decision Gateway 
 Report Builder → Human Approval.
 
 Это один Python-пакет без БД и микросервисов. Collector и Auditor описаны
-протоколами в `ports.py`; Playwright и LLM адаптеры в v0.1 не реализованы.
+протоколами в `ports.py`; в v0.2 реализован отдельный Playwright Collector с расширенным результатом,
+а LLM адаптеры не реализованы. См. [Collector](collector.md).
 Аудиторы получают одинаковый набор свидетельств и работают независимо:
 результат A не должен передаваться B. Инфраструктура независимых запусков — будущий этап.
 Verifier принимает отдельные записи проверки: факт и применимость нормы,

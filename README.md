@@ -1,4 +1,4 @@
-# LexRadar MVP v0.1 — Foundation
+# LexRadar MVP v0.2 — Evidence Collector
 
 Технический фундамент юридико-технического аудита сайтов по законодательству РФ
 о персональных данных. Обработка полностью локальная, вход и выход — JSON.
@@ -37,3 +37,10 @@ lexradar examples/input.json --output work/report.json
 Отсутствие подтверждённых нарушений означает NURTURE с причиной
 `no_confirmed_violation_no_outreach_basis`, без клиентского черновика.
 Это не утверждение о полном соответствии сайта законодательству.
+
+## Evidence Collector
+
+`lexradar collect URL --output work/audit` собирает только технические факты.
+[Установка, защита SSRF, лимиты и ограничения](docs/collector.md).
+Для браузерных тестов установите Chromium: `python -m playwright install --with-deps chromium`.
+Collector не подключён к Gateway, не формирует юридические выводы и не отправляет сообщения.
