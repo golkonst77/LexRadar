@@ -1,0 +1,8 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Price listed as zero and unspecified.</p>"
+    }
+  },
+  "screenshot_failure": false
+}

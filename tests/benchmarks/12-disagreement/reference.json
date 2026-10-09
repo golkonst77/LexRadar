@@ -1,0 +1,53 @@
+{
+  "id": "12-disagreement",
+  "situation": "A asserts possible issue; B says no issue for same observed fact",
+  "observed_facts": [
+    {
+      "kind": "text_contains",
+      "value": "Retention is stated as unlimited."
+    }
+  ],
+  "units": [
+    {
+      "id": "12-disagreement-unit",
+      "topic": "privacy_policy",
+      "claim_code": "disputed_retention",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "expected_problem": true,
+      "rationale": "Potential material hypothesis, never a confirmed violation.",
+      "norm_ids": [
+        "152-template"
+      ],
+      "expected_operator_ref": null,
+      "expected_applicability": null
+    }
+  ],
+  "permitted_hypotheses": [
+    "Investigate public text and applicability with a human."
+  ],
+  "forbidden_conclusions": [
+    "Confirmed violation based solely on synthetic model assertion.",
+    "Full website compliance.",
+    "Automatic GO or client sending."
+  ],
+  "expected_evidence_ids": [
+    "page-0001"
+  ],
+  "normative_references": {
+    "152-template": "unverified"
+  },
+  "expected_limitations": [
+    "No automatic live legal-source verification"
+  ],
+  "admissible_statuses": {
+    "disputed_retention": [
+      "potential_issue"
+    ]
+  },
+  "material_pages": {
+    "page-0001": 1
+  },
+  "disagreement_expected": true
+}

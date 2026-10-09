@@ -1,0 +1,8 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Appointment form</p><form><input name=\"contact\"><button>Submit</button></form>"
+    }
+  },
+  "screenshot_failure": false
+}

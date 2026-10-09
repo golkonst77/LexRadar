@@ -1,0 +1,56 @@
+{
+  "id": "05-no-checkbox",
+  "situation": "Appointment form has no separate checkbox",
+  "observed_facts": [
+    {
+      "kind": "text_contains",
+      "value": "Appointment form"
+    },
+    {
+      "kind": "forms_no_checkbox"
+    }
+  ],
+  "units": [
+    {
+      "id": "05-no-checkbox-unit",
+      "topic": "consent",
+      "claim_code": "missing_checkbox_illegal",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "expected_problem": false,
+      "rationale": "Appointment form has no separate checkbox",
+      "norm_ids": [
+        "152-template"
+      ],
+      "expected_operator_ref": null,
+      "expected_applicability": null
+    }
+  ],
+  "permitted_hypotheses": [
+    "Investigate public text and applicability with a human."
+  ],
+  "forbidden_conclusions": [
+    "Confirmed violation based solely on synthetic model assertion.",
+    "Full website compliance.",
+    "Automatic GO or client sending."
+  ],
+  "expected_evidence_ids": [
+    "page-0001"
+  ],
+  "normative_references": {
+    "152-template": "unverified"
+  },
+  "expected_limitations": [
+    "No automatic live legal-source verification"
+  ],
+  "admissible_statuses": {
+    "missing_checkbox_illegal": [
+      "rejected"
+    ]
+  },
+  "material_pages": {
+    "page-0001": 1
+  },
+  "disagreement_expected": false
+}

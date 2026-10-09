@@ -1,0 +1,55 @@
+{
+  "id": "03-pdf-scan",
+  "situation": "PDF has no text layer; visual review required",
+  "observed_facts": [
+    {
+      "kind": "pdf_scan",
+      "evidence_id": "document-0001"
+    }
+  ],
+  "units": [
+    {
+      "id": "03-pdf-scan-unit",
+      "topic": "mandatory_documents",
+      "claim_code": "pdf_scan_illegal",
+      "evidence_ids": [
+        "document-0001"
+      ],
+      "expected_problem": false,
+      "rationale": "PDF has no text layer; visual review required",
+      "norm_ids": [
+        "152-template"
+      ],
+      "expected_operator_ref": null,
+      "expected_applicability": null
+    }
+  ],
+  "permitted_hypotheses": [
+    "Investigate public text and applicability with a human."
+  ],
+  "forbidden_conclusions": [
+    "Confirmed violation based solely on synthetic model assertion.",
+    "Full website compliance.",
+    "Automatic GO or client sending."
+  ],
+  "expected_evidence_ids": [
+    "page-0001",
+    "document-0001"
+  ],
+  "normative_references": {
+    "152-template": "unverified"
+  },
+  "expected_limitations": [
+    "No automatic live legal-source verification"
+  ],
+  "admissible_statuses": {
+    "pdf_scan_illegal": [
+      "rejected"
+    ]
+  },
+  "material_pages": {
+    "page-0001": 1,
+    "document-0001": 1
+  },
+  "disagreement_expected": false
+}

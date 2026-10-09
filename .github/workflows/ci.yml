@@ -24,3 +24,10 @@ jobs:
       - run: lexradar verify examples/analysis-dossier --registry examples/legal-registry.json --output /tmp/lexradar-verifier-one
       - run: lexradar verify-compare examples/analysis-dossier --registry examples/legal-registry.json --stage-one /tmp/lexradar-verifier-one --analysis /tmp/lexradar-analysis/analysis.json --output /tmp/lexradar-verifier-final
       - run: lexradar verify-preflight examples/analysis-dossier --registry examples/legal-registry.json --output /tmp/lexradar-verifier-preflight
+      - run: lexradar benchmark --suite tests/benchmarks --output /tmp/lexradar-benchmark
+      - run: lexradar quality-report /tmp/lexradar-benchmark --format html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-quality-report
+          path: /tmp/lexradar-benchmark
+          retention-days: 7

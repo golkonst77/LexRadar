@@ -1,0 +1,53 @@
+{
+  "id": "13-both-miss",
+  "situation": "A and B miss explicit concerning text; blind verifier finds it",
+  "observed_facts": [
+    {
+      "kind": "text_contains",
+      "value": "Retention is stated as unlimited."
+    }
+  ],
+  "units": [
+    {
+      "id": "13-both-miss-unit",
+      "topic": "privacy_policy",
+      "claim_code": "unlimited_retention",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "expected_problem": true,
+      "rationale": "Potential material hypothesis, never a confirmed violation.",
+      "norm_ids": [
+        "152-template"
+      ],
+      "expected_operator_ref": null,
+      "expected_applicability": null
+    }
+  ],
+  "permitted_hypotheses": [
+    "Investigate public text and applicability with a human."
+  ],
+  "forbidden_conclusions": [
+    "Confirmed violation based solely on synthetic model assertion.",
+    "Full website compliance.",
+    "Automatic GO or client sending."
+  ],
+  "expected_evidence_ids": [
+    "page-0001"
+  ],
+  "normative_references": {
+    "152-template": "unverified"
+  },
+  "expected_limitations": [
+    "No automatic live legal-source verification"
+  ],
+  "admissible_statuses": {
+    "unlimited_retention": [
+      "potential_issue"
+    ]
+  },
+  "material_pages": {
+    "page-0001": 1
+  },
+  "disagreement_expected": false
+}
