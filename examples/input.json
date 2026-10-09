@@ -1,0 +1,86 @@
+{
+  "target": {
+    "id": "demo",
+    "url": "https://clinic.example/",
+    "legal_entity": {
+      "name": "Synthetic clinic",
+      "registration_id": null,
+      "identity_verified": true
+    },
+    "critical_obstacles": []
+  },
+  "evidence": [
+    {
+      "id": "e1",
+      "source": "https://clinic.example/form",
+      "captured_at": "2026-01-01T00:00:00Z",
+      "observed_fact": "Synthetic observation",
+      "available": true,
+      "artifact_path": null,
+      "sha256": null,
+      "signal": "substantive"
+    }
+  ],
+  "auditors": [
+    {
+      "auditor": "A",
+      "completed": true,
+      "findings": [
+        {
+          "id": "f1",
+          "source": "https://clinic.example/form",
+          "evidence_ids": [
+            "e1"
+          ],
+          "fact_description": "Synthetic observed fact",
+          "legal_basis": "Synthetic legal applicability reviewed by human",
+          "legal_interpretation": "Synthetic material issue, not a real legal conclusion",
+          "assumptions": [],
+          "confidence": 0.95,
+          "status": "confirmed",
+          "material": true,
+          "signal": "substantive"
+        }
+      ]
+    },
+    {
+      "auditor": "B",
+      "completed": true,
+      "findings": [
+        {
+          "id": "f1",
+          "source": "https://clinic.example/form",
+          "evidence_ids": [
+            "e1"
+          ],
+          "fact_description": "Synthetic observed fact",
+          "legal_basis": "Synthetic legal applicability reviewed by human",
+          "legal_interpretation": "Synthetic material issue, not a real legal conclusion",
+          "assumptions": [],
+          "confidence": 0.95,
+          "status": "confirmed",
+          "material": true,
+          "signal": "substantive"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "completed": true,
+    "findings": [
+      {
+        "finding_id": "f1",
+        "status": "confirmed",
+        "evidence_checked": true,
+        "legal_basis_checked": true,
+        "reviewer_kind": "human",
+        "reviewer_id": "demo-reviewer",
+        "reviewed_at": "2026-01-01T01:00:00Z",
+        "rationale": "Synthetic review only"
+      }
+    ],
+    "contradictions": [],
+    "uncertainties": [],
+    "critical_obstacles": []
+  }
+}
