@@ -89,7 +89,10 @@ class OpenRouterProvider:
         key = os.environ.get("OPENROUTER_API_KEY")
         if not key or any(c.isspace() for c in key):
             raise ProviderError("missing_or_invalid_api_key")
-        if any(key in settings.model for settings in (config.auditor_a, config.auditor_b)):
+        configured = [config.auditor_a, config.auditor_b]
+        if verifier := getattr(config, "verifier", None):
+            configured.append(verifier)
+        if any(key in settings.model for settings in configured):
             raise ProviderError("secret_in_configuration")
         self._key = key
         self.config = config

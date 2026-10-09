@@ -1,0 +1,224 @@
+{
+  "schema_version": "0.4",
+  "mode": "offline",
+  "started_at": "2026-10-09T12:39:32.876873Z",
+  "stage_one_packet_sha256": "797188d928f4b36731b71a5720155baa6178e3a5696a643bc1aecf196d3d4fdb",
+  "stage_two_packet_sha256": "28e4d2756cb1334ff67093ca2154afd63550534867f48d1cd14b304c8ee09032",
+  "stage_one_result_sha256": "ba98acbbb30ac9340e7267eea3112eca09253e078a34be20d6448bd07ec11341",
+  "collector_manifest_sha256": "8fb7c0165afb118226fef8de60493950ebed4e06c9328e3e1fd5fa2c74f0ba0d",
+  "registry_sha256": "8f518af71f92988094fff0089b65e7470bf2cb24883004c485710a89051838a8",
+  "completed": true,
+  "run_status": "complete",
+  "independent_directions": [
+    {
+      "topic": "consent",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    },
+    {
+      "topic": "cookies_analytics",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    },
+    {
+      "topic": "data_collection_forms",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    },
+    {
+      "topic": "mandatory_documents",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    },
+    {
+      "topic": "medical_vs_152fz",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    },
+    {
+      "topic": "operator_identity",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    },
+    {
+      "topic": "privacy_policy",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    },
+    {
+      "topic": "special_categories",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    },
+    {
+      "topic": "third_party_transfers",
+      "status": "insufficient_evidence",
+      "limitation": "Offline placeholder; no LLM"
+    }
+  ],
+  "independent_findings": [],
+  "auditor_assessments": [],
+  "normative_sources": [
+    {
+      "norm_id": "152-template",
+      "revision": "Не проверена",
+      "status": "unverified",
+      "reasons": [
+        "No authenticated source attestation; registry JSON cannot establish trust",
+        "Norm text not supplied",
+        "Claimed review date missing or in future",
+        "Claimed revision effective date unknown"
+      ],
+      "source_url": "https://pravo.gov.ru/",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "domain": "personal_data"
+    },
+    {
+      "norm_id": "323-template",
+      "revision": "Не проверена",
+      "status": "unverified",
+      "reasons": [
+        "No authenticated source attestation; registry JSON cannot establish trust",
+        "Norm text not supplied",
+        "Claimed review date missing or in future",
+        "Claimed revision effective date unknown"
+      ],
+      "source_url": "https://pravo.gov.ru/",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "domain": "medical"
+    },
+    {
+      "norm_id": "2300-template",
+      "revision": "Не проверена",
+      "status": "unverified",
+      "reasons": [
+        "No authenticated source attestation; registry JSON cannot establish trust",
+        "Norm text not supplied",
+        "Claimed review date missing or in future",
+        "Claimed revision effective date unknown"
+      ],
+      "source_url": "https://pravo.gov.ru/",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "domain": "consumer"
+    },
+    {
+      "norm_id": "736-template",
+      "revision": "Не проверена",
+      "status": "unverified",
+      "reasons": [
+        "No authenticated source attestation; registry JSON cannot establish trust",
+        "Norm text not supplied",
+        "Claimed review date missing or in future",
+        "Claimed revision effective date unknown"
+      ],
+      "source_url": "https://pravo.gov.ru/",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "domain": "paid_medical"
+    }
+  ],
+  "materials": [
+    {
+      "evidence_id": "page-0001",
+      "url": "https://clinic.example/",
+      "type": "html_page",
+      "page_count": 1,
+      "text_page_count": 0,
+      "examined_pages": 0,
+      "examined_page_numbers": [],
+      "text_available": false,
+      "visual_review_required": false,
+      "supplied_text": "",
+      "page_texts": {},
+      "collection_status": "unavailable",
+      "examination": "not_examined",
+      "reasons": [
+        "Synthetic timeout example",
+        "Offline placeholder; no legal examination",
+        "Whole material not examined"
+      ]
+    }
+  ],
+  "unexamined_material_ids": [
+    "page-0001"
+  ],
+  "completeness": {
+    "method": "Materials with acknowledged supplied-text review / all collected materials",
+    "examined_text_materials": 0,
+    "total_materials": 1,
+    "text_review_fraction": 0.0,
+    "known_pdf_pages": 0,
+    "examined_pdf_text_pages": 0,
+    "unknown_page_count_documents": 0,
+    "complete_website_audit": false
+  },
+  "confirmed_problem_ids": [],
+  "potential_problem_ids": [],
+  "rejected_hypothesis_ids": [],
+  "recommendations": [
+    "Review unread public materials and operator applicability; no blanket requirement for private internal documents"
+  ],
+  "limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "Collector contains partial/unavailable evidence",
+    "page-0001: no integrity-checked text artifact supplied",
+    "Offline demonstration only; no legal search performed",
+    "Heuristic screening cannot guarantee absence of personal or sensitive data; human review required",
+    "Text-review completeness is not legal certainty or whole-site coverage",
+    "PDF images/layout not visually reviewed; quoted text occurrence is not semantic proof",
+    "Finding reviews are unauthenticated; source review submissions never establish trust",
+    "No automatic live legal-source verification; LLM cannot verify norm currency",
+    "Empty findings never establish full legal compliance",
+    "Offline placeholders perform no legal search"
+  ],
+  "logs": [
+    {
+      "stage": "independent",
+      "model": "offline/verifier",
+      "started_at": "2026-10-09T12:39:32.880197Z",
+      "duration_seconds": 0.00015728300058981404,
+      "prompt_version": "independent-v1",
+      "prompt_sha256": "c76d9c245a171e4040c617f5646a9d60b400d7be4ca14bf6b911265349ad2687",
+      "packet_sha256": "797188d928f4b36731b71a5720155baa6178e3a5696a643bc1aecf196d3d4fdb",
+      "attempt": 1,
+      "request_sent": false,
+      "status": "success",
+      "usage": {
+        "prompt_tokens": null,
+        "completion_tokens": null,
+        "total_tokens": null,
+        "cost_usd": "0"
+      },
+      "budget_charge_usd": "0"
+    },
+    {
+      "stage": "comparison",
+      "model": "offline/verifier",
+      "started_at": "2026-10-09T12:39:33.128621Z",
+      "duration_seconds": 0.00015516999883402605,
+      "prompt_version": "comparison-v1",
+      "prompt_sha256": "bc306251659c224aa9cc9c60e26738b3e72631293e1e33f05c0569b4fc71c058",
+      "packet_sha256": "28e4d2756cb1334ff67093ca2154afd63550534867f48d1cd14b304c8ee09032",
+      "attempt": 1,
+      "request_sent": false,
+      "status": "success",
+      "usage": {
+        "prompt_tokens": null,
+        "completion_tokens": null,
+        "total_tokens": null,
+        "cost_usd": "0"
+      },
+      "budget_charge_usd": "0"
+    }
+  ],
+  "budget_charged_usd": "0",
+  "budget_limit_usd": "1",
+  "model_independence_limited": false,
+  "requires_human_approval": true,
+  "automatic_go_allowed": false,
+  "automatic_send_allowed": false,
+  "full_legal_compliance_established": false
+}
