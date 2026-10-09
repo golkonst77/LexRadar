@@ -18,14 +18,41 @@ class Limits(Model):
     max_pdf_pages: int = Field(default=100, ge=1, le=500)
 
 
+SCREENSHOT_NOTICE = (
+    "Isolated screenshot: JavaScript and external resources disabled; "
+    "not an exact reproduction of the live website"
+)
+
+
 class Artifact(Model):
     path: str
     sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     size: int = Field(ge=0)
     kind: Literal["html", "screenshot", "form_screenshot", "pdf", "text"]
+    representation: Literal[
+        "original_html", "extracted_text", "isolated_screenshot", "original_pdf"
+    ]
+    notice: str | None = None
+
+    @model_validator(mode="after")
+    def representation_matches_kind(self):
+        expected = {
+            "html": "original_html",
+            "text": "extracted_text",
+            "pdf": "original_pdf",
+            "screenshot": "isolated_screenshot",
+            "form_screenshot": "isolated_screenshot",
+        }
+        if self.representation != expected[self.kind]:
+            raise ValueError("Artifact representation does not match kind")
+        if self.representation == "isolated_screenshot" and self.notice != SCREENSHOT_NOTICE:
+            raise ValueError("Isolated screenshots require the rendering limitation notice")
+        return self
 
 
 class CollectedEvidence(Evidence):
+    status: Literal["complete", "partial", "unavailable"] = "unavailable"
+    collection_errors: list[str] = Field(default_factory=list)
     unavailable_reason: str | None = None
     artifacts: list[Artifact] = Field(default_factory=list)
 
@@ -100,3 +127,17 @@ class CollectionResult(Model):
     evidence: list[CollectedEvidence] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     requires_independent_review: Literal[True] = True
+
+    @model_validator(mode="after")
+    def evidence_status_consistency(self):
+        for evidence in self.evidence:
+            if evidence.status == "unavailable":
+                if evidence.available or evidence.artifacts or not evidence.unavailable_reason:
+                    raise ValueError("Unavailable evidence cannot contain available artifacts")
+            elif not evidence.available or not evidence.artifacts or evidence.unavailable_reason:
+                raise ValueError("Complete/partial evidence must retain available artifacts")
+            elif (evidence.status == "partial") != bool(evidence.collection_errors):
+                raise ValueError(
+                    "Partial status requires errors; complete status cannot have errors"
+                )
+        return self

@@ -4,12 +4,13 @@ import http.client
 import ipaddress
 import os
 import queue
+import re
 import socket
 import ssl
 import threading
 import time
 from dataclasses import dataclass
-from urllib.parse import urldefrag, urljoin, urlsplit, urlunsplit
+from urllib.parse import quote, urldefrag, urljoin, urlsplit, urlunsplit
 
 from .models import Limits
 
@@ -19,21 +20,42 @@ class CollectionError(Exception):
 
 
 def canonical_url(url: str) -> str:
-    url = urldefrag(url)[0]
-    p = urlsplit(url)
-    if p.scheme not in {"http", "https"} or not p.hostname or p.username or p.password:
-        raise CollectionError("Only credential-free HTTP(S) URLs are allowed")
-    if "\\" in url or any(ord(c) < 33 for c in url):
+    if "\\" in url or any(ord(c) < 33 or ord(c) == 127 for c in url):
         raise CollectionError("Invalid URL characters")
     try:
+        url = urldefrag(url)[0]
+        p = urlsplit(url)
+        if (
+            p.scheme not in {"http", "https"}
+            or not p.hostname
+            or p.username is not None
+            or p.password is not None
+        ):
+            raise CollectionError("Only credential-free HTTP(S) URLs are allowed")
         port = p.port
-    except ValueError as exc:
-        raise CollectionError("Invalid port") from exc
-    host = p.hostname.encode("idna").decode().lower().rstrip(".")
-    if ":" in host:
-        host = f"[{host}]"
-    netloc = host if port in (None, 80 if p.scheme == "http" else 443) else f"{host}:{port}"
-    return urlunsplit((p.scheme, netloc, p.path or "/", p.query, ""))
+        if port == 0:
+            raise CollectionError("Invalid port")
+        if "%" in p.hostname:
+            raise CollectionError("Encoded or scoped hostnames are blocked")
+        host = p.hostname.encode("idna").decode().lower().rstrip(".")
+        if not host:
+            raise CollectionError("Empty hostname")
+        if ":" in host:
+            host = f"[{host}]"
+        netloc = host if port in (None, 80 if p.scheme == "http" else 443) else f"{host}:{port}"
+        if re.search(r"%(?![0-9a-fA-F]{2})", p.path + p.query):
+            raise CollectionError("Malformed percent escape")
+        return urlunsplit(
+            (
+                p.scheme,
+                netloc,
+                quote(p.path or "/", safe="/%:@!$&'()*+,;=-._~"),
+                quote(p.query, safe="/%?:@!$&'()*+,;=-._~"),
+                "",
+            )
+        )
+    except (ValueError, UnicodeError) as exc:
+        raise CollectionError("Invalid URL") from exc
 
 
 def origin(url: str) -> tuple[str, str, int]:
@@ -45,7 +67,7 @@ class AddressPolicy:
     def __init__(self, timeout: float = 5):
         self.timeout = timeout
 
-    def resolve(self, host: str, port: int) -> str:
+    def resolve(self, host: str, port: int, *, timeout: float | None = None) -> str:
         if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
             raise CollectionError("Local hostname blocked")
         answers = queue.Queue(maxsize=1)
@@ -58,7 +80,9 @@ class AddressPolicy:
 
         threading.Thread(target=lookup, daemon=True).start()
         try:
-            addresses = answers.get(timeout=self.timeout)
+            addresses = answers.get(
+                timeout=min(self.timeout, timeout) if timeout is not None else self.timeout
+            )
         except queue.Empty as exc:
             raise CollectionError("DNS resolution timeout") from exc
         if isinstance(addresses, OSError):
@@ -116,10 +140,20 @@ class Fetcher:
             # Do not silently bypass an environment's mandatory egress proxy.
             if type(self.policy) is AddressPolicy and any(
                 os.environ.get(k)
-                for k in ("HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy")
+                for k in (
+                    "HTTPS_PROXY",
+                    "HTTP_PROXY",
+                    "https_proxy",
+                    "http_proxy",
+                    "ALL_PROXY",
+                    "all_proxy",
+                )
             ):
                 raise CollectionError("Pinned transport requires direct egress; proxy configured")
-            ip = self.policy.resolve(host, port)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise CollectionError("Request timeout")
+            ip = self.policy.resolve(host, port, timeout=remaining)
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise CollectionError("Request timeout")
@@ -144,17 +178,35 @@ class Fetcher:
                     continue
                 if response.getheader("Content-Encoding", "identity").lower() != "identity":
                     raise CollectionError("Encoded response unsupported")
-                declared = response.getheader("Content-Length")
-                if declared and int(declared) > self.limits.max_file_bytes:
+                lengths = response.headers.get_all("Content-Length", [])
+                transfer = response.getheader("Transfer-Encoding")
+                if len(lengths) > 1 or (lengths and transfer):
+                    raise CollectionError("Ambiguous response framing")
+                if transfer and transfer.lower() != "chunked":
+                    raise CollectionError("Unsupported transfer encoding")
+                declared = lengths[0] if lengths else None
+                if declared is not None and not re.fullmatch(r"[0-9]+", declared):
+                    raise CollectionError("Invalid Content-Length")
+                if declared is not None and int(declared) > self.limits.max_file_bytes:
                     raise CollectionError("File size limit exceeded")
+                if declared is not None and int(declared) > (
+                    self.limits.max_total_bytes - self.received
+                ):
+                    raise CollectionError("Total download limit exceeded")
                 body = bytearray()
                 while True:
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
                         raise CollectionError("Request timeout")
-                    if connection.sock:
-                        connection.sock.settimeout(remaining)
-                    chunk = response.read1(min(65536, self.limits.max_file_bytes + 1 - len(body)))
+                    if response.fp is not None:
+                        response.fp.raw._sock.settimeout(remaining)
+                    chunk = response.read1(
+                        min(
+                            65536,
+                            self.limits.max_file_bytes + 1 - len(body),
+                            self.limits.max_total_bytes + 1 - self.received,
+                        )
+                    )
                     if not chunk:
                         break
                     body.extend(chunk)

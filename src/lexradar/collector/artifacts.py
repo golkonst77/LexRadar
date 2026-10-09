@@ -3,7 +3,7 @@
 import hashlib
 from pathlib import Path
 
-from .models import Artifact, CollectionResult, Limits
+from .models import SCREENSHOT_NOTICE, Artifact, CollectionResult, Limits
 from .network import CollectionError
 
 
@@ -21,13 +21,26 @@ class ArtifactStore:
         if self.saved + len(content) > self.limits.max_total_bytes:
             raise CollectionError("Total artifact limit exceeded")
         path = self.root / "artifacts" / name
-        path.write_bytes(content)
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        try:
+            temporary.write_bytes(content)
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
         self.saved += len(content)
         return Artifact(
             path=path.relative_to(self.root).as_posix(),
             sha256=hashlib.sha256(content).hexdigest(),
             size=len(content),
             kind=kind,
+            representation={
+                "html": "original_html",
+                "text": "extracted_text",
+                "pdf": "original_pdf",
+                "screenshot": "isolated_screenshot",
+                "form_screenshot": "isolated_screenshot",
+            }[kind],
+            notice=SCREENSHOT_NOTICE if kind in {"screenshot", "form_screenshot"} else None,
         )
 
 
@@ -37,7 +50,7 @@ def verify_integrity(result: CollectionResult, root: Path) -> list[str]:
     for evidence in result.evidence:
         kinds = {a.kind for a in evidence.artifacts}
         expected = {"html", "screenshot", "text"} if evidence.id.startswith("page-") else {"pdf"}
-        if evidence.available and not expected <= kinds:
+        if evidence.status == "complete" and not expected <= kinds:
             issues.append(f"{evidence.id}: missing mandatory artifact")
         for artifact in evidence.artifacts:
             path = (root / artifact.path).resolve()

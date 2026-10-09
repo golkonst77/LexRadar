@@ -27,6 +27,25 @@ def now():
     return datetime.now(UTC)
 
 
+def finalize_evidence(evidence: CollectedEvidence) -> None:
+    if evidence.artifacts:
+        evidence.available = True
+        evidence.unavailable_reason = None
+        evidence.status = "partial" if evidence.collection_errors else "complete"
+        evidence.observed_fact = (
+            "Partially collected artifacts retained; see collection_errors; no legal conclusion"
+            if evidence.status == "partial"
+            else "Artifacts captured with individual representations; no legal conclusion"
+        )
+    else:
+        evidence.status = "unavailable"
+        evidence.unavailable_reason = (
+            "; ".join(evidence.collection_errors) or "No artifacts captured"
+        )
+        evidence.available = False
+        evidence.observed_fact = "No artifacts captured; reason recorded without assumptions"
+
+
 def collect(
     url: str, output: Path, limits: Limits | None = None, *, fetcher: Fetcher | None = None
 ) -> CollectionResult:
@@ -75,11 +94,14 @@ def collect(
                     page_record.captured_at = evidence.captured_at
                     page_record.final_url = response.url
                     page_record.http_status = response.status
-                    if response.status >= 400:
+                    if not 200 <= response.status < 300:
                         raise CollectionError(f"HTTP {response.status}")
                     if "text/html" not in response.content_type.lower():
                         raise CollectionError("Page is not HTML")
-                    evidence.artifacts.append(store.save(f"{eid}.html", response.body, "html"))
+                    try:
+                        evidence.artifacts.append(store.save(f"{eid}.html", response.body, "html"))
+                    except (CollectionError, OSError) as exc:
+                        evidence.collection_errors.append(f"html: {str(exc)[:300]}")
                     page = context.new_page()
                     page.set_default_timeout(limits.timeout_seconds * 1000)
                     # Only this one main navigation is fulfilled; every subrequest is aborted.
@@ -105,12 +127,24 @@ def collect(
                     dom = page.evaluate(DOM_SCRIPT)
                     page_record.text = dom["text"][: limits.max_file_bytes // 4]
                     page_record.categories = categories(current + " " + page_record.title)
-                    evidence.artifacts.append(
-                        store.save(f"{eid}.txt", page_record.text.encode(), "text")
-                    )
-                    evidence.artifacts.append(
-                        store.save(f"{eid}.png", page.screenshot(), "screenshot")
-                    )
+                    for stage, capture in (
+                        (
+                            "text",
+                            lambda eid=eid, record=page_record: store.save(
+                                f"{eid}.txt", record.text.encode(), "text"
+                            ),
+                        ),
+                        (
+                            "screenshot",
+                            lambda eid=eid, page=page: store.save(
+                                f"{eid}.png", page.screenshot(), "screenshot"
+                            ),
+                        ),
+                    ):
+                        try:
+                            evidence.artifacts.append(capture())
+                        except (CollectionError, BrowserError, OSError) as exc:
+                            evidence.collection_errors.append(f"{stage}: {str(exc)[:300]}")
                     result.entities.extend(entities(page_record.text, response.url))
                     for index, form in enumerate(dom["forms"]):
                         links = form.pop("links")
@@ -135,7 +169,8 @@ def collect(
                                 "form_screenshot",
                             )
                             evidence.artifacts.append(observation.screenshot)
-                        except (CollectionError, BrowserError) as exc:
+                        except (CollectionError, BrowserError, OSError) as exc:
+                            evidence.collection_errors.append(f"form_screenshot: {str(exc)[:300]}")
                             observation.unavailable_reason = str(exc)[:300]
                         page_record.forms.append(observation)
                     links = sorted(
@@ -159,24 +194,26 @@ def collect(
                         except CollectionError:
                             continue
                     page_record.document_links = sorted(set(page_record.document_links))
-                    evidence.observed_fact = (
-                        "HTML page and visible content captured; no legal conclusion"
-                    )
-                    evidence.available = True
-                    evidence.unavailable_reason = None
                 except (CollectionError, BrowserError, OSError) as exc:
-                    evidence.unavailable_reason = str(exc)[:500]
+                    evidence.collection_errors.append(str(exc)[:500])
                 finally:
                     if page:
-                        page.close()
+                        try:
+                            page.close()
+                        except BrowserError as exc:
+                            evidence.collection_errors.append(f"page_close: {str(exc)[:300]}")
+                    finalize_evidence(evidence)
                     if evidence.artifacts:
                         evidence.artifact_path = evidence.artifacts[0].path
                         evidence.sha256 = evidence.artifacts[0].sha256
             if queue:
                 result.warnings.append("Page crawl limit reached")
         finally:
-            context.close()
-            browser.close()
+            for close in (context.close, browser.close):
+                try:
+                    close()
+                except BrowserError as exc:
+                    result.warnings.append(f"Browser cleanup failed: {str(exc)[:300]}")
     pdf_urls = [u for u in sorted(document_urls) if urlsplit(u).path.lower().endswith(".pdf")]
     if len(pdf_urls) > limits.max_documents:
         result.warnings.append("PDF download limit reached")
@@ -199,7 +236,7 @@ def collect(
             evidence.captured_at = now()
             document.final_url = response.url
             document.http_status = response.status
-            if response.status >= 400:
+            if not 200 <= response.status < 300:
                 raise CollectionError(f"HTTP {response.status}")
             if not response.body.startswith(b"%PDF-"):
                 raise CollectionError("Response is not a PDF")
@@ -212,9 +249,16 @@ def collect(
             document.text, document.extraction_status, document.extraction_reason = extract_pdf(
                 store.root / artifact.path, limits.max_pdf_pages, limits.timeout_seconds
             )
+            if document.extraction_status == "failed":
+                evidence.collection_errors.append(
+                    document.extraction_reason or "PDF extraction failed"
+                )
         except (CollectionError, OSError) as exc:
-            evidence.unavailable_reason = str(exc)[:500]
+            evidence.collection_errors.append(str(exc)[:500])
+        finally:
+            finalize_evidence(evidence)
     result.warnings.extend(verify_integrity(result, store.root))
+    result = CollectionResult.model_validate(result.model_dump())
     (store.root / "collection.json").write_text(
         result.model_dump_json(indent=2) + "\n", encoding="utf-8"
     )
