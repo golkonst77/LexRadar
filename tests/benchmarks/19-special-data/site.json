@@ -1,0 +1,8 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Diagnosis requested in appointment form.</p><form aria-label=\"Appointment\"><label>Diagnosis<textarea name=\"diagnosis\"></textarea></label><button>Submit</button></form>"
+    }
+  },
+  "screenshot_failure": false
+}

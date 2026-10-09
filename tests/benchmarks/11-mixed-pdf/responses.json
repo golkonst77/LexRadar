@@ -1,0 +1,359 @@
+{
+  "A": {
+    "auditor": "A",
+    "findings": [
+      {
+        "id": "a-1",
+        "topic": "mandatory_documents",
+        "claim_code": "whole_pdf_issue",
+        "subject": "synthetic scope",
+        "source": "https://benchmark.example/policy.pdf",
+        "evidence_ids": [
+          "document-0001"
+        ],
+        "fact": "Public policy excerpt.",
+        "fact_assertion": "present",
+        "examination_scope": "whole_document",
+        "text_grounding": [
+          {
+            "evidence_id": "document-0001",
+            "exact_quote": "Public policy excerpt."
+          }
+        ],
+        "legal_interpretation": "Synthetic hypothesis requiring independent legal review.",
+        "legal_position": "possible_issue",
+        "normative_basis": [
+          {
+            "act_name": "Федеральный закон «О персональных данных»",
+            "act_id": "152-ФЗ",
+            "provision": "Уточнить по официальному тексту",
+            "requirement": "Synthetic hypothesis, no verified legislation."
+          }
+        ],
+        "confidence": 1,
+        "material": true,
+        "limitations": [
+          "Synthetic fixture."
+        ],
+        "alternative_explanations": [
+          "Different applicability."
+        ],
+        "additional_checks": [
+          "Human review."
+        ],
+        "status": "confirmed"
+      }
+    ],
+    "coverage": [
+      {
+        "topic": "operator_identity",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "privacy_policy",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "data_collection_forms",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "consent",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "special_categories",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "third_party_transfers",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "cookies_analytics",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "mandatory_documents",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "medical_vs_152fz",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      }
+    ],
+    "limitations": [
+      "Recorded synthetic response, not a model evaluation."
+    ]
+  },
+  "B": {
+    "auditor": "B",
+    "findings": [
+      {
+        "id": "b-1",
+        "topic": "mandatory_documents",
+        "claim_code": "whole_pdf_issue",
+        "subject": "synthetic scope",
+        "source": "https://benchmark.example/policy.pdf",
+        "evidence_ids": [
+          "document-0001"
+        ],
+        "fact": "Public policy excerpt.",
+        "fact_assertion": "present",
+        "examination_scope": "whole_document",
+        "text_grounding": [
+          {
+            "evidence_id": "document-0001",
+            "exact_quote": "Public policy excerpt."
+          }
+        ],
+        "legal_interpretation": "Synthetic hypothesis requiring independent legal review.",
+        "legal_position": "possible_issue",
+        "normative_basis": [
+          {
+            "act_name": "Федеральный закон «О персональных данных»",
+            "act_id": "152-ФЗ",
+            "provision": "Уточнить по официальному тексту",
+            "requirement": "Synthetic hypothesis, no verified legislation."
+          }
+        ],
+        "confidence": 1,
+        "material": true,
+        "limitations": [
+          "Synthetic fixture."
+        ],
+        "alternative_explanations": [
+          "Different applicability."
+        ],
+        "additional_checks": [
+          "Human review."
+        ],
+        "status": "confirmed"
+      }
+    ],
+    "coverage": [
+      {
+        "topic": "operator_identity",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "privacy_policy",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "data_collection_forms",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "consent",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "special_categories",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "third_party_transfers",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "cookies_analytics",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "mandatory_documents",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      },
+      {
+        "topic": "medical_vs_152fz",
+        "status": "reviewed",
+        "limitations": [
+          "Synthetic text only."
+        ]
+      }
+    ],
+    "limitations": [
+      "Recorded synthetic response, not a model evaluation."
+    ]
+  },
+  "independent": {
+    "findings": [
+      {
+        "id": "v-1",
+        "topic": "mandatory_documents",
+        "claim_code": "whole_pdf_issue",
+        "subject": "synthetic scope",
+        "source": "https://benchmark.example/policy.pdf",
+        "evidence_ids": [
+          "document-0001"
+        ],
+        "fact": "Public policy excerpt.",
+        "fact_assertion": "present",
+        "examination_scope": "whole_document",
+        "fragments": [
+          {
+            "evidence_id": "document-0001",
+            "text": "Public policy excerpt.",
+            "page": 1
+          }
+        ],
+        "norm_ids": [
+          "152-template"
+        ],
+        "legal_interpretation": "Synthetic hypothesis requiring independent legal review.",
+        "attention_reason": "Review the specified public excerpt.",
+        "additional_checks": [
+          "Verify operator, law and applicability."
+        ],
+        "limitations": [
+          "Synthetic response; no real LLM."
+        ],
+        "status": "verified_issue"
+      }
+    ],
+    "materials": [
+      {
+        "evidence_id": "page-0001",
+        "text_examined": true,
+        "pages_examined": [
+          1
+        ],
+        "limitation": "Only supplied text; images and unread pages excluded."
+      },
+      {
+        "evidence_id": "document-0001",
+        "text_examined": true,
+        "pages_examined": [
+          1
+        ],
+        "limitation": "Only supplied text; images and unread pages excluded."
+      }
+    ],
+    "directions": [
+      {
+        "topic": "operator_identity",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      },
+      {
+        "topic": "privacy_policy",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      },
+      {
+        "topic": "data_collection_forms",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      },
+      {
+        "topic": "consent",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      },
+      {
+        "topic": "special_categories",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      },
+      {
+        "topic": "third_party_transfers",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      },
+      {
+        "topic": "cookies_analytics",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      },
+      {
+        "topic": "mandatory_documents",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      },
+      {
+        "topic": "medical_vs_152fz",
+        "status": "text_reviewed",
+        "limitation": "Synthetic recorded text review only."
+      }
+    ],
+    "limitations": [
+      "Synthetic fixture responses; no legal determination."
+    ]
+  },
+  "comparison": {
+    "assessments": [
+      {
+        "auditor": "A",
+        "finding_id": "a-1",
+        "status": "verified_issue",
+        "matched_independent_ids": [
+          "v-1"
+        ],
+        "reason": "Synthetic assertion must pass deterministic checks."
+      },
+      {
+        "auditor": "B",
+        "finding_id": "b-1",
+        "status": "verified_issue",
+        "matched_independent_ids": [
+          "v-1"
+        ],
+        "reason": "Synthetic assertion must pass deterministic checks."
+      }
+    ],
+    "limitations": [
+      "Synthetic comparison."
+    ]
+  }
+}

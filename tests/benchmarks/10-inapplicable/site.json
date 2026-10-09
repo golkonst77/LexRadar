@@ -1,0 +1,8 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Only outpatient services.</p>"
+    }
+  },
+  "screenshot_failure": false
+}

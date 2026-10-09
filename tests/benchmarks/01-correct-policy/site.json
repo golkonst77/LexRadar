@@ -1,0 +1,8 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Policy describes purpose and retention.</p>"
+    }
+  },
+  "screenshot_failure": false
+}
