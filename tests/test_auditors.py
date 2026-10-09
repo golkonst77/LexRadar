@@ -107,6 +107,24 @@ def save_dossier(root, result):
     (root / "collection.json").write_text(result.model_dump_json(indent=2), encoding="utf-8")
 
 
+def approve_packet(root):
+    packet = load_packet(root, 200000)
+    path = root.parent / "human-approval.json"
+    path.write_text(
+        json.dumps(
+            {
+                "packet_sha256": packet.sha256,
+                "approved": True,
+                "contents_reviewed": True,
+                "reviewer": "synthetic-test-reviewer",
+                "approved_at": datetime.now(UTC).isoformat(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def finding():
     return {
         "id": "f1",
@@ -421,7 +439,12 @@ def test_missing_key_and_permission(dossier, config, tmp_path, monkeypatch):
         analyze(dossier[0], tmp_path / "forbidden", config, mode="openrouter")
     with pytest.raises(ProviderError):
         analyze(
-            dossier[0], tmp_path / "no-key", config, mode="openrouter", allow_external_transfer=True
+            dossier[0],
+            tmp_path / "no-key",
+            config,
+            mode="openrouter",
+            allow_external_transfer=True,
+            packet_approval=approve_packet(dossier[0]),
         )
     assert not (tmp_path / "forbidden").exists()
 
@@ -435,6 +458,7 @@ def test_budget_blocks_calls(dossier, config, tmp_path):
         config,
         mode="openrouter",
         allow_external_transfer=True,
+        packet_approval=approve_packet(dossier[0]),
         provider=provider,
     )
     assert not provider.calls
@@ -452,6 +476,7 @@ def test_budget_overrun_stops_further_calls(dossier, config, tmp_path):
         config,
         mode="openrouter",
         allow_external_transfer=True,
+        packet_approval=approve_packet(dossier[0]),
         provider=provider,
     )
     assert len(provider.calls) == 1
@@ -480,6 +505,7 @@ def test_retry_is_fresh_and_b_does_not_receive_a(dossier, config, tmp_path):
         config,
         mode="openrouter",
         allow_external_transfer=True,
+        packet_approval=approve_packet(dossier[0]),
         provider=provider,
         sleep=lambda _: None,
     )
@@ -537,6 +563,7 @@ def test_openrouter_payload_and_secret_safe_journal(dossier, config, tmp_path, m
         config,
         mode="openrouter",
         allow_external_transfer=True,
+        packet_approval=approve_packet(dossier[0]),
         provider=OpenRouterProvider(config, Transport()),
     )
     assert report.completed and report.budget_charged_usd == Decimal("0.002")
@@ -619,6 +646,7 @@ def test_bounded_retries_and_unknown_cost_reservations(dossier, config, tmp_path
         config,
         mode="openrouter",
         allow_external_transfer=True,
+        packet_approval=approve_packet(dossier[0]),
         provider=provider,
         sleep=lambda _: None,
     )
@@ -816,3 +844,178 @@ def test_report_schema_cannot_inject_confirmation(dossier, config, tmp_path):
     raw["runs"][0]["result"]["findings"][0]["status"] = "confirmed"
     with pytest.raises(ValidationError):
         AnalysisReport.model_validate(raw)
+
+
+@pytest.mark.parametrize(
+    "sensitive",
+    [
+        "synthetic.patient@example.invalid",
+        "Пациент: Синтетический диагноз",
+        "Паспорт 0000 000000 (synthetic)",
+        "Дата рождения 01.01.1900 (synthetic)",
+        "H\u200bIV synthetic record",
+        "https://clinic.example/?email=synthetic%40example.invalid",
+    ],
+)
+def test_sensitive_packet_never_sent(dossier, config, tmp_path, sensitive):
+    from lexradar.auditors.preflight import screen
+
+    root, data = dossier
+    data.evidence[0].observed_fact = sensitive
+    save_dossier(root, data)
+    approval = approve_packet(root)
+    packet = load_packet(root, config.max_input_bytes)
+    assert screen(packet)
+    assert all(sensitive not in json.dumps(issue) for issue in screen(packet))
+    provider = RecordingProvider()
+    with pytest.raises(PermissionError, match="Potential sensitive"):
+        analyze(
+            root,
+            tmp_path / "blocked",
+            config,
+            mode="openrouter",
+            allow_external_transfer=True,
+            packet_approval=approval,
+            provider=provider,
+        )
+    assert not provider.calls and not (tmp_path / "blocked").exists()
+
+
+def test_general_flag_cannot_bypass_human_approval(dossier, config, tmp_path):
+    provider = RecordingProvider()
+    with pytest.raises(PermissionError, match="Human approval"):
+        analyze(
+            dossier[0],
+            tmp_path / "blocked",
+            config,
+            mode="openrouter",
+            allow_external_transfer=True,
+            provider=provider,
+        )
+    assert not provider.calls
+
+
+def test_changed_packet_invalidates_approval(dossier, config, tmp_path):
+    root, data = dossier
+    approval = approve_packet(root)
+    data.evidence[0].observed_fact = "Changed synthetic observation"
+    save_dossier(root, data)
+    provider = RecordingProvider()
+    with pytest.raises(PermissionError, match="packet-specific"):
+        analyze(
+            root,
+            tmp_path / "blocked",
+            config,
+            mode="openrouter",
+            allow_external_transfer=True,
+            packet_approval=approval,
+            provider=provider,
+        )
+    assert not provider.calls
+
+
+@pytest.mark.parametrize("field", ["approved", "contents_reviewed"])
+def test_unapproved_template_blocks(dossier, config, tmp_path, field):
+    approval = approve_packet(dossier[0])
+    record = json.loads(approval.read_text())
+    record[field] = False
+    approval.write_text(json.dumps(record))
+    provider = RecordingProvider()
+    with pytest.raises(PermissionError):
+        analyze(
+            dossier[0],
+            tmp_path / "blocked",
+            config,
+            mode="openrouter",
+            allow_external_transfer=True,
+            packet_approval=approval,
+            provider=provider,
+        )
+    assert not provider.calls
+
+
+def test_preflight_cli_local_only(dossier, tmp_path, monkeypatch):
+    from lexradar.cli import main
+
+    output = tmp_path / "review"
+    monkeypatch.setattr(
+        "sys.argv", ["lexradar", "preflight", str(dossier[0]), "--output", str(output)]
+    )
+    main()
+    summary = json.loads((output / "preflight.json").read_text())
+    import hashlib
+
+    assert (
+        summary["packet_sha256"]
+        == hashlib.sha256((output / "packet.json").read_bytes()).hexdigest()
+    )
+    assert not summary["transfer_allowed"]
+    assert "cannot guarantee" in summary["limitation"]
+    approval = json.loads((output / "approval.json").read_text())
+    assert not approval["approved"] and not approval["contents_reviewed"]
+
+
+@pytest.mark.parametrize(
+    "scope,quote,fact,assertion,expected",
+    [
+        ("unknown", None, "The whole PDF has no consent", "absent", "unverifiable"),
+        (
+            "whole_document",
+            "Visible synthetic excerpt",
+            "Visible synthetic excerpt",
+            "present",
+            "unverifiable",
+        ),
+        ("text_excerpt", "Invented quote", "Invented quote", "present", "unverifiable"),
+        (
+            "text_excerpt",
+            "Visible synthetic excerpt",
+            "Whole document examined",
+            "present",
+            "unverifiable",
+        ),
+        (
+            "text_excerpt",
+            "Visible synthetic excerpt",
+            "Visible synthetic excerpt",
+            "absent",
+            "unverifiable",
+        ),
+        (
+            "text_excerpt",
+            "Visible synthetic excerpt",
+            "Visible synthetic excerpt",
+            "present",
+            "potential",
+        ),
+    ],
+)
+def test_mixed_pdf_requires_exact_available_excerpt(
+    dossier, scope, quote, fact, assertion, expected
+):
+    root, data = dossier
+    # Reuse a valid PDF fixture, then emulate extraction of only its readable pages.
+    test_scan_not_read_and_unavailable_not_violation(dossier)
+    data = CollectionResult.model_validate_json((root / "collection.json").read_text())
+    data.documents[0].text = "Visible synthetic excerpt"
+    save_dossier(root, data)
+    raw = auditor_response("A")
+    raw["findings"][0].update(
+        evidence_ids=["document-0001"],
+        source="https://clinic.example/scan.pdf",
+        examination_scope=scope,
+        fact=fact,
+        fact_assertion=assertion,
+        text_grounding=[]
+        if quote is None
+        else [{"evidence_id": "document-0001", "exact_quote": quote}],
+    )
+    result, notes = validate_result(json.dumps(raw), "A", load_packet(root, 200000))
+    finding_result = result.findings[0]
+    assert finding_result.status == expected
+    assert finding_result.normative_basis and finding_result.fact == fact
+    assert finding_result.evidence_quality != "complete"
+    assert any("unexamined pages" in text for text in finding_result.limitations)
+    if expected == "unverifiable":
+        assert finding_result.fact_assertion == "unknown"
+        assert "mixed_pdf_claim_not_grounded" in notes

@@ -9,6 +9,7 @@ from .budget import Budget, BudgetExceeded
 from .disagreements import compare
 from .evidence import load_packet
 from .models import AnalysisConfig, AnalysisReport, AuditorRun, RequestLog, Usage
+from .preflight import LIMITATION, authorize
 from .prompts import messages_for
 from .provider import OfflineProvider, OpenRouterProvider, Provider, ProviderError
 from .validator import ResultError, validate_result
@@ -21,6 +22,7 @@ def analyze(
     *,
     mode: str = "offline",
     allow_external_transfer: bool = False,
+    packet_approval: Path | None = None,
     provider: Provider | None = None,
     sleep=time.sleep,
 ) -> AnalysisReport:
@@ -31,6 +33,7 @@ def analyze(
     if mode == "offline" and isinstance(provider, OpenRouterProvider):
         raise PermissionError("Real OpenRouter provider cannot be injected into offline mode")
     packet = load_packet(root, config.max_input_bytes)
+    approval = authorize(packet, packet_approval) if mode == "openrouter" else None
     output = output.resolve()
     if output.exists():
         raise ValueError("Analysis output must be a new directory")
@@ -54,6 +57,7 @@ def analyze(
             sent = False
             try:
                 if mode == "openrouter":
+                    authorize(packet, packet_approval)
                     reserved = charge = budget.reserve(settings, messages)
                 # Reconstruct fresh messages even if an injected test provider mutates its input.
                 sent = mode == "openrouter"
@@ -107,6 +111,7 @@ def analyze(
         same_model_independence_limited=config.auditor_a.model == config.auditor_b.model,
         limitations=[
             *packet.limitations,
+            LIMITATION,
             "Agreement is not independent verification of legal correctness",
             "Prompt safeguards cannot guarantee absence of model-level injection effects",
             "Same model reduces independence"
@@ -127,6 +132,7 @@ def analyze(
             {
                 "mode": mode,
                 "schema_version": "0.3",
+                "packet_approval": approval.model_dump(mode="json") if approval else None,
                 "external_transfer_explicitly_permitted": allow_external_transfer
                 if mode == "openrouter"
                 else False,

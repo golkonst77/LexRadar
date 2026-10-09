@@ -50,5 +50,8 @@ Collector не подключён к Gateway, не формирует юриди
 `lexradar analyze work/audit --output work/analysis` по умолчанию работает offline без LLM.
 [Архитектура, настройка OpenRouter, бюджет и ограничения](docs/auditors.md).
 Реальный запуск требует конфигурации, `OPENROUTER_API_KEY` в окружении и
-`--mode openrouter --allow-external-transfer`. A/B получают одинаковые доказательства
+`--mode openrouter --allow-external-transfer --packet-approval work/review/approval.json`.
+Перед этим обязателен локальный `lexradar preflight`: проверка человеком точного пакета
+по SHA-256 и блокировка при признаках чувствительных данных. Эвристики не гарантируют
+отсутствие ПДн. A/B получают одинаковые доказательства
 в отдельных запросах с разными промптами. Результаты не подключены к Gateway.

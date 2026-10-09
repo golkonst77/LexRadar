@@ -75,6 +75,39 @@ def validate_result(
             if finding.evidence_quality == "complete":
                 finding.evidence_quality = "partial"
             finding.limitations.append("PDF contains unexamined pages; visual review required")
+            finding.additional_checks.append("Visually examine unread PDF pages independently")
+            mixed_ids = {
+                e.id
+                for e in supporting
+                if e.id in docs and docs[e.id].extraction_status == "visual_review_required"
+            }
+            grounded = finding.examination_scope == "text_excerpt" and all(
+                any(
+                    g.evidence_id == eid
+                    and g.exact_quote.strip()
+                    and finding.fact == g.exact_quote
+                    and g.exact_quote in (docs[eid].text or "")
+                    for g in finding.text_grounding
+                )
+                for eid in mixed_ids
+            )
+            # A quotation supports only an observed excerpt, never absence across unread pages.
+            if not grounded or finding.fact_assertion != "present":
+                finding.status = "unverifiable"
+                finding.fact_assertion = "unknown"
+                finding.limitations.append(
+                    f"Unverified requested scope: {finding.examination_scope}"
+                )
+                finding.examination_scope = "unknown"
+                notes.append("mixed_pdf_claim_not_grounded")
+                finding.limitations.append(
+                    "Claim not grounded in available text; whole-document examination prohibited"
+                )
+            else:
+                finding.limitations.append(
+                    "Only quotation occurrence checked; interpretation needs human review; "
+                    "unread pages excluded"
+                )
         finding.limitations.append("All normative references are independently unverified")
         finding.additional_checks.append("Independently verify current law and its applicability")
         if finding.status != "rejected":

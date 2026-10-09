@@ -24,3 +24,5 @@ Differentiate insufficient evidence from rejection. Give necessary additional_ch
 Return one JSON object matching the supplied schema, without markdown or extra text.
 
 State legal_position as possible_issue, no_issue or undetermined, separate from factual assertion.
+
+Mixed PDFs: never claim whole-document examination. Use examination_scope=text_excerpt and text_grounding entries (evidence_id, exact_quote) from supplied text only. Unread pages cannot support absence claims. Without exact grounding use unverifiable. A quotation alone does not establish the semantic or legal claim.

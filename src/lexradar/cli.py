@@ -9,6 +9,21 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "preflight":
+        from .auditors.evidence import load_packet
+        from .auditors.preflight import write_preflight
+
+        parser = argparse.ArgumentParser(description="Local packet review; no external transfer")
+        parser.add_argument("dossier", type=Path)
+        parser.add_argument("--output", type=Path, required=True)
+        parser.add_argument("--max-input-bytes", type=int, default=200000)
+        args = parser.parse_args(sys.argv[2:])
+        try:
+            write_preflight(load_packet(args.dossier, args.max_input_bytes), args.output)
+        except (ValueError, OSError):
+            parser.error("Preflight failed; inspect dossier locally")
+        print("Review exact packet.json and preflight.json; approval template is NOT approved")
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "analyze":
         from .auditors.models import AnalysisConfig
         from .auditors.orchestrator import analyze
@@ -22,9 +37,14 @@ def main() -> None:
         parser.add_argument("--mode", choices=("offline", "openrouter"), default="offline")
         parser.add_argument("--config", type=Path)
         parser.add_argument("--allow-external-transfer", action="store_true")
+        parser.add_argument("--packet-approval", type=Path)
         args = parser.parse_args(sys.argv[2:])
-        if args.mode == "openrouter" and (not args.config or not args.allow_external_transfer):
-            parser.error("OpenRouter requires --config and --allow-external-transfer")
+        if args.mode == "openrouter" and (
+            not args.config or not args.allow_external_transfer or not args.packet_approval
+        ):
+            parser.error(
+                "OpenRouter requires --config, --allow-external-transfer and --packet-approval"
+            )
         try:
             if args.config:
                 config = AnalysisConfig.model_validate_json(args.config.read_text(encoding="utf-8"))
@@ -53,6 +73,7 @@ def main() -> None:
                 config,
                 mode=args.mode,
                 allow_external_transfer=args.allow_external_transfer,
+                packet_approval=args.packet_approval,
             )
         except (ValueError, PermissionError, OSError, ProviderError) as exc:
             # No input contents or credentials in CLI errors.

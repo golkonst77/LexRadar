@@ -54,7 +54,14 @@ class NormativeBasis(Model):
     verified_source: None = None
 
 
+class TextGrounding(Model):
+    evidence_id: str = Field(min_length=1, max_length=200)
+    exact_quote: str = Field(min_length=1, max_length=10000)
+
+
 class AIFinding(Model):
+    examination_scope: Literal["unknown", "text_excerpt", "whole_document"] = "unknown"
+    text_grounding: list[TextGrounding] = Field(default_factory=list, max_length=100)
     id: str = Field(min_length=1, max_length=100)
     topic: Topic
     claim_code: str = Field(min_length=1, max_length=100, pattern=r"^[a-z0-9_]+$")
