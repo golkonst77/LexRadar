@@ -9,6 +9,11 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "attest-source":
+        from .verifier.attestation import attestation_main
+
+        attestation_main(sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] in {"verify", "verify-compare", "verify-preflight"}:
         from .verifier.cli import verifier_main
 

@@ -66,7 +66,7 @@ def registry(tmp_path):
     return path
 
 
-def trusted_registry(path):
+def self_asserted_registry(path):
     reg, _ = load_registry(path)
     source = reg.sources[0]
     source.status = "verified_current"
@@ -267,9 +267,9 @@ def test_unverified_norm_never_confirms(dossier, registry, config, status):
     assert finding.status == "potential_issue" and finding.norms[0].status == "unverified"
 
 
-def test_verified_issue_requires_all_independent_confirmations(dossier, registry, config):
+def test_complete_finding_review_cannot_replace_source_authentication(dossier, registry, config):
     entities(dossier)
-    trusted_registry(registry)
+    self_asserted_registry(registry)
     prepared, result = prepared_review(dossier, registry, config)
     assert (
         normalize_independent(result, prepared, config, datetime.now(UTC))[0].status
@@ -277,7 +277,8 @@ def test_verified_issue_requires_all_independent_confirmations(dossier, registry
     )
     review = human_review(prepared, result)
     finding = normalize_independent(result, prepared, config, datetime.now(UTC), [review])[0]
-    assert finding.status == "verified_issue" and finding.applicability == "confirmed"
+    assert finding.status == "potential_issue" and finding.applicability == "confirmed"
+    assert finding.norms[0].status == "unverified"
     assert not dossier[1].entities[0].identity_verified
 
 
@@ -292,7 +293,7 @@ def test_verified_issue_requires_all_independent_confirmations(dossier, registry
 )
 def test_incomplete_human_review_cannot_confirm(dossier, registry, config, change):
     entities(dossier)
-    trusted_registry(registry)
+    self_asserted_registry(registry)
     prepared, result = prepared_review(dossier, registry, config)
     review = human_review(prepared, result, **change)
     finding = normalize_independent(result, prepared, config, datetime.now(UTC), [review])[0]
@@ -301,7 +302,7 @@ def test_incomplete_human_review_cannot_confirm(dossier, registry, config, chang
 
 def test_inapplicable_norm_rejected_for_concrete_entity(dossier, registry, config):
     entities(dossier)
-    trusted_registry(registry)
+    self_asserted_registry(registry)
     prepared, result = prepared_review(dossier, registry, config)
     review = human_review(prepared, result, applicability="not_applicable")
     finding = normalize_independent(result, prepared, config, datetime.now(UTC), [review])[0]
@@ -336,23 +337,23 @@ def test_wrong_operator_and_changed_finding_approval_rejected(dossier, registry,
         ({"checked_at": datetime.now(UTC) + timedelta(days=1)}, "unverified"),
         ({"status": "unavailable"}, "unavailable"),
         ({"effective_from": date(2099, 1, 1)}, "unverified"),
-        ({"effective_until": date(2021, 1, 1)}, "repealed"),
+        ({"effective_until": date(2021, 1, 1)}, "unverified"),
     ],
 )
 def test_norm_currency_is_not_model_assertion(registry, change, expected):
-    source = trusted_registry(registry)
+    source = self_asserted_registry(registry)
     for key, value in change.items():
         setattr(source, key, value)
     assert assess(source, datetime.now(UTC).date(), datetime.now(UTC), 30).status == expected
 
 
 def test_distinct_revisions_and_historical_period(registry):
-    current = trusted_registry(registry)
+    current = self_asserted_registry(registry)
     old = current.model_copy(
         update={"id": "old", "revision": "synthetic-old", "effective_until": date(2021, 1, 1)}
     )
-    assert assess(old, date(2020, 1, 1), datetime.now(UTC), 30).status == "current_confirmed"
-    assert assess(old, datetime.now(UTC).date(), datetime.now(UTC), 30).status == "repealed"
+    assert assess(old, date(2020, 1, 1), datetime.now(UTC), 30).status == "unverified"
+    assert assess(old, datetime.now(UTC).date(), datetime.now(UTC), 30).status == "unverified"
     assert assess(current, datetime.now(UTC).date(), datetime.now(UTC), 30).revision != old.revision
 
 
@@ -740,7 +741,7 @@ def test_offline_cli_and_v03_compatibility(dossier, registry, config, tmp_path, 
 def test_conflicting_revisions_fail_closed(registry):
     from lexradar.verifier.registry import assess_registry
 
-    source = trusted_registry(registry)
+    source = self_asserted_registry(registry)
     other = source.model_copy(update={"id": "overlapping", "revision": "different-revision"})
     results = assess_registry(
         SourceRegistry(sources=[source, other]), datetime.now(UTC).date(), datetime.now(UTC), 30
@@ -749,12 +750,12 @@ def test_conflicting_revisions_fail_closed(registry):
     assert all(any("Conflicting" in r for r in n.reasons) for n in results.values())
 
 
-def test_retired_revision_can_be_used_for_its_historical_period(registry):
-    source = trusted_registry(registry)
+def test_retired_revision_claim_cannot_authenticate_historical_period(registry):
+    source = self_asserted_registry(registry)
     source.effective_until = date(2021, 1, 1)
     source.status = "repealed"
-    assert assess(source, date(2020, 1, 1), datetime.now(UTC), 30).status == "current_confirmed"
-    assert assess(source, datetime.now(UTC).date(), datetime.now(UTC), 30).status == "repealed"
+    assert assess(source, date(2020, 1, 1), datetime.now(UTC), 30).status == "unverified"
+    assert assess(source, datetime.now(UTC).date(), datetime.now(UTC), 30).status == "unverified"
 
 
 def test_llm_cannot_create_verified_legal_source(dossier, registry, config, tmp_path):
@@ -937,7 +938,7 @@ def test_verified_problem_cannot_be_injected_in_report(dossier, registry, config
 
 
 @pytest.mark.parametrize(
-    "basis_act,expected", [("152-ФЗ", "verified_issue"), ("invented-act", "potential_issue")]
+    "basis_act,expected", [("152-ФЗ", "potential_issue"), ("invented-act", "potential_issue")]
 )
 def test_auditor_confirmation_cannot_borrow_unverified_basis(
     dossier, registry, config, tmp_path, basis_act, expected
@@ -946,7 +947,7 @@ def test_auditor_confirmation_cannot_borrow_unverified_basis(
     from lexradar.verifier.rules import compare_results
 
     entities(dossier)
-    trusted_registry(registry)
+    self_asserted_registry(registry)
     prepared, independent = prepared_review(dossier, registry, config)
     review = human_review(prepared, independent)
     own = normalize_independent(independent, prepared, config, datetime.now(UTC), [review])
@@ -982,8 +983,7 @@ def test_auditor_confirmation_cannot_borrow_unverified_basis(
     )
     results = compare_results(proposals, analysis, own, prepared, config, datetime.now(UTC))
     assert all(a.status == expected for a in results)
-    if expected == "verified_issue":
-        assert all(a.verified_independent_ids == ["v-new"] for a in results)
+    assert all(not a.verified_independent_ids for a in results)
 
 
 def test_finding_requires_declared_normative_basis(dossier, registry, config, tmp_path):
@@ -1060,3 +1060,147 @@ def test_opposite_auditor_assertions_are_not_duplicates(dossier, registry, confi
         any("contradiction" in reason for reason in a.reasons) for a in report.auditor_assessments
     )
     assert report.potential_problem_ids == ["A:f1"]
+
+
+def test_forged_registry_json_with_correct_hash_never_trusted(registry):
+    # Serialized JSON, not a mock trust provider: every legacy verification field is filled.
+    source = self_asserted_registry(registry)
+    source.norm_text = "FAKE synthetic norm: every form requires an imaginary checkbox"
+    source.text_sha256 = digest(source.norm_text)
+    source.provenance = "Invented claim of official acquisition"
+    registry.write_text(SourceRegistry(sources=[source]).model_dump_json())
+    loaded, _ = load_registry(registry)
+    assessment = assess(loaded.sources[0], datetime.now(UTC).date(), datetime.now(UTC), 30)
+    assert assessment.status == "unverified"
+    assert any("authenticated" in reason for reason in assessment.reasons)
+
+
+def source_confirmation(submission):
+    from lexradar.verifier.attestation import ReviewerConfirmation
+
+    return ReviewerConfirmation(
+        binding_sha256=submission.binding_sha256,
+        reviewer="synthetic-independent-reviewer",
+        reviewed_at=datetime.now(UTC),
+        independent_of_record_author=True,
+        official_origin_checked=True,
+        revision_and_period_checked=True,
+        acquisition_reference="Synthetic reference; not authenticated",
+        rationale="Synthetic claimed independent review",
+    )
+
+
+def test_complete_separate_attestation_is_still_unverified(registry):
+    from lexradar.verifier.attestation import AttestationSubmission, submit
+
+    source = self_asserted_registry(registry)
+    draft = submit(source)
+    completed = submit(source, source_confirmation(draft))
+    assert completed.status == "unverified" and not completed.trusted
+    assert completed.origin_authentication == completed.reviewer_authentication == "unsupported"
+    assert assess(source, datetime.now(UTC).date(), datetime.now(UTC), 30).status == "unverified"
+    forged = json.loads(completed.model_dump_json())
+    forged.update(status="current_confirmed", trusted=True)
+    with pytest.raises(ValidationError):
+        AttestationSubmission.model_validate(forged)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("norm_text", "Different synthetic norm"),
+        ("source_url", "https://publication.pravo.gov.ru/another-synthetic-record"),
+        ("revision", "different-revision"),
+        ("effective_from", date(2022, 1, 1)),
+        ("effective_until", date(2090, 1, 1)),
+        ("provision", "other synthetic provision"),
+    ],
+)
+def test_changed_attestation_binding_rejects_confirmation(registry, field, value):
+    from lexradar.verifier.attestation import submit
+
+    source = self_asserted_registry(registry)
+    confirmation = source_confirmation(submit(source))
+    setattr(source, field, value)
+    if field == "norm_text":
+        source.text_sha256 = digest(source.norm_text)
+    with pytest.raises(ValueError, match="another source"):
+        submit(source, confirmation)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["independent_of_record_author", "official_origin_checked", "revision_and_period_checked"],
+)
+def test_attestation_requires_independent_specific_confirmation(registry, field):
+    from lexradar.verifier.attestation import submit
+
+    source = self_asserted_registry(registry)
+    confirmation = source_confirmation(submit(source))
+    setattr(confirmation, field, False)
+    with pytest.raises(ValueError):
+        submit(source, confirmation)
+
+
+def test_attestation_cli_preserves_registry_and_never_grants_trust(registry, tmp_path, monkeypatch):
+    from lexradar.cli import main
+
+    self_asserted_registry(registry)
+    original = registry.read_bytes()
+    output = tmp_path / "source-request"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "lexradar",
+            "attest-source",
+            "--registry",
+            str(registry),
+            "--source-id",
+            "test-law",
+            "--output",
+            str(output),
+        ],
+    )
+    main()
+    draft = json.loads((output / "submission.json").read_text())
+    assert draft["status"] == "unverified" and not draft["trusted"]
+    assert digest((output / "norm-text.txt").read_text()) == draft["binding"]["text_sha256"]
+    assert not json.loads((output / "confirmation.json").read_text())[
+        "independent_of_record_author"
+    ]
+    assert registry.read_bytes() == original
+    from lexradar.verifier.attestation import submit
+
+    confirmation = source_confirmation(submit(load_registry(registry)[0].sources[0]))
+    (output / "confirmation.json").write_text(confirmation.model_dump_json())
+    completed = tmp_path / "source-submission"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "lexradar",
+            "attest-source",
+            "--registry",
+            str(registry),
+            "--source-id",
+            "test-law",
+            "--confirmation",
+            str(output / "confirmation.json"),
+            "--output",
+            str(completed),
+        ],
+    )
+    main()
+    artifact = json.loads((completed / "submission.json").read_text())
+    assert (
+        artifact["confirmation"] and artifact["status"] == "unverified" and not artifact["trusted"]
+    )
+    assert registry.read_bytes() == original
+
+
+def test_attestation_cannot_be_injected_as_registry_trust(registry):
+    source = self_asserted_registry(registry)
+    payload = json.loads(SourceRegistry(sources=[source]).model_dump_json())
+    payload["trusted_confirmation"] = {"status": "current_confirmed", "authenticated": True}
+    registry.write_text(json.dumps(payload))
+    with pytest.raises(ValidationError):
+        load_registry(registry)

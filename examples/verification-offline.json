@@ -1,9 +1,9 @@
 {
   "schema_version": "0.4",
   "mode": "offline",
-  "started_at": "2026-10-09T12:03:20.143401Z",
-  "stage_one_packet_sha256": "9def3dc9fc39766178b6478c9041e746c8a7302bb72cf72f133686cd2ed94d2f",
-  "stage_two_packet_sha256": "f157c46d7e4acdcde5f5b7d650f86e063367e82eafd8cf15f40e9ad8484b1d26",
+  "started_at": "2026-10-09T12:39:32.876873Z",
+  "stage_one_packet_sha256": "797188d928f4b36731b71a5720155baa6178e3a5696a643bc1aecf196d3d4fdb",
+  "stage_two_packet_sha256": "28e4d2756cb1334ff67093ca2154afd63550534867f48d1cd14b304c8ee09032",
   "stage_one_result_sha256": "ba98acbbb30ac9340e7267eea3112eca09253e078a34be20d6448bd07ec11341",
   "collector_manifest_sha256": "8fb7c0165afb118226fef8de60493950ebed4e06c9328e3e1fd5fa2c74f0ba0d",
   "registry_sha256": "8f518af71f92988094fff0089b65e7470bf2cb24883004c485710a89051838a8",
@@ -64,7 +64,10 @@
       "revision": "Не проверена",
       "status": "unverified",
       "reasons": [
-        "No fresh human review of official text and revision provenance"
+        "No authenticated source attestation; registry JSON cannot establish trust",
+        "Norm text not supplied",
+        "Claimed review date missing or in future",
+        "Claimed revision effective date unknown"
       ],
       "source_url": "https://pravo.gov.ru/",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -75,7 +78,10 @@
       "revision": "Не проверена",
       "status": "unverified",
       "reasons": [
-        "No fresh human review of official text and revision provenance"
+        "No authenticated source attestation; registry JSON cannot establish trust",
+        "Norm text not supplied",
+        "Claimed review date missing or in future",
+        "Claimed revision effective date unknown"
       ],
       "source_url": "https://pravo.gov.ru/",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -86,7 +92,10 @@
       "revision": "Не проверена",
       "status": "unverified",
       "reasons": [
-        "No fresh human review of official text and revision provenance"
+        "No authenticated source attestation; registry JSON cannot establish trust",
+        "Norm text not supplied",
+        "Claimed review date missing or in future",
+        "Claimed revision effective date unknown"
       ],
       "source_url": "https://pravo.gov.ru/",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -97,7 +106,10 @@
       "revision": "Не проверена",
       "status": "unverified",
       "reasons": [
-        "No fresh human review of official text and revision provenance"
+        "No authenticated source attestation; registry JSON cannot establish trust",
+        "Norm text not supplied",
+        "Claimed review date missing or in future",
+        "Claimed revision effective date unknown"
       ],
       "source_url": "https://pravo.gov.ru/",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -157,7 +169,7 @@
     "Heuristic screening cannot guarantee absence of personal or sensitive data; human review required",
     "Text-review completeness is not legal certainty or whole-site coverage",
     "PDF images/layout not visually reviewed; quoted text occurrence is not semantic proof",
-    "Local human attestations are trusted inputs, not authenticated signatures",
+    "Finding reviews are unauthenticated; source review submissions never establish trust",
     "No automatic live legal-source verification; LLM cannot verify norm currency",
     "Empty findings never establish full legal compliance",
     "Offline placeholders perform no legal search"
@@ -166,11 +178,11 @@
     {
       "stage": "independent",
       "model": "offline/verifier",
-      "started_at": "2026-10-09T12:03:20.150916Z",
-      "duration_seconds": 0.00019275699924037326,
+      "started_at": "2026-10-09T12:39:32.880197Z",
+      "duration_seconds": 0.00015728300058981404,
       "prompt_version": "independent-v1",
-      "prompt_sha256": "1198f9a30c68cfcdd5ba926f541a14e405abcd9bd87edec898e18fa0160b322b",
-      "packet_sha256": "9def3dc9fc39766178b6478c9041e746c8a7302bb72cf72f133686cd2ed94d2f",
+      "prompt_sha256": "c76d9c245a171e4040c617f5646a9d60b400d7be4ca14bf6b911265349ad2687",
+      "packet_sha256": "797188d928f4b36731b71a5720155baa6178e3a5696a643bc1aecf196d3d4fdb",
       "attempt": 1,
       "request_sent": false,
       "status": "success",
@@ -185,11 +197,11 @@
     {
       "stage": "comparison",
       "model": "offline/verifier",
-      "started_at": "2026-10-09T12:03:20.670979Z",
-      "duration_seconds": 0.00017134799963969272,
+      "started_at": "2026-10-09T12:39:33.128621Z",
+      "duration_seconds": 0.00015516999883402605,
       "prompt_version": "comparison-v1",
-      "prompt_sha256": "77efc508145e2bdab5fac645e5eb52fab126e9776951d5defe61bafb8359306d",
-      "packet_sha256": "f157c46d7e4acdcde5f5b7d650f86e063367e82eafd8cf15f40e9ad8484b1d26",
+      "prompt_sha256": "bc306251659c224aa9cc9c60e26738b3e72631293e1e33f05c0569b4fc71c058",
+      "packet_sha256": "28e4d2756cb1334ff67093ca2154afd63550534867f48d1cd14b304c8ee09032",
       "attempt": 1,
       "request_sent": false,
       "status": "success",

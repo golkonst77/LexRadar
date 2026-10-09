@@ -108,7 +108,7 @@ def _report(
             LIMITATION,
             "Text-review completeness is not legal certainty or whole-site coverage",
             "PDF images/layout not visually reviewed; quoted text occurrence is not semantic proof",
-            "Local human attestations are trusted inputs, not authenticated signatures",
+            "Finding reviews are unauthenticated; source review submissions never establish trust",
             "No automatic live legal-source verification; LLM cannot verify norm currency",
             "Empty findings never establish full legal compliance",
             "Offline placeholders perform no legal search"

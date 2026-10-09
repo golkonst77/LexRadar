@@ -35,43 +35,31 @@ def load_registry(path: Path) -> tuple[SourceRegistry, str]:
 def assess(source: LegalSource, period: date, now: datetime, recheck_days: int) -> NormAssessment:
     reasons = []
     status = "unverified"
-    trusted = (
-        source.verification_method == "human_official_review"
-        and source.source_url.scheme == "https"
-        and source.source_url.host in OFFICIAL_HOSTS
-        and source.source_url.port == 443
-        and digest(source.norm_text) == source.text_sha256
-        and source.source_url.username is None
-        and source.source_url.password is None
-        and bool(source.reviewer and source.reviewer.strip())
-        and bool(source.revision_check_basis and source.revision_check_basis.strip())
-        and bool(source.norm_text.strip())
-        and source.checked_at is not None
-        and source.checked_at <= now
-        and now - source.checked_at <= timedelta(days=recheck_days)
-    )
+    # Registry fields are self-assertions. MVP has no authenticated trust provider.
+    # URL allowlisting and a local hash verify syntax/integrity, not official provenance.
     if source.status == "unavailable":
         status = "unavailable"
-        reasons.append("Source unavailable; no legal confirmation")
-    elif not trusted:
-        reasons.append("No fresh human review of official text and revision provenance")
-    elif source.effective_from is None:
-        reasons.append("Revision effective date unknown")
-    elif period < source.effective_from:
-        reasons.append("Revision not effective in examined period")
-    elif source.effective_until and period > source.effective_until:
-        status = "repealed"
-        reasons.append("Revision no longer effective in examined period")
-    elif source.status == "repealed" and not source.effective_until:
-        status = "repealed"
-        reasons.append("Human-reviewed source marked repealed; select correct historical revision")
-    elif source.status in {"verified_current", "repealed"}:
-        status = "current_confirmed"
-        reasons.append(
-            "Local human attestation of official revision; applicability assessed separately"
-        )
+        reasons.append("Declared source unavailable; no legal confirmation")
     else:
-        reasons.append("Source found but revision not confirmed")
+        reasons.append("No authenticated source attestation; registry JSON cannot establish trust")
+    if source.source_url.scheme != "https" or source.source_url.host not in OFFICIAL_HOSTS:
+        reasons.append("Declared URL is not an approved official HTTPS source")
+    if digest(source.norm_text) != source.text_sha256:
+        reasons.append("Local text hash mismatch")
+    if not source.norm_text.strip():
+        reasons.append("Norm text not supplied")
+    if source.checked_at is None or source.checked_at > now:
+        reasons.append("Claimed review date missing or in future")
+    elif now - source.checked_at > timedelta(days=recheck_days):
+        reasons.append("Claimed review is stale; repeat review required")
+    if source.effective_from is None:
+        reasons.append("Claimed revision effective date unknown")
+    elif period < source.effective_from:
+        reasons.append("Claimed revision not effective in examined period")
+    if source.effective_until and period > source.effective_until:
+        reasons.append("Claimed revision interval expired; repeal not independently confirmed")
+    if source.status == "repealed":
+        reasons.append("Claim of repeal is not independently authenticated")
     return NormAssessment(
         norm_id=source.id,
         revision=source.revision,
@@ -89,13 +77,16 @@ def assess_registry(
     result = {s.id: assess(s, period, now, recheck_days) for s in registry.sources}
     groups = {}
     for source in registry.sources:
-        if result[source.id].status == "current_confirmed":
+        if (
+            source.effective_from
+            and period >= source.effective_from
+            and (source.effective_until is None or period <= source.effective_until)
+        ):
             groups.setdefault((source.act_number, source.provision), []).append(source)
     for group in groups.values():
         if len({(s.revision, s.text_sha256) for s in group}) > 1:
             for source in group:
-                result[source.id].status = "unverified"
                 result[source.id].reasons.append(
-                    "Conflicting effective revisions; resolve interval/provenance"
+                    "Conflicting claimed effective revisions; resolve interval/provenance"
                 )
     return result

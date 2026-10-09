@@ -31,6 +31,8 @@ class VerifierConfig(AnalysisConfig):
 
 
 class LegalSource(Model):
+    """Untrusted registry claims, including review/status fields retained for compatibility."""
+
     id: str = Field(min_length=1, max_length=100)
     domain: Literal["personal_data", "medical", "consumer", "paid_medical", "other"]
     act_name: str = Field(min_length=1, max_length=500)
