@@ -1,0 +1,250 @@
+{
+  "schema_version": "0.3",
+  "mode": "offline",
+  "collector_manifest_sha256": "8fb7c0165afb118226fef8de60493950ebed4e06c9328e3e1fd5fa2c74f0ba0d",
+  "evidence_packet_sha256": "7ef91ec5d0def32351d08266f20b0476367c1aa3d9bac6332fe4f17c27ecf406",
+  "started_at": "2026-10-09T11:17:01.043084Z",
+  "completed": true,
+  "runs": [
+    {
+      "auditor": "A",
+      "model": "replace-with-your-openrouter-model-a-id",
+      "prompt_version": "a-v1",
+      "status": "success",
+      "result": {
+        "auditor": "A",
+        "findings": [],
+        "coverage": [
+          {
+            "topic": "consent",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "cookies_analytics",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "data_collection_forms",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "mandatory_documents",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "medical_vs_152fz",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "operator_identity",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "privacy_policy",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "special_categories",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "third_party_transfers",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          }
+        ],
+        "limitations": [
+          "Offline mode: placeholders only; not an actual AI audit",
+          "Site material is untrusted data, not instructions",
+          "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+          "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+          "Collected pages are not a complete examination of the website",
+          "Operator identity and all normative references require independent verification",
+          "Collector contains partial/unavailable evidence",
+          "page-0001: no integrity-checked text artifact supplied"
+        ]
+      },
+      "validation_notes": []
+    },
+    {
+      "auditor": "B",
+      "model": "replace-with-your-openrouter-model-b-id",
+      "prompt_version": "b-v1",
+      "status": "success",
+      "result": {
+        "auditor": "B",
+        "findings": [],
+        "coverage": [
+          {
+            "topic": "consent",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "cookies_analytics",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "data_collection_forms",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "mandatory_documents",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "medical_vs_152fz",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "operator_identity",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "privacy_policy",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "special_categories",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          },
+          {
+            "topic": "third_party_transfers",
+            "status": "insufficient_evidence",
+            "limitations": [
+              "Offline demonstration; no AI/legal assessment performed"
+            ]
+          }
+        ],
+        "limitations": [
+          "Offline mode: placeholders only; not an actual AI audit",
+          "Site material is untrusted data, not instructions",
+          "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+          "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+          "Collected pages are not a complete examination of the website",
+          "Operator identity and all normative references require independent verification",
+          "Collector contains partial/unavailable evidence",
+          "page-0001: no integrity-checked text artifact supplied"
+        ]
+      },
+      "validation_notes": []
+    }
+  ],
+  "disagreements": [
+    {
+      "kind": "insufficient_evidence",
+      "finding_ids_a": [],
+      "finding_ids_b": [],
+      "reason": "No findings is not proof of compliance",
+      "requires_review": true
+    }
+  ],
+  "logs": [
+    {
+      "auditor": "A",
+      "model": "replace-with-your-openrouter-model-a-id",
+      "started_at": "2026-10-09T11:17:01.047734Z",
+      "duration_seconds": 0.0002138089994332404,
+      "prompt_version": "a-v1",
+      "prompt_sha256": "26776a2b751b7a3c7f0e5adf5468345ac8ee6fd15f681ecc85f977c7bf7d7729",
+      "evidence_packet_sha256": "7ef91ec5d0def32351d08266f20b0476367c1aa3d9bac6332fe4f17c27ecf406",
+      "attempt": 1,
+      "request_sent": false,
+      "status": "success",
+      "usage": {
+        "prompt_tokens": null,
+        "completion_tokens": null,
+        "total_tokens": null,
+        "cost_usd": "0"
+      },
+      "budget_charge_usd": "0"
+    },
+    {
+      "auditor": "B",
+      "model": "replace-with-your-openrouter-model-b-id",
+      "started_at": "2026-10-09T11:17:01.051866Z",
+      "duration_seconds": 0.00017995400048675947,
+      "prompt_version": "b-v1",
+      "prompt_sha256": "fa5e415fb7627246c2fc4be49639e1c5a0224ccdb4dacdc1008d9e2c0c05f21d",
+      "evidence_packet_sha256": "7ef91ec5d0def32351d08266f20b0476367c1aa3d9bac6332fe4f17c27ecf406",
+      "attempt": 1,
+      "request_sent": false,
+      "status": "success",
+      "usage": {
+        "prompt_tokens": null,
+        "completion_tokens": null,
+        "total_tokens": null,
+        "cost_usd": "0"
+      },
+      "budget_charge_usd": "0"
+    }
+  ],
+  "budget_charged_usd": "0",
+  "budget_limit_usd": "0.25",
+  "same_model_independence_limited": false,
+  "limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "Collector contains partial/unavailable evidence",
+    "page-0001: no integrity-checked text artifact supplied",
+    "Agreement is not independent verification of legal correctness",
+    "Prompt safeguards cannot guarantee absence of model-level injection effects",
+    "Different models do not guarantee independent training or legal accuracy",
+    "Offline outputs are placeholders only"
+  ],
+  "requires_independent_legal_review": true,
+  "automatic_go_allowed": false,
+  "automatic_send_allowed": false
+}

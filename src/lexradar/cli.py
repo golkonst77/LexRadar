@@ -9,6 +9,58 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "analyze":
+        from .auditors.models import AnalysisConfig
+        from .auditors.orchestrator import analyze
+        from .auditors.provider import ProviderError
+
+        parser = argparse.ArgumentParser(
+            description="Independent review of a saved Collector dossier"
+        )
+        parser.add_argument("dossier", type=Path)
+        parser.add_argument("--output", type=Path, required=True)
+        parser.add_argument("--mode", choices=("offline", "openrouter"), default="offline")
+        parser.add_argument("--config", type=Path)
+        parser.add_argument("--allow-external-transfer", action="store_true")
+        args = parser.parse_args(sys.argv[2:])
+        if args.mode == "openrouter" and (not args.config or not args.allow_external_transfer):
+            parser.error("OpenRouter requires --config and --allow-external-transfer")
+        try:
+            if args.config:
+                config = AnalysisConfig.model_validate_json(args.config.read_text(encoding="utf-8"))
+            else:
+                config = AnalysisConfig.model_validate(
+                    {
+                        "auditor_a": {
+                            "model": "offline/a",
+                            "prompt_price_cap": 1,
+                            "completion_price_cap": 1,
+                        },
+                        "auditor_b": {
+                            "model": "offline/b",
+                            "prompt_price_cap": 1,
+                            "completion_price_cap": 1,
+                        },
+                        "max_budget_usd": 1,
+                    }
+                )
+        except (ValueError, OSError):
+            parser.error("Invalid or unreadable analysis configuration")
+        try:
+            report = analyze(
+                args.dossier,
+                args.output,
+                config,
+                mode=args.mode,
+                allow_external_transfer=args.allow_external_transfer,
+            )
+        except (ValueError, PermissionError, OSError, ProviderError) as exc:
+            # No input contents or credentials in CLI errors.
+            parser.error(f"Analysis preflight failed ({type(exc).__name__})")
+        print(f"Analysis mode: {report.mode}; independent legal review required")
+        if not report.completed:
+            parser.exit(1, "One or both auditors did not complete; review analysis.json\n")
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "collect":
         from .collector import Limits, collect
 
