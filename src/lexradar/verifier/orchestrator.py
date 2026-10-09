@@ -78,8 +78,11 @@ def _report(
         ],
         completeness=completeness(prepared.materials),
         confirmed_problem_ids=[f.candidate.id for f in independent if f.status == "verified_issue"],
-        potential_problem_ids=[
-            f.candidate.id for f in independent if f.status == "potential_issue"
+        potential_problem_ids=[f.candidate.id for f in independent if f.status == "potential_issue"]
+        + [
+            f"{a.proposal.auditor}:{a.proposal.finding_id}"
+            for a in assessments
+            if a.status == "potential_issue" and a.duplicate_of is None
         ],
         rejected_hypothesis_ids=[f.candidate.id for f in independent if f.status == "rejected"]
         + [
@@ -88,7 +91,12 @@ def _report(
             if a.status == "rejected"
         ],
         recommendations=list(
-            dict.fromkeys(check for f in independent for check in f.additional_checks)
+            dict.fromkeys(
+                [
+                    *(check for f in independent for check in f.additional_checks),
+                    *(check for a in assessments for check in a.additional_checks),
+                ]
+            )
         )
         + [
             "Review unread public materials and operator applicability; "

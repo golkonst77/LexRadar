@@ -231,6 +231,15 @@ def compare_results(
     seen = {}
     period = prepared.packet.data.started_at.date()
     normative = assess_registry(prepared.registry, period, now, config.legal_recheck_days)
+    assertions = {}
+    for original in all_findings.values():
+        key = (
+            original.topic,
+            original.claim_code,
+            original.subject,
+            tuple(sorted(original.evidence_ids)),
+        )
+        assertions.setdefault(key, set()).add(original.fact_assertion)
     for proposal in proposals.assessments:
         original = all_findings[(proposal.auditor, proposal.finding_id)]
         if not set(proposal.matched_independent_ids) <= own.keys():
@@ -241,6 +250,14 @@ def compare_results(
             if _same_claim(original, own[fid].candidate)
         ]
         reasons = [proposal.reason, "A/B/Verifier agreement alone cannot confirm a violation"]
+        assertion_key = (
+            original.topic,
+            original.claim_code,
+            original.subject,
+            tuple(sorted(original.evidence_ids)),
+        )
+        if {"present", "absent"} <= assertions[assertion_key]:
+            reasons.append("A/B factual contradiction requires independent review; not a duplicate")
         norms = [
             normative[s.id]
             for basis in original.normative_basis
@@ -314,6 +331,11 @@ def compare_results(
             original.claim_code,
             original.subject,
             tuple(sorted(original.evidence_ids)),
+            original.fact_assertion,
+            original.legal_position,
+            original.fact,
+            original.legal_interpretation,
+            tuple(sorted((b.act_id, b.provision, b.requirement) for b in original.normative_basis)),
         )
         duplicate = seen.get(key)
         reference = f"{proposal.auditor}:{proposal.finding_id}"
@@ -323,8 +345,18 @@ def compare_results(
             seen[key] = reference
         assessed.append(
             AuditAssessment(
+                original_finding=original.model_copy(deep=True),
                 proposal=proposal,
                 status=status,
+                applicability="confirmed"
+                if status == "verified_issue"
+                else "not_applicable"
+                if any(f.applicability == "not_applicable" for f in matches)
+                else "unestablished",
+                additional_checks=[
+                    *original.additional_checks,
+                    "Review contradictions, law revision and operator applicability",
+                ],
                 reasons=reasons,
                 normative_assessments=norms,
                 duplicate_of=duplicate,

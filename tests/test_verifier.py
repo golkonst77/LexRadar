@@ -1022,3 +1022,41 @@ def test_wrong_auditor_source_blocks_comparison(dossier, registry, config, tmp_p
     path.write_text(json.dumps(raw))
     with pytest.raises(ValueError, match="Unsupported auditor source"):
         load_analysis(path, prepared.packet)
+
+
+def test_potential_index_includes_unresolved_auditor_hypothesis(
+    dossier, registry, config, tmp_path
+):
+    raw_a, raw_b = auditor_response("A"), auditor_response("B")
+    for raw in [raw_a, raw_b]:
+        raw["findings"][0]["fact_assertion"] = "present"
+    analysis = prior_analysis(dossier, config, tmp_path, [raw_a, raw_b])
+    one = tmp_path / "one"
+    start(dossier[0], registry, one, config, provider=Scripted(findings=[]))
+    report = finish(
+        dossier[0], registry, one, analysis, tmp_path / "two", config, provider=Scripted()
+    )
+    assert report.potential_problem_ids == ["A:f1"]
+    assert (
+        report.auditor_assessments[0].original_finding.normative_basis[0].actuality_status
+        == "unverified"
+    )
+    assert report.auditor_assessments[0].additional_checks
+    assert report.auditor_assessments[1].duplicate_of == "A:f1"
+
+
+def test_opposite_auditor_assertions_are_not_duplicates(dossier, registry, config, tmp_path):
+    raw_a, raw_b = auditor_response("A"), auditor_response("B")
+    raw_a["findings"][0]["fact_assertion"] = "present"
+    raw_b["findings"][0]["fact_assertion"] = "absent"
+    analysis = prior_analysis(dossier, config, tmp_path, [raw_a, raw_b])
+    one = tmp_path / "one"
+    start(dossier[0], registry, one, config, provider=Scripted(findings=[]))
+    report = finish(
+        dossier[0], registry, one, analysis, tmp_path / "two", config, provider=Scripted()
+    )
+    assert all(a.duplicate_of is None for a in report.auditor_assessments)
+    assert all(
+        any("contradiction" in reason for reason in a.reasons) for a in report.auditor_assessments
+    )
+    assert report.potential_problem_ids == ["A:f1"]

@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import AwareDatetime, Field, HttpUrl, model_validator
 
-from ..auditors.models import AnalysisConfig, ModelSettings, Topic, Usage
+from ..auditors.models import AIFinding, AnalysisConfig, ModelSettings, Topic, Usage
 from ..models import Model, Signal
 
 Status = Literal[
@@ -216,7 +216,10 @@ class ComparisonResult(Model):
 
 
 class AuditAssessment(Model):
+    original_finding: AIFinding
     proposal: AssessmentProposal
+    applicability: Literal["confirmed", "not_applicable", "unestablished"] = "unestablished"
+    additional_checks: list[str] = Field(default_factory=list)
     status: Status
     reasons: list[str]
     normative_assessments: list[NormAssessment]
