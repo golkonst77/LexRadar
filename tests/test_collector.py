@@ -195,6 +195,8 @@ def test_invalid_urls(url):
         "::1",
         "fc00::1",
         "0.0.0.0",
+        "224.0.0.1",
+        "ff02::1",
     ],
 )
 def test_ssrf_addresses(monkeypatch, ip):

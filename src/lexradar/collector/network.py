@@ -64,7 +64,12 @@ class AddressPolicy:
         if isinstance(addresses, OSError):
             raise CollectionError("DNS resolution failed") from addresses
         ips = sorted({item[4][0] for item in addresses})
-        if not ips or any(not ipaddress.ip_address(ip).is_global for ip in ips):
+        if not ips or any(
+            not ipaddress.ip_address(ip).is_global
+            or ipaddress.ip_address(ip).is_multicast
+            or ipaddress.ip_address(ip).is_reserved
+            for ip in ips
+        ):
             raise CollectionError("Non-public address blocked")
         return ips[0]
 
