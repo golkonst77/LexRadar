@@ -10,6 +10,7 @@ from playwright.sync_api import Error as BrowserError
 from playwright.sync_api import sync_playwright
 
 from .artifacts import ArtifactStore, verify_integrity
+from .crawl import CrawlOptions, CrawlSession
 from .extract import DOCUMENT_EXTENSIONS, DOM_SCRIPT, categories, entities
 from .models import (
     CollectedEvidence,
@@ -47,20 +48,34 @@ def finalize_evidence(evidence: CollectedEvidence) -> None:
 
 
 def collect(
-    url: str, output: Path, limits: Limits | None = None, *, fetcher: Fetcher | None = None
+    url: str,
+    output: Path,
+    limits: Limits | None = None,
+    *,
+    fetcher: Fetcher | None = None,
+    crawl_options: CrawlOptions | None = None,
 ) -> CollectionResult:
     limits = limits or Limits()
     url = canonical_url(url)
     allowed = origin(url)
     store = ArtifactStore(output, limits)
-    fetcher = fetcher or Fetcher(limits)
+    session = CrawlSession(fetcher or Fetcher(limits), url, store.root, crawl_options)
+    try:
+        return _collect(url, limits, allowed, store, session)
+    except BaseException:
+        session.finish("collector_error")
+        raise
+
+
+def _collect(url, limits, allowed, store, session):
     result = CollectionResult(target_url=url, started_at=now(), limits=limits)
     queue = deque([url])
     seen = {url}
     document_urls = set()
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
-            executable_path=os.environ.get("LEXRADAR_CHROMIUM_PATH")
+            executable_path=os.environ.get("LEXRADAR_CHROMIUM_PATH"),
+            timeout=min(30, session.remaining()) * 1000,
         )
         context = browser.new_context(
             java_script_enabled=False,
@@ -70,6 +85,10 @@ def collect(
         )
         try:
             while queue and len(result.pages) < limits.max_pages:
+                try:
+                    session.check()
+                except CollectionError:
+                    break
                 current = queue.popleft()
                 eid = f"page-{len(result.pages) + 1:04d}"
                 timestamp = now()
@@ -88,7 +107,7 @@ def collect(
                 result.pages.append(page_record)
                 page = None
                 try:
-                    response = fetcher.get(current, allowed)
+                    response = session.get(current, allowed)
                     evidence.source = response.url
                     evidence.captured_at = now()
                     page_record.captured_at = evidence.captured_at
@@ -103,7 +122,9 @@ def collect(
                     except (CollectionError, OSError) as exc:
                         evidence.collection_errors.append(f"html: {str(exc)[:300]}")
                     page = context.new_page()
-                    page.set_default_timeout(limits.timeout_seconds * 1000)
+                    page.set_default_timeout(
+                        min(limits.timeout_seconds, session.remaining()) * 1000
+                    )
                     # Only this one main navigation is fulfilled; every subrequest is aborted.
                     served = False
 
@@ -142,11 +163,19 @@ def collect(
                         ),
                     ):
                         try:
+                            page.set_default_timeout(
+                                min(limits.timeout_seconds, session.remaining()) * 1000
+                            )
                             evidence.artifacts.append(capture())
                         except (CollectionError, BrowserError, OSError) as exc:
                             evidence.collection_errors.append(f"{stage}: {str(exc)[:300]}")
                     result.entities.extend(entities(page_record.text, response.url))
                     for index, form in enumerate(dom["forms"]):
+                        if session.stop_reason:
+                            break
+                        page.set_default_timeout(
+                            min(limits.timeout_seconds, session.remaining()) * 1000
+                        )
                         links = form.pop("links")
                         observation = FormObservation(
                             page_url=response.url,
@@ -218,6 +247,10 @@ def collect(
     if len(pdf_urls) > limits.max_documents:
         result.warnings.append("PDF download limit reached")
     for current in pdf_urls[: limits.max_documents]:
+        try:
+            session.check()
+        except CollectionError:
+            break
         eid = f"document-{len(result.documents) + 1:04d}"
         evidence = CollectedEvidence(
             id=eid,
@@ -231,7 +264,7 @@ def collect(
         result.evidence.append(evidence)
         result.documents.append(document)
         try:
-            response = fetcher.get(current, allowed)
+            response = session.get(current, allowed)
             evidence.source = response.url
             evidence.captured_at = now()
             document.final_url = response.url
@@ -247,7 +280,9 @@ def collect(
             evidence.available = True
             evidence.unavailable_reason = None
             document.text, document.extraction_status, document.extraction_reason = extract_pdf(
-                store.root / artifact.path, limits.max_pdf_pages, limits.timeout_seconds
+                store.root / artifact.path,
+                limits.max_pdf_pages,
+                min(limits.timeout_seconds, session.remaining()),
             )
             if document.extraction_status == "failed":
                 evidence.collection_errors.append(
@@ -257,6 +292,15 @@ def collect(
             evidence.collection_errors.append(str(exc)[:500])
         finally:
             finalize_evidence(evidence)
+    summary = session.finish(
+        "page_limit"
+        if queue
+        else "document_limit"
+        if len(pdf_urls) > limits.max_documents
+        else "queue_exhausted"
+    )
+    if session.stop_reason:
+        result.warnings.append("Crawl stopped: " + summary["stop_reason"])
     result.warnings.extend(verify_integrity(result, store.root))
     result = CollectionResult.model_validate(result.model_dump())
     (store.root / "collection.json").write_text(

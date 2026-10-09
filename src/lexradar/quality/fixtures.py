@@ -18,11 +18,28 @@ class FixtureFetcher:
         self.site = site
         self.calls = []
 
-    def get(self, url, allowed_origin):
+    def get(
+        self,
+        url,
+        allowed_origin,
+        *,
+        before_request=None,
+        on_event=None,
+        allow_redirects=True,
+        max_file_bytes=None,
+    ):
         if origin(url) != origin("https://benchmark.example/") or allowed_origin != origin(url):
             raise CollectionError("Synthetic transport accepts fixture origin only")
+        if before_request:
+            before_request(url)
+        if on_event:
+            on_event("request_sent", url)
         path = urlsplit(url).path
         self.calls.append(url)
+        if path == "/robots.txt":
+            if on_event:
+                on_event("http_response", url, 200)
+            return Response(url, 200, "text/plain", b"User-agent: LexRadar\nDisallow:\n")
         item = self.site["routes"].get(path)
         if item is None:
             raise CollectionError("Unknown synthetic route")
@@ -32,6 +49,8 @@ class FixtureFetcher:
             content, mime = pdf_bytes(item["pdf_pages"]), "application/pdf"
         else:
             content, mime = item["html"].encode(), "text/html; charset=utf-8"
+        if on_event:
+            on_event("http_response", url, item.get("status", 200))
         return Response(url, item.get("status", 200), mime, content)
 
 

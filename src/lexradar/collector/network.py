@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from urllib.parse import quote, urldefrag, urljoin, urlsplit, urlunsplit
 
 from .models import Limits
+from .robots import USER_AGENT
 
 
 class CollectionError(Exception):
@@ -127,14 +128,33 @@ class Fetcher:
         self.policy = policy or AddressPolicy(limits.timeout_seconds)
         self.received = 0
 
-    def get(self, url: str, allowed_origin: tuple[str, str, int]) -> Response:
+    def get(
+        self,
+        url: str,
+        allowed_origin: tuple[str, str, int],
+        *,
+        before_request=None,
+        on_event=None,
+        allow_redirects=True,
+        max_file_bytes=None,
+    ) -> Response:
         if self.received >= self.limits.max_total_bytes:
             raise CollectionError("Total download limit exceeded")
+        file_limit = min(self.limits.max_file_bytes, max_file_bytes or self.limits.max_file_bytes)
         deadline = time.monotonic() + self.limits.timeout_seconds
         current = canonical_url(url)
         for step in range(self.limits.max_redirects + 1):
             if origin(current) != allowed_origin:
+                if on_event:
+                    on_event("navigation_blocked", current)
                 raise CollectionError("Cross-origin navigation blocked")
+            if before_request:
+                began = time.monotonic()
+                remaining_crawl = before_request(current)
+                # Pacing is charged to the crawl deadline, not to the HTTP I/O timeout.
+                deadline += time.monotonic() - began
+                if remaining_crawl is not None:
+                    deadline = min(deadline, time.monotonic() + remaining_crawl)
             p = urlsplit(current)
             host, port = p.hostname, origin(current)[2]
             # Do not silently bypass an environment's mandatory egress proxy.
@@ -165,16 +185,24 @@ class Fetcher:
                     "GET",
                     urlunsplit(("", "", p.path or "/", p.query, "")),
                     headers={
-                        "User-Agent": "LexRadar/0.2 (bounded evidence collector)",
+                        "User-Agent": USER_AGENT,
                         "Accept-Encoding": "identity",
                     },
                 )
+                if on_event:
+                    on_event("request_sent", current)
                 response = connection.getresponse()
+                if on_event:
+                    on_event("http_response", current, response.status)
                 if response.status in {301, 302, 303, 307, 308}:
+                    if not allow_redirects:
+                        raise CollectionError("Robots redirect refused; target not requested")
                     location = response.getheader("Location")
                     if not location or step == self.limits.max_redirects:
                         raise CollectionError("Redirect limit or missing Location")
                     current = canonical_url(urljoin(current, location))
+                    if on_event:
+                        on_event("redirect_target", current)
                     continue
                 if response.getheader("Content-Encoding", "identity").lower() != "identity":
                     raise CollectionError("Encoded response unsupported")
@@ -187,7 +215,7 @@ class Fetcher:
                 declared = lengths[0] if lengths else None
                 if declared is not None and not re.fullmatch(r"[0-9]+", declared):
                     raise CollectionError("Invalid Content-Length")
-                if declared is not None and int(declared) > self.limits.max_file_bytes:
+                if declared is not None and int(declared) > file_limit:
                     raise CollectionError("File size limit exceeded")
                 if declared is not None and int(declared) > (
                     self.limits.max_total_bytes - self.received
@@ -203,7 +231,7 @@ class Fetcher:
                     chunk = response.read1(
                         min(
                             65536,
-                            self.limits.max_file_bytes + 1 - len(body),
+                            file_limit + 1 - len(body),
                             self.limits.max_total_bytes + 1 - self.received,
                         )
                     )
@@ -211,7 +239,7 @@ class Fetcher:
                         break
                     body.extend(chunk)
                     self.received += len(chunk)
-                    if len(body) > self.limits.max_file_bytes:
+                    if len(body) > file_limit:
                         raise CollectionError("File size limit exceeded")
                     if self.received > self.limits.max_total_bytes:
                         raise CollectionError("Total download limit exceeded")
