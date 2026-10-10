@@ -1,3 +1,5 @@
+"""Legacy/demo compatibility and permanent sending prohibition."""
+
 import json
 from pathlib import Path
 

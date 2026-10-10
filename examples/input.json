@@ -1,4 +1,5 @@
 {
+  "input_scope": "legacy_demo",
   "target": {
     "id": "demo",
     "url": "https://clinic.example/",

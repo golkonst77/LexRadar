@@ -1,6 +1,10 @@
 {
+  "report_scope": "legacy_demo",
+  "production_go_allowed": false,
+  "client_release_allowed": false,
   "schema_version": "0.1",
   "dossier": {
+    "input_scope": "legacy_demo",
     "target": {
       "id": "demo",
       "url": "https://clinic.example/",
@@ -87,6 +91,9 @@
     }
   },
   "decision": {
+    "decision_scope": "legacy_demo",
+    "production_go_allowed": false,
+    "client_release_allowed": false,
     "outcome": "GO",
     "reasons": [
       "material_finding_independently_and_human_verified"
@@ -97,8 +104,9 @@
     "rules_version": "0.1",
     "requires_human_approval": true
   },
-  "client_message_draft": "Черновик для проверки человеком. Предлагаем обсудить результаты юридико-технического аудита и возможные меры по устранению подтверждённых вопросов. Основания и доказательства приведены во внутреннем досье.",
+  "client_message_draft": "DEMO/LEGACY — НЕ ДЛЯ ОТПРАВКИ КЛИЕНТУ. Черновик для проверки человеком. Предлагаем обсудить результаты юридико-технического аудита и возможные меры по устранению подтверждённых вопросов. Основания и доказательства приведены во внутреннем досье.",
   "human_approval": {
+    "trust_status": "untrusted",
     "approved": false,
     "reviewer_id": null,
     "approved_at": null

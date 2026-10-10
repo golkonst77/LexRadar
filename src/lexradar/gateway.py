@@ -1,9 +1,9 @@
-"""Pure, deterministic rules; confidence never promotes a finding to GO."""
+"""Legacy/demo rules only. A demo GO never permits production legal/client release."""
 
 from .models import AuditInput, FindingStatus, GatewayDecision, Outcome, Signal
 
 
-def decide(data: AuditInput) -> GatewayDecision:
+def decide_demo(data: AuditInput) -> GatewayDecision:
     def result(outcome, reason, ids=()):
         return GatewayDecision(outcome=outcome, reasons=[reason], eligible_finding_ids=list(ids))
 
@@ -67,3 +67,7 @@ def decide(data: AuditInput) -> GatewayDecision:
     if potential:
         return result(Outcome.NURTURE, "insufficient_support_for_categorical_claim")
     return result(Outcome.NURTURE, "no_confirmed_violation_no_outreach_basis")
+
+
+# Compatibility for v0.1 callers; returned scope and denied release cannot be changed.
+decide = decide_demo

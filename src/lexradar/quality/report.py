@@ -65,6 +65,8 @@ def write_html(root: Path, expert_path=None):
         "td,th{border:1px solid #ccc;padding:.4em;text-align:left}"
         "code{overflow-wrap:anywhere}</style>",
         "<h1>LexRadar: испытательный отчёт</h1>",
+        "<p>ТОЛЬКО СИНТЕТИЧЕСКИЕ/REPLAY ИСПЫТАНИЯ. Положительные эталонные метки не являются "
+        "юридическим GO или допуском клиентского текста.</p>",
         "<p>Эталонные сценарии и записанные ответы. Результаты не оценивают качество реальных LLM "
         "и не устанавливают юридическое соответствие сайта.</p>",
         "<p>Статус: "
@@ -89,6 +91,8 @@ def write_html(root: Path, expert_path=None):
             [
                 f"<h2>{_e(case.id)} ({_e(case.mode)})</h2>",
                 f"<p>{_e(case.situation)}</p>",
+                f"<p>Production decision: {_e(case.production_outcome or 'not evaluated')}; "
+                "клиентский допуск отсутствует.</p>",
                 f"<p>Досье: <code>{_e(case.dossier_sha256)}</code></p>",
                 "<table><tr><th>Проверка</th><th>Результат</th><th>Основание</th></tr>",
             ]

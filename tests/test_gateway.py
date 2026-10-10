@@ -1,3 +1,5 @@
+"""Legacy/demo v0.1 rules; any GO here is never a production client admission."""
+
 import pytest
 
 from lexradar.gateway import decide
