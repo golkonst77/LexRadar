@@ -4,6 +4,7 @@ import hashlib
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from .legal_cards import assess_card, read_local
 from .models import LegalSource, NormAssessment, SourceRegistry
 
 OFFICIAL_HOSTS = frozenset(
@@ -22,10 +23,9 @@ def digest(text: str) -> str:
 
 
 def load_registry(path: Path) -> tuple[SourceRegistry, str]:
-    if path.is_symlink() or path.stat().st_size > 6_000_000:
-        raise ValueError("Unsafe/oversized registry")
-    raw = path.read_text(encoding="utf-8")
+    raw = read_local(path).decode("utf-8")
     registry = SourceRegistry.model_validate_json(raw)
+    registry._source_root = path.absolute().parent
     for source in registry.sources:
         if digest(source.norm_text) != source.text_sha256:
             raise ValueError("Norm text hash mismatch")
@@ -75,6 +75,43 @@ def assess_registry(
     registry: SourceRegistry, period: date, now: datetime, recheck_days: int
 ) -> dict[str, NormAssessment]:
     result = {s.id: assess(s, period, now, recheck_days) for s in registry.sources}
+    for card in registry.cards:
+        assessment = assess_card(card, registry._source_root, period, now, recheck_days)
+        result[card.id] = NormAssessment(
+            norm_id=card.id,
+            revision=card.revision,
+            status="unverified",
+            reasons=assessment.reasons.copy(),
+            source_url=card.source_url,
+            text_sha256=card.text_sha256,
+            domain=card.domain,
+            card_assessment=assessment,
+        )
+    # Check all declared intervals, including overlaps outside the current event.
+    for index, card in enumerate(registry.cards):
+        for other in registry.cards[index + 1 :]:
+            if (card.act_id, card.provision) != (other.act_id, other.provision):
+                continue
+            if (card.source_kind, card.act_number, card.document_date) != (
+                other.source_kind,
+                other.act_number,
+                other.document_date,
+            ):
+                reason = "Conflicting identity metadata for declared act_id"
+            elif card.effective_from is None or other.effective_from is None:
+                reason = "Ambiguous revision selection: interval start unknown"
+            elif max(card.effective_from, other.effective_from) <= min(
+                card.effective_until or date.max, other.effective_until or date.max
+            ):
+                reason = "Conflicting overlapping declared revisions; no latest-revision fallback"
+            else:
+                continue
+            for current in (card, other):
+                record = result[current.id]
+                record.reasons.append(reason)
+                record.card_assessment.reasons.append(reason)
+                record.card_assessment.temporal_claim = "ambiguous"
+                record.card_assessment.technical_integrity = "invalid"
     groups = {}
     for source in registry.sources:
         if (

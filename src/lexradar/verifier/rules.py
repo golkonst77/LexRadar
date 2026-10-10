@@ -48,7 +48,7 @@ def normalize_independent(
     ):
         raise ValueError("Unique findings and all nine independent review directions required")
     materials = {m.evidence_id: m for m in prepared.materials}
-    sources = {s.id: s for s in prepared.registry.sources}
+    sources = {s.id: s for s in [*prepared.registry.sources, *prepared.registry.cards]}
     reviews = human_reviews or []
     hashes = [r.candidate_sha256 for r in reviews]
     if len(hashes) != len(set(hashes)):
@@ -127,6 +127,7 @@ def normalize_independent(
                 ]
             )
         assessments = [normative[nid] for nid in candidate.norm_ids]
+        reasons.extend(reason for assessment in assessments for reason in assessment.reasons)
         if not assessments or any(n.status != "current_confirmed" for n in assessments):
             reasons.append("Current applicable legal basis not fully confirmed")
             checks.append("Verify specific official revision and effective period")
@@ -272,10 +273,11 @@ def compare_results(
         norms = [
             normative[s.id]
             for basis in original.normative_basis
-            for s in prepared.registry.sources
+            for s in [*prepared.registry.sources, *prepared.registry.cards]
             if s.act_number == basis.act_id and s.provision == basis.provision
         ]
         status = "potential_issue"
+        reasons.extend(reason for norm in norms for reason in norm.reasons)
         invalid_material = any(
             not materials[eid].text_available or materials[eid].reading.provenance != "reproduced"
             for eid in original.evidence_ids
@@ -330,7 +332,7 @@ def compare_results(
             and all(
                 any(
                     s.act_number == basis.act_id and s.provision == basis.provision
-                    for s in prepared.registry.sources
+                    for s in [*prepared.registry.sources, *prepared.registry.cards]
                 )
                 for basis in original.normative_basis
             )
