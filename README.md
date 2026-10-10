@@ -69,6 +69,10 @@ Collector не подключён к Gateway, не формирует юриди
 
 ## Independent Legal Verifier
 
+Локальные карточки нормативных оснований и редакций: [workflow PR #9](docs/trusted-legal-sources.md).
+`lexradar legal-source prepare/check/review` проверяет сохранённый текст, цитаты и
+заявленные периоды, сохраняя unverified/untrusted и production HOLD.
+
 v0.4 сохраняет самостоятельный результат до чтения A/B, затем выполняет отдельное
 сопоставление. `lexradar verify` и `lexradar verify-compare` работают offline по умолчанию.
 [Архитектура, запуск, реестр норм, полнота и ограничения](docs/verifier.md).

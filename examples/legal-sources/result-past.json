@@ -1,0 +1,152 @@
+{
+  "registry_sha256": "1b4abec06fad55093ab9256d90bab48ab4396d412b57be5af5ef3abdd1ba30f2",
+  "event_date": "2025-06-01",
+  "status": "unverified",
+  "production_go_allowed": false,
+  "client_release_allowed": false,
+  "legal_research_completed": false,
+  "assessments": [
+    {
+      "norm_id": "synthetic-v1",
+      "revision": "Synthetic v1",
+      "status": "unverified",
+      "reasons": [
+        "Source origin and reviewer authentication unsupported; all declarations remain untrusted",
+        "Integrity, publication officiality, legal force, revision and applicability are distinct",
+        "SYNTHETIC; not official law",
+        "Origin unverified",
+        "Check timestamp missing or in future",
+        "Source category and declared lifecycle are not independently authenticated",
+        "Official-domain locator is a declaration, not verified content",
+        "Temporal result is conditional on unverified dates: within_declared_interval"
+      ],
+      "source_url": "https://pravo.gov.ru/synthetic-unverified-fixture",
+      "text_sha256": "f584edcc77d7ed99c648ee19ee19bcfed0f97d9060afb5a715492954aeacd893",
+      "domain": "other",
+      "card_assessment": {
+        "card_id": "synthetic-v1",
+        "event_date": "2025-06-01",
+        "technical_integrity": "consistent",
+        "saved_original_sha256": "f584edcc77d7ed99c648ee19ee19bcfed0f97d9060afb5a715492954aeacd893",
+        "hash_matches": true,
+        "exact_quote_present": true,
+        "authenticity": "unverified",
+        "revision_confirmation": "unverified",
+        "temporal_claim": "within_declared_interval",
+        "legal_force": "unverified",
+        "applicability": "unestablished",
+        "factual_violation": "unestablished",
+        "status": "unverified",
+        "trusted": false,
+        "production_go_allowed": false,
+        "reasons": [
+          "Source origin and reviewer authentication unsupported; all declarations remain untrusted",
+          "Integrity, publication officiality, legal force, revision and applicability are distinct",
+          "SYNTHETIC; not official law",
+          "Origin unverified",
+          "Check timestamp missing or in future",
+          "Source category and declared lifecycle are not independently authenticated",
+          "Official-domain locator is a declaration, not verified content",
+          "Temporal result is conditional on unverified dates: within_declared_interval"
+        ],
+        "binding_sha256": "eb271bfa0ee9ed70d71b135098d2d2456d4c733e5d5589f7481d209fb2729613"
+      }
+    },
+    {
+      "norm_id": "synthetic-v2",
+      "revision": "Synthetic v2",
+      "status": "unverified",
+      "reasons": [
+        "Source origin and reviewer authentication unsupported; all declarations remain untrusted",
+        "Integrity, publication officiality, legal force, revision and applicability are distinct",
+        "SYNTHETIC; not official law",
+        "Origin unverified",
+        "Check timestamp missing or in future",
+        "Source category and declared lifecycle are not independently authenticated",
+        "Official-domain locator is a declaration, not verified content",
+        "Temporal result is conditional on unverified dates: not_yet_effective"
+      ],
+      "source_url": "https://pravo.gov.ru/synthetic-unverified-fixture",
+      "text_sha256": "15e7a78b4bde01208c63b1d5468ab28f910aeb36d7f8f1fe7bea4d176b05b7de",
+      "domain": "other",
+      "card_assessment": {
+        "card_id": "synthetic-v2",
+        "event_date": "2025-06-01",
+        "technical_integrity": "consistent",
+        "saved_original_sha256": "15e7a78b4bde01208c63b1d5468ab28f910aeb36d7f8f1fe7bea4d176b05b7de",
+        "hash_matches": true,
+        "exact_quote_present": true,
+        "authenticity": "unverified",
+        "revision_confirmation": "unverified",
+        "temporal_claim": "not_yet_effective",
+        "legal_force": "unverified",
+        "applicability": "unestablished",
+        "factual_violation": "unestablished",
+        "status": "unverified",
+        "trusted": false,
+        "production_go_allowed": false,
+        "reasons": [
+          "Source origin and reviewer authentication unsupported; all declarations remain untrusted",
+          "Integrity, publication officiality, legal force, revision and applicability are distinct",
+          "SYNTHETIC; not official law",
+          "Origin unverified",
+          "Check timestamp missing or in future",
+          "Source category and declared lifecycle are not independently authenticated",
+          "Official-domain locator is a declaration, not verified content",
+          "Temporal result is conditional on unverified dates: not_yet_effective"
+        ],
+        "binding_sha256": "92d5398f637478b282e719ac36abb42fbac07edd19c79e39a15622c689a3a098"
+      }
+    },
+    {
+      "norm_id": "synthetic-secondary",
+      "revision": "Synthetic v1",
+      "status": "unverified",
+      "reasons": [
+        "Source origin and reviewer authentication unsupported; all declarations remain untrusted",
+        "Integrity, publication officiality, legal force, revision and applicability are distinct",
+        "SYNTHETIC; not official law",
+        "Origin unverified",
+        "Ambiguous start of effective/transition period",
+        "Check timestamp missing or in future",
+        "Source category and declared lifecycle are not independently authenticated",
+        "Source is not an NPA; no normative obligation established by source category",
+        "URL is not an approved publication HTTPS locator; no origin proof",
+        "Temporal result is conditional on unverified dates: ambiguous"
+      ],
+      "source_url": "https://example.org/synthetic-article",
+      "text_sha256": "aaa84a6161d5ca26061df457ba109ebe513f234fc93dce26297f4c7cb1874e8f",
+      "domain": "other",
+      "card_assessment": {
+        "card_id": "synthetic-secondary",
+        "event_date": "2025-06-01",
+        "technical_integrity": "consistent",
+        "saved_original_sha256": "aaa84a6161d5ca26061df457ba109ebe513f234fc93dce26297f4c7cb1874e8f",
+        "hash_matches": true,
+        "exact_quote_present": true,
+        "authenticity": "unverified",
+        "revision_confirmation": "unverified",
+        "temporal_claim": "ambiguous",
+        "legal_force": "unverified",
+        "applicability": "unestablished",
+        "factual_violation": "unestablished",
+        "status": "unverified",
+        "trusted": false,
+        "production_go_allowed": false,
+        "reasons": [
+          "Source origin and reviewer authentication unsupported; all declarations remain untrusted",
+          "Integrity, publication officiality, legal force, revision and applicability are distinct",
+          "SYNTHETIC; not official law",
+          "Origin unverified",
+          "Ambiguous start of effective/transition period",
+          "Check timestamp missing or in future",
+          "Source category and declared lifecycle are not independently authenticated",
+          "Source is not an NPA; no normative obligation established by source category",
+          "URL is not an approved publication HTTPS locator; no origin proof",
+          "Temporal result is conditional on unverified dates: ambiguous"
+        ],
+        "binding_sha256": "4743521e35770c320cba3c91299446bdcd2c1f3ce96c3daa3c29bd4649ba817c"
+      }
+    }
+  ]
+}

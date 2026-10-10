@@ -6,8 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..auditors.evidence import load_packet
-from ..verifier.models import SourceRegistry
-from ..verifier.registry import assess_registry, digest
+from ..verifier.registry import assess_registry, digest, load_registry
 from .models import HumanReviewSubmission, ProductionDecision, ReviewAssessment, ReviewBinding
 
 
@@ -70,7 +69,9 @@ def _snapshot(root, finding_path, registry_path, client_text, imported_report):
         raise DecisionInputError("unsupported_finding_references")
     registry_raw = read_bytes(registry_path)
     json_object(registry_raw)
-    registry = SourceRegistry.model_validate_json(registry_raw)
+    registry, registry_hash = load_registry(registry_path)
+    if registry_hash != sha256(registry_raw):
+        raise DecisionInputError("registry_changed_during_read")
     if any(digest(s.norm_text) != s.text_sha256 for s in registry.sources):
         raise DecisionInputError("norm_text_hash_mismatch")
     client_raw = None if client_text is None else read_bytes(client_text, 100_000)

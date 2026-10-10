@@ -1214,3 +1214,83 @@ def test_attestation_cannot_be_injected_as_registry_trust(registry):
     registry.write_text(json.dumps(payload))
     with pytest.raises(ValidationError):
         load_registry(registry)
+
+
+@pytest.mark.parametrize("tamper", [False, True])
+def test_source_cards_reach_independent_and_comparison_with_reasons(
+    dossier, config, tmp_path, tamper
+):
+    from test_legal_sources import RAW, payload
+
+    original = tmp_path / "original.txt"
+    original.write_bytes(RAW)
+    card = payload(
+        id="test-law", act_number="152-ФЗ", domain="personal_data", provision="test provision"
+    )
+    path = tmp_path / "cards.json"
+    path.write_text(json.dumps({"schema_version": "0.4", "sources": [], "cards": [card]}))
+    if tamper:
+        original.write_bytes(b"Synthetic substitution")
+    provider = Scripted()
+    first = start(dossier[0], path, tmp_path / "stage-one", config, provider=provider)
+    assert first.run_status == "awaiting_comparison" and first.independent_findings
+    finding = first.independent_findings[0]
+    assert finding.status != "verified_issue"
+    assert finding.norms[0].status == "unverified"
+    assert any("authentication unsupported" in r for r in finding.reasons)
+    assert finding.norms[0].card_assessment.technical_integrity == (
+        "invalid" if tamper else "consistent"
+    )
+    independent_packet = json.loads(provider.calls[0][1]["content"])
+    assert "untrusted_auditor_results" not in independent_packet
+    responses = [auditor_response(label) for label in ("A", "B")]
+    for response in responses:
+        response["findings"][0]["normative_basis"][0].update(
+            act_id="152-ФЗ", provision="test provision"
+        )
+    analysis = prior_analysis(dossier, config, tmp_path, responses)
+    final = finish(
+        dossier[0],
+        path,
+        tmp_path / "stage-one",
+        analysis,
+        tmp_path / "stage-two",
+        config,
+        provider=Scripted(),
+    )
+    assert final.completed
+    assert all(a.status != "verified_issue" for a in final.auditor_assessments)
+    assert any(a.normative_assessments for a in final.auditor_assessments)
+    assert not final.automatic_go_allowed and not final.automatic_send_allowed
+
+
+def test_source_original_change_after_stage_i_blocks_comparison(dossier, config, tmp_path):
+    from test_legal_sources import RAW, payload
+
+    original = tmp_path / "original.txt"
+    original.write_bytes(RAW)
+    path = tmp_path / "cards.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.4",
+                "sources": [],
+                "cards": [payload(id="test-law", domain="personal_data", act_number="152-ФЗ")],
+            }
+        )
+    )
+    start(dossier[0], path, tmp_path / "stage-one", config, provider=Scripted())
+    analysis = prior_analysis(dossier, config, tmp_path)
+    original.write_bytes(b"Substituted after independent preparation")
+    provider = Scripted()
+    with pytest.raises(ValueError, match="snapshot changed"):
+        finish(
+            dossier[0],
+            path,
+            tmp_path / "stage-one",
+            analysis,
+            tmp_path / "stage-two",
+            config,
+            provider=provider,
+        )
+    assert not provider.calls

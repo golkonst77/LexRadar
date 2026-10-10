@@ -17,6 +17,10 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest -q
+      - run: lexradar legal-source prepare --metadata examples/legal-sources/metadata-v1.json --text examples/legal-sources/originals/v1.txt --event-date 2025-06-01 --output /tmp/lexradar-source-prepared
+      - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2025-06-01 --output /tmp/lexradar-source-past
+      - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2026-06-01 --output /tmp/lexradar-source-current
+      - run: python -c "import json; p=json.load(open('/tmp/lexradar-source-past/report.json')); c=json.load(open('/tmp/lexradar-source-current/report.json')); assert all(a['status']=='unverified' and not a['card_assessment']['trusted'] for a in c['assessments']); assert [a['card_assessment']['temporal_claim'] for a in p['assessments'][:2]]==['within_declared_interval','not_yet_effective']; assert [a['card_assessment']['temporal_claim'] for a in c['assessments'][:2]]==['expired','within_declared_interval']; assert not c['production_go_allowed'] and not c['client_release_allowed']"
       - run: lexradar demo examples/input.json --output /tmp/report.json
       - run: diff examples/result.json /tmp/report.json
       - run: lexradar inspect-evidence examples/reading-dossier --evidence document-0003 --page 1 --output /tmp/lexradar-reading-template

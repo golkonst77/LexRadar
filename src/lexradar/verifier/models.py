@@ -2,13 +2,15 @@
 
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from typing import Literal
 
-from pydantic import AwareDatetime, Field, HttpUrl, model_validator
+from pydantic import AwareDatetime, Field, HttpUrl, PrivateAttr, model_validator
 
 from ..auditors.models import AIFinding, AnalysisConfig, ModelSettings, Topic, Usage
 from ..collector.reading import ReadingState
 from ..models import Model, Signal
+from .legal_cards import LegalSourceCard, SourceCardAssessment
 
 Status = Literal[
     "verified_issue", "potential_issue", "rejected", "insufficient_evidence", "no_issue_observed"
@@ -74,10 +76,12 @@ class LegalSource(Model):
 class SourceRegistry(Model):
     schema_version: Literal["0.4"] = "0.4"
     sources: list[LegalSource] = Field(default_factory=list, max_length=100)
+    cards: list[LegalSourceCard] = Field(default_factory=list, max_length=100)
+    _source_root: Path | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def unique(self):
-        ids = [s.id for s in self.sources]
+        ids = [s.id for s in [*self.sources, *self.cards]]
         if len(ids) != len(set(ids)):
             raise ValueError("Duplicate legal source IDs")
         return self
@@ -88,9 +92,10 @@ class NormAssessment(Model):
     revision: str
     status: Literal["current_confirmed", "unverified", "repealed", "unavailable"]
     reasons: list[str]
-    source_url: HttpUrl
+    source_url: HttpUrl | None
     text_sha256: str
     domain: str
+    card_assessment: SourceCardAssessment | None = None
 
 
 class Material(Model):
