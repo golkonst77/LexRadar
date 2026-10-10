@@ -51,3 +51,24 @@ def data():
             },
         }
     )
+
+
+class FakeCrawlClock:
+    """Only the new pacing clock is virtual; real socket/DNS/browser timeouts remain real."""
+
+    def __init__(self):
+        self.value = 0
+        self.sleeps = []
+
+    def now(self):
+        return self.value
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.value += seconds
+
+
+@pytest.fixture(autouse=True)
+def fast_synthetic_crawl_clock(monkeypatch):
+    # All pytest collection is synthetic. This does not change CLI/public clock behavior.
+    monkeypatch.setattr("lexradar.collector.crawl.Clock", FakeCrawlClock)

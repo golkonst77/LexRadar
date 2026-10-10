@@ -84,3 +84,18 @@ lexradar quality-report work/benchmark --format html
 [Методика, replay, экспертная разметка и controlled pilot](docs/quality-testing.md).
 Пилот выключен по умолчанию и выполняет только отдельно разрешённый публичный сбор.
 Ни испытания, ни экспертные метки не создают доверенную норму, автоматический GO или рассылку.
+
+## Безопасный публичный Collector
+
+Collector проверяет robots.txt для LexRadar, соблюдает запреты и Crawl-delay, выполняет
+последовательные запросы с задержкой по умолчанию 2 с, общим лимитом попыток и срока обхода.
+Недоступный или неоднозначный robots.txt блокирует обход; журнал находится в `crawl/` досье.
+
+```bash
+lexradar collect https://example.org/ --output work/public-pilot \
+  --max-pages 10 --max-documents 10 --timeout 10 \
+  --min-delay 2 --max-requests 64 --max-duration 300
+```
+
+[Политика, журнал, ограничения и требования к сетевой среде](docs/collector-pilot-safety.md).
+Обязательный proxy по-прежнему не поддерживается pinned транспортом; обход ограничений запрещён.

@@ -98,7 +98,7 @@ def main() -> None:
             parser.exit(1, "One or both auditors did not complete; review analysis.json\n")
         return
     if len(sys.argv) > 1 and sys.argv[1] == "collect":
-        from .collector import Limits, collect
+        from .collector import CrawlOptions, Limits, collect
 
         parser = argparse.ArgumentParser(
             description="Collect technical facts without legal decisions"
@@ -108,6 +108,9 @@ def main() -> None:
         parser.add_argument("--max-pages", type=int, default=10)
         parser.add_argument("--max-documents", type=int, default=10)
         parser.add_argument("--timeout", type=float, default=10)
+        parser.add_argument("--min-delay", type=float, default=2)
+        parser.add_argument("--max-requests", type=int, default=64)
+        parser.add_argument("--max-duration", type=float, default=300)
         args = parser.parse_args(sys.argv[2:])
         result = collect(
             args.url,
@@ -117,8 +120,20 @@ def main() -> None:
                 max_documents=args.max_documents,
                 timeout_seconds=args.timeout,
             ),
+            crawl_options=CrawlOptions(
+                min_delay_seconds=args.min_delay,
+                max_requests=args.max_requests,
+                max_duration_seconds=args.max_duration,
+            ),
         )
-        print(f"Collected {len(result.pages)} pages; independent review required")
+        import json
+
+        summary = json.loads((args.output / "crawl/summary.json").read_text())
+        print(
+            f"Recorded {len(result.pages)} page attempts; "
+            f"stop: {summary['stop_reason']}; requests sent: {summary['requests_sent']}; "
+            "independent review required"
+        )
         return
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
