@@ -1,5 +1,6 @@
 """Actual synthetic PDF bytes and hostile manifest claims, with all external transports blocked."""
 
+import io
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -45,10 +46,45 @@ def save_manifest(root, data):
     (root / "collection.json").write_text(data.model_dump_json(indent=2), encoding="utf-8")
 
 
-def pdf_dossier(tmp_path, texts, *, pages=100, per_page=100_000, total=1_000_000):
+def pdf_dossier(tmp_path, texts, *, pages=100, per_page=100_000, total=1_000_000, scans=False):
     root = tmp_path / "dossier"
     store = ArtifactStore(root, Limits(max_pdf_pages=pages))
-    artifact = store.save("synthetic.pdf", pdf_bytes(texts), "pdf")
+    content = pdf_bytes(texts)
+    if scans:
+        from pypdf import PdfReader, PdfWriter
+        from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject, NumberObject
+
+        writer = PdfWriter()
+        writer.append_pages_from_reader(PdfReader(io.BytesIO(content)))
+        for page, text in zip(writer.pages, texts, strict=True):
+            if text:
+                continue
+            image = DecodedStreamObject()
+            image.set_data(b"\x00")  # Synthetic one-pixel raster, never real personal data.
+            image.update(
+                {
+                    NameObject("/Type"): NameObject("/XObject"),
+                    NameObject("/Subtype"): NameObject("/Image"),
+                    NameObject("/Width"): NumberObject(1),
+                    NameObject("/Height"): NumberObject(1),
+                    NameObject("/BitsPerComponent"): NumberObject(8),
+                    NameObject("/ColorSpace"): NameObject("/DeviceGray"),
+                }
+            )
+            page[NameObject("/Resources")] = DictionaryObject(
+                {
+                    NameObject("/XObject"): DictionaryObject(
+                        {NameObject("/Scan"): writer._add_object(image)}
+                    )
+                }
+            )
+            drawing = DecodedStreamObject()
+            drawing.set_data(b"q 100 0 0 100 0 0 cm /Scan Do Q")
+            page[NameObject("/Contents")] = writer._add_object(drawing)
+        output = io.BytesIO()
+        writer.write(output)
+        content = output.getvalue()
+    artifact = store.save("synthetic.pdf", content, "pdf")
     extracted = extract_inventory(root / artifact.path, pages, 10, per_page, total)
     text, status, reason = legacy_result(extracted)
     evidence = CollectedEvidence(
@@ -139,7 +175,12 @@ def test_page_and_total_text_caps_are_explicit(tmp_path, per_page, total):
 
 
 def test_mixed_text_and_scan_not_whole_text_review(tmp_path):
-    root, _ = pdf_dossier(tmp_path, ["Readable synthetic page", "", "Another page"])
+    from pypdf import PdfReader
+
+    root, data = pdf_dossier(tmp_path, ["Readable synthetic page", "", "Another page"], scans=True)
+    reader = PdfReader(root / data.evidence[0].artifacts[0].path)
+    image = reader.pages[1]["/Resources"]["/XObject"]["/Scan"].get_object()
+    assert image["/Subtype"] == "/Image"
     material = material_for(root)
     assert material.reading.extraction_state == "complete"
     assert material.reading.pages[1].extraction_state == "no_text"
