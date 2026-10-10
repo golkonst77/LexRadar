@@ -1,0 +1,492 @@
+{
+  "schema_version": "primary-audit-0.1",
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "methodology": "pr10_working_structure",
+  "verbatim_v25_correspondence": false,
+  "target_url": "https://clinic.example/",
+  "dossier_sha256": "79c9e268be911cdb8edc162ec7a5e9b12476d65864e305670bf3b592e8d7167c",
+  "artifact_inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "source_registry_sha256": null,
+  "source_started_at": "2026-10-10T00:00:00Z",
+  "assessed_at": "2026-10-10T00:00:00Z",
+  "sector_hint": "unknown",
+  "organizations": [],
+  "operator_situation": "operator_unestablished",
+  "materials": [],
+  "forms": [],
+  "flows": [],
+  "services": [],
+  "medical_checks": [
+    {
+      "check_id": "licensed_entity",
+      "status": "not_checked",
+      "observation_ids": [],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    },
+    {
+      "check_id": "license_details",
+      "status": "not_checked",
+      "observation_ids": [],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    },
+    {
+      "check_id": "organization_disclosures",
+      "status": "not_checked",
+      "observation_ids": [],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    },
+    {
+      "check_id": "services",
+      "status": "not_checked",
+      "observation_ids": [],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    },
+    {
+      "check_id": "prices",
+      "status": "not_checked",
+      "observation_ids": [],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    },
+    {
+      "check_id": "medical_staff",
+      "status": "not_checked",
+      "observation_ids": [],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    },
+    {
+      "check_id": "paid_service_rules",
+      "status": "not_checked",
+      "observation_ids": [],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    },
+    {
+      "check_id": "other_applicable_disclosures",
+      "status": "not_checked",
+      "observation_ids": [],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    }
+  ],
+  "stages": [
+    {
+      "stage_id": "01",
+      "title": "Идентификация сайта, организации и оператора",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Оператор и организация не установлены"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [
+        "check-0001"
+      ],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "02",
+      "title": "Все юридические лица и ИП",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Подтверждённые сведения о юрлицах и ИП"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "03",
+      "title": "Структура сайта и полнота обследования",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Знаменатель всех страниц сайта неизвестен"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "04",
+      "title": "Политика обработки персональных данных",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Содержание, непрочитанные страницы и применимость"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [
+        "check-0002"
+      ],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "05",
+      "title": "Формы сбора данных",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Недостаточно предметных материалов по направлению"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "06",
+      "title": "Согласия на обработку персональных данных",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Содержание, непрочитанные страницы и применимость"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [
+        "check-0003"
+      ],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "07",
+      "title": "Отдельные согласия на рекламу",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Недостаточно предметных материалов по направлению"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "08",
+      "title": "Cookies, аналитика и сторонние сервисы",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Нет достаточных данных о работающих сервисах"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [
+        "check-0004"
+      ],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "09",
+      "title": "Получатели, маршрутизация и возможная трансграничная передача",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [
+        "check-0005"
+      ],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "10",
+      "title": "Фото, отзывы и специальные категории данных",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость",
+        "Недостаточно предметных материалов по направлению"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "11",
+      "title": "Публичные сведения об операторе, включая РКН",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена",
+        "Публичные реестры не запрашивались"
+      ],
+      "additional_check_ids": [
+        "check-0006"
+      ],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "12",
+      "title": "Медицинские лицензии, услуги и раскрытия",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    },
+    {
+      "stage_id": "13",
+      "title": "Итоговая оценка, пробелы доказательств и дальнейшие проверки",
+      "status": "not_checked",
+      "status_scope": "Статус относится только к проверенным локальным материалам; no_issue_observed не является юридической гарантией соответствия",
+      "checked_materials": [],
+      "observed_fact_ids": [],
+      "hypothesis_ids": [],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Подтверждённая норма, редакция и применимость"
+      ],
+      "limitations": [
+        "Нормативные ссылки — кандидаты, применимость не установлена"
+      ],
+      "additional_check_ids": [
+        "check-0007",
+        "check-0008"
+      ],
+      "possible_paid_legal_work": false,
+      "paid_work_rationale": "Недостаточно предметных оснований для определения объёма работ"
+    }
+  ],
+  "observations": [],
+  "hypotheses": [],
+  "normative_references": [],
+  "missing_checks": [
+    {
+      "id": "check-0001",
+      "stage_id": "01",
+      "type": "operator_identity_review",
+      "question": "Установить владельца сайта и фактического оператора",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0002",
+      "stage_id": "04",
+      "type": "document_content_review",
+      "question": "Проверить реальные ссылки, доступный текст и нормы",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0003",
+      "stage_id": "06",
+      "type": "document_content_review",
+      "question": "Проверить реальные ссылки, доступный текст и нормы",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0004",
+      "stage_id": "08",
+      "type": "cookie_and_integration_review",
+      "question": "Проверить поведение сервисов и cookies при отдельно разрешённом исследовании",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0005",
+      "stage_id": "09",
+      "type": "network_route_review",
+      "question": "Установить фактические маршруты, получателей и применимость трансграничных правил",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0006",
+      "stage_id": "11",
+      "type": "rkn_identity_prerequisite",
+      "question": "Сначала установить оператора и идентификаторы; РКН не проверен",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0007",
+      "stage_id": "13",
+      "type": "independent_legal_review",
+      "question": "Проверить нормы, применимость и опровержения; первичные гипотезы не являются выводами",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0008",
+      "stage_id": "13",
+      "type": "methodology_reconciliation",
+      "question": "Согласовать рабочие этапы с исходным v2.5, включая документальную готовность РКН",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    }
+  ],
+  "commercial_opportunity": [],
+  "coverage": {
+    "page_attempts": 0,
+    "document_attempts": 0,
+    "reproduced_text_materials": 0,
+    "incomplete_text_materials": 0,
+    "known_pdf_pages": 0,
+    "supplied_pdf_text_pages": 0,
+    "unknown_pdf_page_count_documents": 0,
+    "stages_with_observations": 0,
+    "total_stages": 13,
+    "site_coverage_denominator": null,
+    "entire_site_examined": false,
+    "visual_examination_performed": false,
+    "legal_research_completed": false
+  },
+  "limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
+    "Обследованы сохранённые материалы, не живой сайт; полнота сайта неизвестна",
+    "JavaScript, cookies, сетевые маршруты и функциональное поведение форм не проверялись",
+    "Личность и роли организаций, нормативные основания и нарушения не подтверждены",
+    "Упоминания имён/ИНН/ОГРН не устанавливают оператора или реального получателя данных",
+    "Поля entities/forms из manifest не становятся фактами без повторного извлечения",
+    "Изображения не осматривались; подписи не устанавливают личность изображённых",
+    "РКН и реестры лицензий не запрашивались; недоступность не равна отсутствию записи",
+    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение"
+  ],
+  "technical_processing_completed": true,
+  "audit_complete": false,
+  "legal_status": "not_confirmed",
+  "production_outcome": "HOLD",
+  "production_go_allowed": false,
+  "client_release_allowed": false,
+  "automatic_send_allowed": false
+}

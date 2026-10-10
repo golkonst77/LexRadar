@@ -1,0 +1,294 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "check-0001",
+      "stage_id": "01",
+      "type": "operator_identity_review",
+      "question": "Установить владельца сайта и фактического оператора",
+      "organization_ids": [
+        "organization-0001",
+        "organization-0002"
+      ],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0002",
+      "stage_id": "06",
+      "type": "form_legal_and_routing_review",
+      "question": "Установить основания, применимость согласий и фактическую модель",
+      "organization_ids": [
+        "organization-0001"
+      ],
+      "form_ids": [
+        "form-0001"
+      ],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0003",
+      "stage_id": "09",
+      "type": "form_legal_and_routing_review",
+      "question": "Установить основания, применимость согласий и фактическую модель",
+      "organization_ids": [
+        "organization-0001"
+      ],
+      "form_ids": [
+        "form-0001"
+      ],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0004",
+      "stage_id": "06",
+      "type": "form_legal_and_routing_review",
+      "question": "Установить основания, применимость согласий и фактическую модель",
+      "organization_ids": [
+        "organization-0002"
+      ],
+      "form_ids": [
+        "form-0002"
+      ],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0005",
+      "stage_id": "09",
+      "type": "form_legal_and_routing_review",
+      "question": "Установить основания, применимость согласий и фактическую модель",
+      "organization_ids": [
+        "organization-0002"
+      ],
+      "form_ids": [
+        "form-0002"
+      ],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0006",
+      "stage_id": "07",
+      "type": "advertising_consent_review",
+      "question": "Проверить характер коммуникаций и необходимость отдельного согласия",
+      "organization_ids": [],
+      "form_ids": [
+        "form-0002"
+      ],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0007",
+      "stage_id": "04",
+      "type": "document_content_review",
+      "question": "Проверить реальные ссылки, доступный текст и нормы",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0008",
+      "stage_id": "06",
+      "type": "document_content_review",
+      "question": "Проверить реальные ссылки, доступный текст и нормы",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0009",
+      "stage_id": "09",
+      "type": "resource_route_review",
+      "question": "Установить реальное выполнение, маршрут и получателя по ресурсу",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0010",
+      "stage_id": "09",
+      "type": "resource_route_review",
+      "question": "Установить реальное выполнение, маршрут и получателя по ресурсу",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0011",
+      "stage_id": "10",
+      "type": "visual_and_permission_review",
+      "question": "Осмотреть изображение и проверить основания публикации, если применимо",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0012",
+      "stage_id": "08",
+      "type": "cookie_and_integration_review",
+      "question": "Проверить поведение сервисов и cookies при отдельно разрешённом исследовании",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0013",
+      "stage_id": "09",
+      "type": "network_route_review",
+      "question": "Установить фактические маршруты, получателей и применимость трансграничных правил",
+      "organization_ids": [],
+      "form_ids": [
+        "form-0001",
+        "form-0002"
+      ],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0014",
+      "stage_id": "11",
+      "type": "rkn_registry_review",
+      "question": "Проверить идентичность, запись РКН и сведения; установить применимость обязанности уведомления",
+      "organization_ids": [
+        "organization-0001"
+      ],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001",
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0015",
+      "stage_id": "11",
+      "type": "rkn_registry_review",
+      "question": "Проверить идентичность, запись РКН и сведения; установить применимость обязанности уведомления",
+      "organization_ids": [
+        "organization-0002"
+      ],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001",
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0016",
+      "stage_id": "12",
+      "type": "medical_license_registry_review",
+      "question": "Сопоставить лицо, реквизиты лицензии, услуги и действующие обязанности раскрытия",
+      "organization_ids": [
+        "organization-0001",
+        "organization-0002"
+      ],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": true,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0017",
+      "stage_id": "13",
+      "type": "independent_legal_review",
+      "question": "Проверить нормы, применимость и опровержения; первичные гипотезы не являются выводами",
+      "organization_ids": [
+        "organization-0001",
+        "organization-0002"
+      ],
+      "form_ids": [],
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    },
+    {
+      "id": "check-0018",
+      "stage_id": "13",
+      "type": "methodology_reconciliation",
+      "question": "Согласовать рабочие этапы с исходным v2.5, включая документальную готовность РКН",
+      "organization_ids": [],
+      "form_ids": [],
+      "evidence_ids": [],
+      "external_access_required": false,
+      "state": "not_performed",
+      "legal_confirmation_blocked": true
+    }
+  ]
+}
