@@ -1,4 +1,4 @@
-"""Offline JSON input → internal report JSON."""
+"""Local production decision or explicitly labeled legacy/demo JSON processing."""
 
 import argparse
 import sys
@@ -9,6 +9,11 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] in {"decide", "review-decision"}:
+        from .decision.cli import decision_main
+
+        decision_main(sys.argv[1], sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] in {"benchmark", "quality-report", "pilot"}:
         from .quality.cli import quality_main
 
@@ -138,7 +143,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
     parser.add_argument("--output", type=Path)
-    args = parser.parse_args()
+    legacy_args = sys.argv[2:] if len(sys.argv) > 1 and sys.argv[1] == "demo" else sys.argv[1:]
+    args = parser.parse_args(legacy_args)
+    print("DEMO/LEGACY: no production legal GO or client release", file=sys.stderr)
     report = build_report(AuditInput.model_validate_json(args.input.read_text(encoding="utf-8")))
     payload = report.model_dump_json(indent=2)
     if args.output:

@@ -17,8 +17,11 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest -q
-      - run: lexradar examples/input.json --output /tmp/report.json
+      - run: lexradar demo examples/input.json --output /tmp/report.json
       - run: diff examples/result.json /tmp/report.json
+      - run: lexradar review-decision examples/analysis-dossier --finding examples/decision-finding.json --registry examples/legal-registry.json --output /tmp/lexradar-decision-review
+      - run: lexradar decide examples/analysis-dossier --finding examples/decision-finding.json --registry examples/legal-registry.json --output /tmp/lexradar-production-decision.json
+      - run: python -c "import json; d=json.load(open('/tmp/lexradar-production-decision.json')); assert d['decision_scope']=='production' and d['outcome']=='HOLD' and not d['legal_research_completed'] and not d['client_release_allowed']"
       - run: lexradar analyze examples/analysis-dossier --output /tmp/lexradar-analysis
       - run: lexradar preflight examples/analysis-dossier --output /tmp/lexradar-preflight
       - run: lexradar verify examples/analysis-dossier --registry examples/legal-registry.json --output /tmp/lexradar-verifier-one

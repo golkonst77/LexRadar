@@ -63,6 +63,7 @@ def test_reference_scenarios(run, case_id):
     root, report = run
     case = next(c for c in report.cases if c.id == case_id)
     assert case.checks and all(c.passed for c in case.checks)
+
     assert case.models == ["offline/a", "offline/b", "offline/verifier"]
     assert len(case.prompts) == 4
     assert case.api_cost_usd == "0"
@@ -76,6 +77,20 @@ def test_reference_scenarios(run, case_id):
     for paths in case.evidence_links.values():
         for path in paths:
             assert (root / path).is_file()
+
+
+def test_synthetic_positives_are_never_production_admissions(run):
+    root, report = run
+    assert report.evaluation_scope == "synthetic_or_replay_only"
+    assert not report.production_go_allowed and not report.client_release_allowed
+    decisions = list(root.glob("cases/*/production-decision.json"))
+    assert decisions
+    for path in decisions:
+        decision = json.loads(path.read_text())
+        assert decision["outcome"] == "HOLD"
+        assert not decision["legal_research_completed"]
+        assert not decision["client_release_allowed"]
+    assert all(case.production_outcome in {None, "HOLD"} for case in report.cases)
 
 
 def test_suite_totals_and_intentional_quality_errors(run):

@@ -1,5 +1,12 @@
 # Архитектура
 
+## Граница доверия
+
+Production: `lexradar.decision.decide_production` → HOLD / not_confirmed,
+без вызова demo Gateway. Локальная целостность и техническое завершение отделены
+от юридического подтверждения. Старые Gateway/Report API сохранены как legacy_demo.
+Подробности: [trusted-decision-boundary](trusted-decision-boundary.md).
+
 Collector → Auditor A + Auditor B → Verifier / Arbiter → Decision Gateway →
 Report Builder → Human Approval.
 

@@ -1,0 +1,8 @@
+{
+  "id": "synthetic-unavailable-example",
+  "source": "https://clinic.example/",
+  "evidence_ids": ["page-0001"],
+  "fact": "Synthetic dossier contains an unavailable page; no legal conclusion",
+  "status": "unverifiable",
+  "confidence": 0
+}

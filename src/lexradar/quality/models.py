@@ -136,9 +136,13 @@ class CaseReport(Model):
     recording_metadata: RecordingMetadata = Field(default_factory=RecordingMetadata)
     recording_metadata_sha256: str | None = None
     limitations: list[str]
+    production_outcome: Literal["HOLD"] | None = None
 
 
 class TestReport(Model):
+    evaluation_scope: Literal["synthetic_or_replay_only"] = "synthetic_or_replay_only"
+    production_go_allowed: Literal[False] = False
+    client_release_allowed: Literal[False] = False
     schema_version: Literal["0.5"] = "0.5"
     created_at: AwareDatetime
     cases: list[CaseReport]

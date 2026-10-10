@@ -104,6 +104,9 @@ class VerificationResult(Model):
 
 
 class GatewayDecision(Model):
+    decision_scope: Literal["legacy_demo"] = "legacy_demo"
+    production_go_allowed: Literal[False] = False
+    client_release_allowed: Literal[False] = False
     outcome: Outcome
     reasons: list[str] = Field(min_length=1)
     eligible_finding_ids: list[str] = Field(default_factory=list)
@@ -112,6 +115,7 @@ class GatewayDecision(Model):
 
 
 class AuditInput(Model):
+    input_scope: Literal["legacy_demo"] = "legacy_demo"
     target: AuditTarget
     evidence: list[Evidence] = Field(default_factory=list)
     auditors: list[AuditorResult] = Field(default_factory=list)
@@ -139,6 +143,7 @@ class AuditInput(Model):
 
 
 class HumanApproval(Model):
+    trust_status: Literal["untrusted"] = "untrusted"
     approved: bool = False
     reviewer_id: str | None = None
     approved_at: AwareDatetime | None = None
@@ -151,6 +156,9 @@ class HumanApproval(Model):
 
 
 class AuditReport(Model):
+    report_scope: Literal["legacy_demo"] = "legacy_demo"
+    production_go_allowed: Literal[False] = False
+    client_release_allowed: Literal[False] = False
     schema_version: Literal["0.1"] = "0.1"
     dossier: AuditInput
     decision: GatewayDecision

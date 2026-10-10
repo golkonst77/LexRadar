@@ -13,6 +13,7 @@ from ..auditors.evidence import load_packet
 from ..auditors.models import AnalysisConfig
 from ..auditors.orchestrator import analyze
 from ..collector import Limits, collect
+from ..decision import decide_production
 from ..verifier.cli import default_config
 from ..verifier.orchestrator import finish, start
 from ..verifier.registry import digest
@@ -46,6 +47,7 @@ def _case(folder, output, mode):
     config.max_input_bytes = 2_000_000
     config.retries = 0
     collection = packet = analysis = report = None
+    production_outcome = None
     checks, preds, manual = [], [], []
     try:
         if mode == "synthetic":
@@ -111,6 +113,32 @@ def _case(folder, output, mode):
         )
         checks = gates(reference, collection, analysis, report)
         preds = predictions(report)
+        # Positive reference labels are test hypotheses, never production legal admissions.
+        proposals = [f.candidate for f in report.independent_findings]
+        proposals += [f for r in analysis.runs for f in r.result.findings]
+        if proposals:
+            candidate_path = output / "production-finding.json"
+            candidate_path.write_text(proposals[0].model_dump_json(indent=2) + "\n")
+            decision = decide_production(
+                root,
+                candidate_path,
+                folder / "registry.json",
+                imported_report=output / "verification/verification.json",
+            )
+            (output / "production-decision.json").write_text(
+                decision.model_dump_json(indent=2) + "\n"
+            )
+            production_outcome = decision.outcome
+            checks.append(
+                Check(
+                    name="production_boundary_no_trusted_go",
+                    passed=decision.technical_processing_completed
+                    and decision.outcome == "HOLD"
+                    and not decision.client_release_allowed
+                    and not decision.legal_research_completed,
+                    detail="Scripted findings/imported statuses cannot grant production GO.",
+                )
+            )
         # Actual context boundaries are checked, rather than a provider's independence assertion.
         calls = provider.calls
         checks.append(
@@ -231,6 +259,7 @@ def _case(folder, output, mode):
         recording_metadata=metadata,
         recording_metadata_sha256=metadata_hash,
         limitations=limits,
+        production_outcome=production_outcome,
     )
 
 
