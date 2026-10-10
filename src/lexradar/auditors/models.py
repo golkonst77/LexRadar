@@ -55,11 +55,15 @@ class NormativeBasis(Model):
 
 
 class TextGrounding(Model):
+    page: int | None = Field(default=None, ge=1)
     evidence_id: str = Field(min_length=1, max_length=200)
     exact_quote: str = Field(min_length=1, max_length=10000)
 
 
 class AIFinding(Model):
+    fact_supported: bool = False
+    search_scope: Literal["unknown", "text_excerpt", "whole_document", "site_subset"] = "unknown"
+    search_limitations: list[str] = Field(default_factory=list, max_length=100)
     examination_scope: Literal["unknown", "text_excerpt", "whole_document"] = "unknown"
     text_grounding: list[TextGrounding] = Field(default_factory=list, max_length=100)
     id: str = Field(min_length=1, max_length=100)

@@ -21,7 +21,8 @@ from .models import (
     PageObservation,
 )
 from .network import CollectionError, Fetcher, canonical_url, origin
-from .pdf import extract_pdf
+from .pdf import extract_inventory, legacy_result
+from .reading import extract_html
 
 
 def now():
@@ -146,7 +147,21 @@ def _collect(url, limits, allowed, store, session):
                     page.goto(response.url, wait_until="domcontentloaded")
                     page_record.title = page.title()
                     dom = page.evaluate(DOM_SCRIPT)
-                    page_record.text = dom["text"][: limits.max_file_bytes // 4]
+                    page_record.text, page_record.reading = extract_html(
+                        response.body, min(limits.max_file_bytes // 4, 1_000_000)
+                    )
+                    original = next((a for a in evidence.artifacts if a.kind == "html"), None)
+                    page_record.reading.original_saved = original is not None
+                    page_record.reading.source_sha256 = original.sha256 if original else None
+                    page_record.reading.provenance = (
+                        "reproduced" if original else "missing_original"
+                    )
+                    page_record.reading.text_coverage_complete = (
+                        original is not None
+                        and page_record.reading.extraction_state == "complete"
+                        and not page_record.reading.text_truncated
+                        and bool((page_record.text or "").strip())
+                    )
                     page_record.categories = categories(current + " " + page_record.title)
                     for stage, capture in (
                         (
@@ -279,10 +294,17 @@ def _collect(url, limits, allowed, store, session):
             evidence.observed_fact = "Public PDF downloaded; extraction is a technical observation"
             evidence.available = True
             evidence.unavailable_reason = None
-            document.text, document.extraction_status, document.extraction_reason = extract_pdf(
+            extracted = extract_inventory(
                 store.root / artifact.path,
                 limits.max_pdf_pages,
                 min(limits.timeout_seconds, session.remaining()),
+            )
+            document.reading = extracted.reading
+            document.reading.original_saved = True
+            document.reading.source_sha256 = artifact.sha256
+            document.page_texts = extracted.page_texts
+            document.text, document.extraction_status, document.extraction_reason = legacy_result(
+                extracted
             )
             if document.extraction_status == "failed":
                 evidence.collection_errors.append(

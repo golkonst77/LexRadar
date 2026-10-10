@@ -1,8 +1,6 @@
 """Inventory distinguishes supplied text, acknowledged text examination and unread images."""
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 
 from ..auditors.evidence import EvidencePacket
@@ -15,10 +13,12 @@ def inventory(packet: EvidencePacket, root: Path) -> list[Material]:
     evidence = {e.id: e for e in packet.data.evidence}
     for page in data["pages"]:
         e = evidence[page["evidence_id"]]
+        evidence_page = next(p for p in packet.data.pages if p.evidence_id == e.id)
         text = page["text"] or ""
         result.append(
             Material(
                 evidence_id=e.id,
+                reading=evidence_page.reading,
                 url=e.source,
                 type="html_page",
                 page_count=1,
@@ -44,37 +44,17 @@ def inventory(packet: EvidencePacket, root: Path) -> list[Material]:
             visual_review_required=True,
             reasons=["PDF images and original layout not visually examined", *e.collection_errors],
         )
-        if artifact:
-            try:
-                completed = subprocess.run(
-                    [
-                        sys.executable,
-                        "-m",
-                        "lexradar.verifier.pdf_inventory",
-                        str(root.resolve() / artifact.path),
-                        str(packet.data.limits.max_pdf_pages),
-                    ],
-                    capture_output=True,
-                    timeout=packet.data.limits.timeout_seconds,
-                    check=True,
-                )
-                extracted = json.loads(completed.stdout)
-                material.page_count = extracted["page_count"]
-                material.page_texts = {int(k): v for k, v in extracted["page_texts"].items()}
-                material.text_page_count = len(material.page_texts)
-                material.supplied_text = "\n".join(material.page_texts.values())
-                material.text_available = bool(material.supplied_text.strip())
-                if extracted["truncated"]:
-                    material.reasons.append("Text truncated at extraction safety limit")
-                if material.text_page_count < material.page_count:
-                    material.reasons.append(
-                        "Some PDF pages have no supplied text; visual review needed"
-                    )
-            except (subprocess.SubprocessError, ValueError, KeyError, TypeError):
-                material.reasons.append(
-                    "PDF inventory unavailable or extraction safety limit exceeded"
-                )
-        else:
+        material.reading = document.reading.model_copy(deep=True)
+        material.page_count = document.reading.page_count
+        material.page_texts = document.page_texts.copy()
+        material.text_page_count = len(material.page_texts)
+        material.supplied_text = document.text or ""
+        material.text_available = bool(material.supplied_text.strip())
+        material.reasons.extend(document.reading.limitations)
+        # Text extraction never examines images or layout, including on text-bearing pages.
+        material.visual_review_required = True
+        material.reasons.append("Original PDF layout has not been visually examined")
+        if not artifact:
             material.reasons.append(e.unavailable_reason or "No PDF artifact available")
         result.append(material)
     return result
@@ -98,12 +78,26 @@ def examined(materials: list[Material], result: IndependentResult) -> list[Mater
             raise ValueError("Cannot examine unavailable text")
         if not set(review.pages_examined) <= material.page_texts.keys():
             raise ValueError("Claimed examination of an unread page")
+        complete_numbers = {
+            p.page
+            for p in material.reading.pages
+            if p.extraction_state == "complete" and p.text_available and p.truncated is False
+        }
+        material.fully_examined_text_pages = len(set(review.pages_examined) & complete_numbers)
         material.examined_pages = len(review.pages_examined)
         material.examined_page_numbers = review.pages_examined
+        for page in material.reading.pages:
+            if page.page in review.pages_examined:
+                page.text_examination = (
+                    "acknowledged_text" if page.page in complete_numbers else "acknowledged_excerpt"
+                )
         material.reasons.append(review.limitation)
         if review.text_examined:
             material.examination = (
-                "partial_text" if material.page_count != material.examined_pages else "text_only"
+                "text_only"
+                if material.reading.text_coverage_complete
+                and material.page_count == material.fully_examined_text_pages
+                else "partial_text"
             )
         if material.examined_pages != material.page_count:
             material.reasons.append("Whole material not examined")
@@ -112,10 +106,22 @@ def examined(materials: list[Material], result: IndependentResult) -> list[Mater
 
 def completeness(materials: list[Material]) -> Completeness:
     reviewed = sum(m.examination != "not_examined" for m in materials)
+    pdfs = [m for m in materials if m.type == "pdf"]
+    known_pages = sum(m.page_count or 0 for m in pdfs)
+    fully_reviewed = sum(m.fully_examined_text_pages for m in pdfs)
     return Completeness(
+        pdf_full_text_review_fraction=fully_reviewed / known_pages if known_pages else None,
+        pdf_page_denominator_complete=bool(pdfs) and all(m.page_count is not None for m in pdfs),
         examined_text_materials=reviewed,
         total_materials=len(materials),
         text_review_fraction=reviewed / len(materials) if materials else None,
+        fully_examined_pdf_text_pages=sum(
+            m.fully_examined_text_pages for m in materials if m.type == "pdf"
+        ),
+        extracted_pdf_text_pages=sum(m.text_page_count for m in materials if m.type == "pdf"),
+        extraction_complete_documents=sum(
+            m.reading.extraction_state == "complete" for m in materials
+        ),
         known_pdf_pages=sum(m.page_count or 0 for m in materials if m.type == "pdf"),
         examined_pdf_text_pages=sum(m.examined_pages for m in materials if m.type == "pdf"),
         unknown_page_count_documents=sum(m.page_count is None for m in materials),

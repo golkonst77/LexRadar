@@ -694,6 +694,13 @@ def test_oversize_dossier_is_not_silently_truncated(dossier):
 
 
 def test_both_models_confirmed_are_only_potential(dossier, config, tmp_path):
+    from lexradar.collector.reading import extract_html
+
+    root, data = dossier
+    data.pages[0].reading = extract_html(
+        (root / data.evidence[0].artifacts[0].path).read_bytes(), 1_000_000
+    )[1]
+    save_dossier(root, data)
     a, b = auditor_response("A"), auditor_response("B")
     for raw in (a, b):
         raw["findings"][0]["status"] = "confirmed"
@@ -997,7 +1004,21 @@ def test_mixed_pdf_requires_exact_available_excerpt(
     # Reuse a valid PDF fixture, then emulate extraction of only its readable pages.
     test_scan_not_read_and_unavailable_not_violation(dossier)
     data = CollectionResult.model_validate_json((root / "collection.json").read_text())
-    data.documents[0].text = "Visible synthetic excerpt"
+    # A real mixed PDF replaces the former manifest-only text invention.
+    from hashlib import sha256
+
+    from lexradar.collector.pdf import extract_inventory
+    from lexradar.quality.fixtures import pdf_bytes
+
+    artifact = data.evidence[-1].artifacts[0]
+    content = pdf_bytes(["Visible synthetic excerpt", ""])
+    (root / artifact.path).write_bytes(content)
+    artifact.sha256, artifact.size = sha256(content).hexdigest(), len(content)
+    data.evidence[-1].sha256 = artifact.sha256
+    extracted = extract_inventory(root / artifact.path, 100, 10)
+    data.documents[0].text = extracted.text
+    data.documents[0].reading = extracted.reading
+    data.documents[0].page_texts = extracted.page_texts
     save_dossier(root, data)
     raw = auditor_response("A")
     raw["findings"][0].update(
@@ -1008,7 +1029,7 @@ def test_mixed_pdf_requires_exact_available_excerpt(
         fact_assertion=assertion,
         text_grounding=[]
         if quote is None
-        else [{"evidence_id": "document-0001", "exact_quote": quote}],
+        else [{"evidence_id": "document-0001", "exact_quote": quote, "page": 1}],
     )
     result, notes = validate_result(json.dumps(raw), "A", load_packet(root, 200000))
     finding_result = result.findings[0]

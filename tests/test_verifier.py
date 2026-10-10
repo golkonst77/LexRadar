@@ -422,23 +422,22 @@ def test_scan_inventory_and_no_fake_examination(dossier, registry, config):
 
 def test_partial_pdf_quote_and_unread_page(dossier, registry, config, monkeypatch):
     add_scan(dossier)
-    # Mock a mixed PDF extraction: page 1 readable, page 2 has no text layer.
-    monkeypatch.setattr(
-        "lexradar.verifier.materials.subprocess.run",
-        lambda *a, **k: type(
-            "Reply",
-            (),
-            {
-                "stdout": json.dumps(
-                    {
-                        "page_count": 2,
-                        "page_texts": {"1": "Synthetic quoted page"},
-                        "truncated": False,
-                    }
-                ).encode()
-            },
-        )(),
-    )
+    from hashlib import sha256
+
+    from lexradar.collector.pdf import extract_inventory
+    from lexradar.quality.fixtures import pdf_bytes
+
+    root, data = dossier
+    artifact = data.evidence[-1].artifacts[0]
+    content = pdf_bytes(["Synthetic quoted page", ""])
+    (root / artifact.path).write_bytes(content)
+    artifact.sha256, artifact.size = sha256(content).hexdigest(), len(content)
+    data.evidence[-1].sha256 = artifact.sha256
+    extracted = extract_inventory(root / artifact.path, 100, 10)
+    data.documents[0].text = extracted.text
+    data.documents[0].reading = extracted.reading
+    data.documents[0].page_texts = extracted.page_texts
+    save_dossier(root, data)
     f = candidate()
     f.update(
         source="https://clinic.example/scan.pdf",
@@ -786,7 +785,7 @@ def test_pdf_inventory_timeout_is_not_violation(dossier, registry, config, monke
     def timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired("synthetic", 1)
 
-    monkeypatch.setattr("lexradar.verifier.materials.subprocess.run", timeout)
+    monkeypatch.setattr("lexradar.collector.pdf.subprocess.run", timeout)
     prepared = prepare_independent(dossier[0], registry, config)
     assert prepared.materials[1].page_count is None
     assert not prepared.materials[1].text_available
@@ -965,6 +964,7 @@ def test_auditor_confirmation_cannot_borrow_unverified_basis(
             "legal_interpretation",
         ]:
             f[key] = template[key]
+        f["text_grounding"] = [{"evidence_id": "page-0001", "exact_quote": f["fact"]}]
         f["normative_basis"][0].update(act_id=basis_act, provision="test provision")
     analysis = load_analysis(
         prior_analysis(dossier, config, tmp_path, [raw_a, raw_b]), prepared.packet
@@ -1029,7 +1029,12 @@ def test_potential_index_includes_unresolved_auditor_hypothesis(
 ):
     raw_a, raw_b = auditor_response("A"), auditor_response("B")
     for raw in [raw_a, raw_b]:
-        raw["findings"][0]["fact_assertion"] = "present"
+        raw["findings"][0].update(
+            fact_assertion="present",
+            examination_scope="text_excerpt",
+            fact="Synthetic public form",
+            text_grounding=[{"evidence_id": "page-0001", "exact_quote": "Synthetic public form"}],
+        )
     analysis = prior_analysis(dossier, config, tmp_path, [raw_a, raw_b])
     one = tmp_path / "one"
     start(dossier[0], registry, one, config, provider=Scripted(findings=[]))
@@ -1047,7 +1052,12 @@ def test_potential_index_includes_unresolved_auditor_hypothesis(
 
 def test_opposite_auditor_assertions_are_not_duplicates(dossier, registry, config, tmp_path):
     raw_a, raw_b = auditor_response("A"), auditor_response("B")
-    raw_a["findings"][0]["fact_assertion"] = "present"
+    raw_a["findings"][0].update(
+        fact_assertion="present",
+        examination_scope="text_excerpt",
+        fact="Synthetic public form",
+        text_grounding=[{"evidence_id": "page-0001", "exact_quote": "Synthetic public form"}],
+    )
     raw_b["findings"][0]["fact_assertion"] = "absent"
     analysis = prior_analysis(dossier, config, tmp_path, [raw_a, raw_b])
     one = tmp_path / "one"

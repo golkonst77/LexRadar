@@ -19,6 +19,9 @@ jobs:
       - run: pytest -q
       - run: lexradar demo examples/input.json --output /tmp/report.json
       - run: diff examples/result.json /tmp/report.json
+      - run: lexradar inspect-evidence examples/reading-dossier --evidence document-0003 --page 1 --output /tmp/lexradar-reading-template
+      - run: lexradar record-visual-review examples/reading-dossier --submission /tmp/lexradar-reading-template/observations.json --output /tmp/lexradar-reading-pending
+      - run: python -c "from pathlib import Path; from lexradar.collector.visual_review import verify_sidecar; r=verify_sidecar(Path('examples/reading-dossier'),Path('/tmp/lexradar-reading-pending')); assert r['trust_status']=='untrusted' and not r['production_go_allowed']"
       - run: lexradar review-decision examples/analysis-dossier --finding examples/decision-finding.json --registry examples/legal-registry.json --output /tmp/lexradar-decision-review
       - run: lexradar decide examples/analysis-dossier --finding examples/decision-finding.json --registry examples/legal-registry.json --output /tmp/lexradar-production-decision.json
       - run: python -c "import json; d=json.load(open('/tmp/lexradar-production-decision.json')); assert d['decision_scope']=='production' and d['outcome']=='HOLD' and not d['legal_research_completed'] and not d['client_release_allowed']"

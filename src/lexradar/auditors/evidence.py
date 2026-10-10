@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from ..collector.artifacts import verify_integrity
 from ..collector.models import CollectionResult
+from ..collector.text_integrity import recheck_text
 
 
 class DossierError(ValueError):
@@ -51,6 +52,9 @@ def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
         if evidence.source not in {document.requested_url, document.final_url}:
             raise DossierError("Document source mismatch")
     for evidence in data.evidence:
+        kinds = [a.kind for a in evidence.artifacts]
+        if any(kinds.count(kind) > 1 for kind in ("html", "text", "pdf")):
+            raise DossierError("Ambiguous original or text artifacts")
         for artifact in evidence.artifacts:
             # No symlinks, including parent directories. Never read arbitrary paths.
             path = root / artifact.path
@@ -86,6 +90,9 @@ def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
     ]
     if any(e.status != "complete" for e in data.evidence):
         limitations.append("Collector contains partial/unavailable evidence")
+    limitations.extend(recheck_text(data, root))
+    if verify_integrity(data, root):
+        raise DossierError("Artifact integrity changed during text reproduction")
     serialized = data.model_dump(mode="json")
     for page in serialized["pages"]:
         evidence = next(e for e in data.evidence if e.id == page["evidence_id"])

@@ -38,13 +38,17 @@ def validate_result(
         raise ResultError("wrong_auditor_label")
     evidence = {e.id: e for e in packet.data.evidence}
     docs = {d.evidence_id: d for d in packet.data.documents}
+    pages = {p.evidence_id: p for p in packet.data.pages}
     for finding in result.findings:
+        finding.fact_supported = False
         if (
             len(finding.evidence_ids) != len(set(finding.evidence_ids))
             or not set(finding.evidence_ids) <= evidence.keys()
         ):
             raise ResultError("unknown_or_duplicate_evidence_id")
         supporting = [evidence[eid] for eid in finding.evidence_ids]
+        if any(q.evidence_id not in finding.evidence_ids for q in finding.text_grounding):
+            raise ResultError("quotation_refers_to_uncited_evidence")
         if finding.source not in {e.source for e in supporting}:
             raise ResultError("unsupported_source_url")
         incomplete = any(e.status != "complete" for e in supporting)
@@ -86,7 +90,8 @@ def validate_result(
                     g.evidence_id == eid
                     and g.exact_quote.strip()
                     and finding.fact == g.exact_quote
-                    and g.exact_quote in (docs[eid].text or "")
+                    and g.page is not None
+                    and g.exact_quote in docs[eid].page_texts.get(g.page, "")
                     for g in finding.text_grounding
                 )
                 for eid in mixed_ids
@@ -108,6 +113,45 @@ def validate_result(
                     "Only quotation occurrence checked; interpretation needs human review; "
                     "unread pages excluded"
                 )
+        grounded = (
+            finding.fact_assertion == "present" and finding.examination_scope == "text_excerpt"
+        ) and all(
+            any(
+                q.evidence_id == eid
+                and q.exact_quote.strip()
+                and (finding.fact == q.exact_quote if finding.material or eid in docs else True)
+                and (
+                    q.page is not None and q.exact_quote in docs[eid].page_texts.get(q.page, "")
+                    if eid in docs
+                    else q.page in {None, 1} and q.exact_quote in (pages[eid].text or "")
+                )
+                for q in finding.text_grounding
+            )
+            for eid in finding.evidence_ids
+        )
+        finding.fact_supported = bool(grounded)
+        if finding.fact_assertion == "absent":
+            finding.search_limitations.extend(
+                [
+                    "Negative assertion is unconfirmed; search scope is self-declared",
+                    "Collected subset cannot establish absence across a website",
+                ]
+            )
+            finding.limitations.append("Absence is not established by missing or incomplete text")
+        if finding.material and finding.fact_assertion == "present" and not grounded:
+            finding.status = "unverifiable"
+            finding.limitations.append("Material assertion lacks a source/page-bound exact excerpt")
+        for eid in finding.evidence_ids:
+            reading = docs[eid].reading if eid in docs else pages[eid].reading
+            if not reading.text_coverage_complete:
+                if finding.evidence_quality == "complete":
+                    finding.evidence_quality = "partial"
+                finding.limitations.append(f"{eid}: extraction/reading incomplete or unknown")
+            if reading.provenance != "reproduced":
+                finding.fact_supported = False
+                if finding.material and finding.fact_assertion == "present":
+                    finding.status = "unverifiable"
+                finding.limitations.append(f"{eid}: derivative provenance not reproducible")
         finding.limitations.append("All normative references are independently unverified")
         finding.additional_checks.append("Independently verify current law and its applicability")
         if finding.status != "rejected":

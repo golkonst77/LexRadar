@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import AwareDatetime, Field, HttpUrl, model_validator
 
 from ..auditors.models import AIFinding, AnalysisConfig, ModelSettings, Topic, Usage
+from ..collector.reading import ReadingState
 from ..models import Model, Signal
 
 Status = Literal[
@@ -93,6 +94,9 @@ class NormAssessment(Model):
 
 
 class Material(Model):
+    reading: ReadingState = Field(default_factory=ReadingState)
+    fully_examined_text_pages: int = Field(default=0, ge=0)
+    legal_research_completed: Literal[False] = False
     evidence_id: str
     url: HttpUrl
     type: Literal["html_page", "pdf", "other_document"]
@@ -116,6 +120,8 @@ class Quote(Model):
 
 
 class Candidate(Model):
+    search_scope: Literal["unknown", "text_excerpt", "whole_document", "site_subset"] = "unknown"
+    search_limitations: list[str] = Field(default_factory=list, max_length=100)
     id: str = Field(min_length=1, max_length=100)
     origin: Literal["independent_verifier"] = "independent_verifier"
     topic: Topic
@@ -257,6 +263,12 @@ class VerifierRequestLog(Model):
 
 
 class Completeness(Model):
+    pdf_full_text_review_fraction: float | None = None
+    pdf_page_denominator_complete: bool = False
+    fully_examined_pdf_text_pages: int = 0
+    extracted_pdf_text_pages: int = 0
+    extraction_complete_documents: int = 0
+    legal_research_completed: Literal[False] = False
     method: str = "Materials with acknowledged supplied-text review / all collected materials"
     examined_text_materials: int
     total_materials: int

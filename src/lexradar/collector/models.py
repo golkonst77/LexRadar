@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import AwareDatetime, Field, HttpUrl, model_validator
 
 from ..models import Evidence, Model
+from .reading import ReadingState
 
 
 class Limits(Model):
@@ -94,6 +95,7 @@ class EntityObservation(Model):
 
 
 class PageObservation(Model):
+    reading: ReadingState = Field(default_factory=ReadingState)
     requested_url: HttpUrl
     final_url: HttpUrl | None = None
     captured_at: AwareDatetime
@@ -107,6 +109,8 @@ class PageObservation(Model):
 
 
 class DocumentObservation(Model):
+    reading: ReadingState = Field(default_factory=ReadingState)
+    page_texts: dict[int, str] = Field(default_factory=dict)
     requested_url: HttpUrl
     final_url: HttpUrl | None = None
     http_status: int | None = None
