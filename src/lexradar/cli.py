@@ -9,6 +9,11 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] in {"inspect-evidence", "record-visual-review"}:
+        from .collector.visual_review import visual_main
+
+        visual_main(sys.argv[1], sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] in {"decide", "review-decision"}:
         from .decision.cli import decision_main
 

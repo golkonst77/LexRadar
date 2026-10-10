@@ -1,0 +1,2 @@
+# PDF cross-reference records use significant whitespace; preserve original bytes.
+*.pdf binary

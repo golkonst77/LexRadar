@@ -89,7 +89,10 @@ def normalize_independent(
             material = materials[eid]
             quotes = [q for q in candidate.fragments if q.evidence_id == eid]
             facts &= (
-                bool(quotes) and material.text_available and material.examination != "not_examined"
+                bool(quotes)
+                and material.text_available
+                and material.examination != "not_examined"
+                and material.reading.provenance == "reproduced"
             )
             for quote in quotes:
                 text = (
@@ -114,6 +117,14 @@ def normalize_independent(
             )
             checks.append(
                 "Review publicly obtainable missing text or unread pages; scans are not violations"
+            )
+        if candidate.fact_assertion == "absent":
+            reasons.extend(
+                [
+                    f"Self-declared search scope: {candidate.search_scope}",
+                    *candidate.search_limitations,
+                    "Negative assertion cannot establish absence beyond supplied/reviewed text",
+                ]
             )
         assessments = [normative[nid] for nid in candidate.norm_ids]
         if not assessments or any(n.status != "current_confirmed" for n in assessments):
@@ -265,7 +276,28 @@ def compare_results(
             if s.act_number == basis.act_id and s.provision == basis.provision
         ]
         status = "potential_issue"
-        invalid_material = any(not materials[eid].text_available for eid in original.evidence_ids)
+        invalid_material = any(
+            not materials[eid].text_available or materials[eid].reading.provenance != "reproduced"
+            for eid in original.evidence_ids
+        )
+        grounded = all(
+            any(
+                q.evidence_id == eid
+                and q.exact_quote.strip()
+                and original.fact == q.exact_quote
+                and (
+                    q.page is not None
+                    and q.exact_quote in materials[eid].page_texts.get(q.page, "")
+                    if materials[eid].type == "pdf"
+                    else q.page in {None, 1} and q.exact_quote in materials[eid].supplied_text
+                )
+                for q in original.text_grounding
+            )
+            for eid in original.evidence_ids
+        )
+        if original.material and not grounded:
+            invalid_material = True
+            reasons.append("Material A/B claim lacks independently checked source/page quote")
         if original.fact_assertion != "present" or invalid_material:
             status = "insufficient_evidence"
             reasons.append("Unsupported absence or unavailable content is not proof of a violation")
