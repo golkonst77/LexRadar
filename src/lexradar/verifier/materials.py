@@ -111,7 +111,8 @@ def completeness(materials: list[Material]) -> Completeness:
     fully_reviewed = sum(m.fully_examined_text_pages for m in pdfs)
     return Completeness(
         pdf_full_text_review_fraction=fully_reviewed / known_pages if known_pages else None,
-        pdf_page_denominator_complete=bool(pdfs) and all(m.page_count is not None for m in pdfs),
+        pdf_page_denominator_complete=bool(pdfs)
+        and all(m.page_count is not None for m in materials if m.type in {"pdf", "other_document"}),
         examined_text_materials=reviewed,
         total_materials=len(materials),
         text_review_fraction=reviewed / len(materials) if materials else None,

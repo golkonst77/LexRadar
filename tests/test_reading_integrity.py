@@ -503,3 +503,20 @@ def test_sidecar_tampering_and_stale_source_are_detected(tmp_path):
     save_manifest(root, data)
     with pytest.raises(ValueError, match="Stale"):
         verify_sidecar(root, output)
+
+
+def test_missing_document_keeps_pdf_denominator_incomplete(tmp_path):
+    root, _ = pdf_dossier(tmp_path, ["One synthetic page", "Another synthetic page"])
+    material = acknowledge(material_for(root), [1, 2])
+    missing = Material(
+        evidence_id="unavailable-document",
+        url="https://clinic.example/missing.pdf",
+        type="other_document",
+        collection_status="unavailable",
+    )
+    summary = completeness([material, missing])
+    assert summary.fully_examined_pdf_text_pages == 2 and summary.known_pdf_pages == 2
+    assert summary.pdf_full_text_review_fraction == 1
+    assert not summary.pdf_page_denominator_complete
+    assert summary.unknown_page_count_documents == 1
+    assert not summary.legal_research_completed
