@@ -1,0 +1,94 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "organization-0001",
+      "name": "ООО «Синтетическая клиника»",
+      "inn": null,
+      "ogrn": null,
+      "identifiers_scope": "public_text_mentions_not_registry_verified",
+      "role_hint": "Назван в тексте формы; оператор/получатель фактически не установлен",
+      "form_ids": [
+        "form-0001"
+      ],
+      "flow_ids": [
+        "flow-0001"
+      ],
+      "identification_sources": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ",
+          "page": 1,
+          "element": null
+        },
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться Подписка на новости ",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "mention_confidence": "text_supported",
+      "uncertainties": [
+        "Личность, принадлежность реквизитов и роль не проверены по первоисточникам",
+        "Количество упоминаний не доказывает количество операторов"
+      ],
+      "identity_verified": false,
+      "operator_confirmed": false
+    },
+    {
+      "id": "organization-0002",
+      "name": "ООО «Синтетические заявки»",
+      "inn": null,
+      "ogrn": null,
+      "identifiers_scope": "public_text_mentions_not_registry_verified",
+      "role_hint": "Назван в тексте формы; оператор/получатель фактически не установлен",
+      "form_ids": [
+        "form-0002"
+      ],
+      "flow_ids": [
+        "flow-0002"
+      ],
+      "identification_sources": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетические заявки». Распределение ответственности не установлено. Запись на приём ",
+          "page": 1,
+          "element": null
+        },
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "mention_confidence": "text_supported",
+      "uncertainties": [
+        "Личность, принадлежность реквизитов и роль не проверены по первоисточникам",
+        "Количество упоминаний не доказывает количество операторов"
+      ],
+      "identity_verified": false,
+      "operator_confirmed": false
+    }
+  ]
+}

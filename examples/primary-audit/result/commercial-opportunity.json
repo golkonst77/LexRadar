@@ -1,0 +1,91 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "work-0001",
+      "kind": "additional_legal_expertise",
+      "stage_ids": [
+        "05",
+        "06",
+        "09"
+      ],
+      "observation_ids": [
+        "observation-0005"
+      ],
+      "rationale": "Форма form-0001 имеет наблюдаемые элементы; возможна отдельная оценка основания и распределения ролей, необходимость документов не установлена",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    },
+    {
+      "id": "work-0002",
+      "kind": "additional_legal_expertise",
+      "stage_ids": [
+        "05",
+        "06",
+        "09"
+      ],
+      "observation_ids": [
+        "observation-0008"
+      ],
+      "rationale": "Форма form-0002 имеет наблюдаемые элементы; возможна отдельная оценка основания и распределения ролей, необходимость документов не установлена",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    },
+    {
+      "id": "work-0003",
+      "kind": "additional_legal_expertise",
+      "stage_ids": [
+        "04"
+      ],
+      "observation_ids": [
+        "observation-0013"
+      ],
+      "rationale": "Есть конкретные фрагменты документа для оценки; необходимость подготовки нового документа не установлена",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    },
+    {
+      "id": "work-0004",
+      "kind": "medical_disclosure_review",
+      "stage_ids": [
+        "12"
+      ],
+      "observation_ids": [
+        "observation-0019",
+        "observation-0020",
+        "observation-0021",
+        "observation-0022"
+      ],
+      "rationale": "Медицинские текстовые маркеры позволяют определить предмет проверки; необходимость доработки и её объём ещё не установлены",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    }
+  ]
+}

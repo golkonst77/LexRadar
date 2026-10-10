@@ -1,0 +1,124 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "form-0001",
+      "evidence_id": "page-0001",
+      "url": "https://clinic.example/",
+      "element": "form[occurrence=1]",
+      "purpose_hint": "Запись на приём",
+      "fields": [
+        {
+          "tag": "input",
+          "type": "tel",
+          "name": "phone",
+          "label": "Телефон",
+          "required": true,
+          "checked": null
+        }
+      ],
+      "policy_links": [
+        "https://clinic.example/privacy.pdf"
+      ],
+      "consent_links": [],
+      "advertising_links": [],
+      "interface_elements": [
+        "legend",
+        "button"
+      ],
+      "submission_context": "Запись на приём ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться",
+      "action_reference": "https://clinic.example/appointment",
+      "organization_candidates": [
+        "organization-0001"
+      ],
+      "recipient_hint": "В контексте формы названы организации; это не проверка маршрута",
+      "unresolved_processing": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "citation": {
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "form[occurrence=1]"
+      },
+      "screenshot": null,
+      "screenshot_scope": null,
+      "examination": "saved_static_markup",
+      "functional_test_performed": false,
+      "submitted": false,
+      "lawfulness": "unestablished"
+    },
+    {
+      "id": "form-0002",
+      "evidence_id": "page-0001",
+      "url": "https://clinic.example/",
+      "element": "form[occurrence=2]",
+      "purpose_hint": "Подписка на новости",
+      "fields": [
+        {
+          "tag": "input",
+          "type": "email",
+          "name": "email",
+          "label": "Email",
+          "required": false,
+          "checked": null
+        },
+        {
+          "tag": "input",
+          "type": "checkbox",
+          "name": "advertising",
+          "label": "Согласие на рекламную рассылку",
+          "required": false,
+          "checked": false
+        }
+      ],
+      "policy_links": [],
+      "consent_links": [],
+      "advertising_links": [
+        "https://clinic.example/advertising-consent"
+      ],
+      "interface_elements": [
+        "legend",
+        "button"
+      ],
+      "submission_context": "Подписка на новости ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+      "action_reference": "https://intake.example/submit",
+      "organization_candidates": [
+        "organization-0002"
+      ],
+      "recipient_hint": "В контексте формы названы организации; это не проверка маршрута",
+      "unresolved_processing": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "citation": {
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "form[occurrence=2]"
+      },
+      "screenshot": null,
+      "screenshot_scope": null,
+      "examination": "saved_static_markup",
+      "functional_test_performed": false,
+      "submitted": false,
+      "lawfulness": "unestablished"
+    }
+  ]
+}
