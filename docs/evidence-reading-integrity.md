@@ -118,7 +118,8 @@ lexradar record-visual-review examples/reading-dossier \
 
 Выход должен быть новым каталогом вне исходного досье. В нём inventory.json,
 observations.json и receipt.json: хеши производных файлов, исходного manifest и
-переданной записи. Неверный PDF SHA-256, номер страницы или будущая дата дают
+переданной записи; исходные байты переданной записи сохраняются отдельно в submission.json.
+Неверный PDF SHA-256, номер страницы или будущая дата дают
 invalidated; шаблон — pending; привязанная запись — declared_untrusted. Все состояния
 остаются untrusted. Журнал не передаётся автоматически A/B/Verifier и не заменяет
 машинное поле visual_examined. Нет OCR, изображения не отправляются LLM.

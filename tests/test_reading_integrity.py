@@ -320,6 +320,8 @@ def test_visual_journal_bound_untrusted_and_read_only(tmp_path, wrong):
     path.write_text(json.dumps(submission))
     output = tmp_path / "recorded"
     receipt = write_inventory(root, output, submission=path)
+    assert (output / "submission.json").read_bytes() == path.read_bytes()
+    assert receipt["submission_sha256"] == sha256(path.read_bytes())
     assert receipt["state"] == ("declared_untrusted" if wrong == "none" else "invalidated")
     assert receipt["trust_status"] == "untrusted"
     assert not receipt["legal_research_completed"] and not receipt["production_go_allowed"]

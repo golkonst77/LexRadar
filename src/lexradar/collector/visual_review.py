@@ -141,6 +141,8 @@ def write_inventory(
     output.mkdir(parents=True, exist_ok=False)
     (output / "inventory.json").write_bytes(inventory_raw)
     (output / "observations.json").write_bytes(observations_raw)
+    if submission_raw is not None:
+        (output / "submission.json").write_bytes(submission_raw)
     (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     return receipt
 
@@ -175,7 +177,14 @@ def verify_sidecar(root: Path, output: Path) -> dict:
     ) != reading_inventory(packet):
         raise ValueError("Stale or non-reproducible reading inventory")
     if observations_raw != b"null":
-        VisualObservation.model_validate_json(observations_raw)
+        observation = VisualObservation.model_validate_json(observations_raw)
+        if receipt.get("submission_sha256") is not None:
+            raw_submission = read_bytes(output / "submission.json", 200_000)
+            if sha256(raw_submission) != receipt["submission_sha256"]:
+                raise ValueError("Original submission hash mismatch")
+            json_object(raw_submission)
+            if VisualObservation.model_validate_json(raw_submission) != observation:
+                raise ValueError("Observation does not match saved submission")
     return receipt
 
 
