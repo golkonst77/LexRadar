@@ -55,6 +55,23 @@ jobs:
               report = json.loads((root / (name + '.json')).read_text())
               assert report['audience'] == 'internal_only' and not report['client_release_allowed']
           PYCODE
+      - name: Independent local verification of primary outputs
+        run: |
+          lexradar verify-primary examples/primary-audit/dossier --primary /tmp/lexradar-primary/audit.json --assessment /tmp/lexradar-primary/internal-assessment.json --registry examples/legal-sources/registry.json --output /tmp/lexradar-independent-local
+          python - <<'PYCODE'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/lexradar-independent-local')
+          assert len(list(root.glob('*.json'))) == 4
+          for p in root.glob('*.json'):
+              r = json.loads(p.read_text())
+              assert r['audience'] == 'internal_only' and r['production_outcome'] == 'HOLD'
+              assert not r['client_release_allowed'] and not r['automatic_send_allowed']
+          r = json.loads((root / 'independent-verification.json').read_text())
+          assert r['technical_fact_count'] > 0 and not r['legal_research_completed']
+          assert all(f['normative_status'] == 'normative_review_required' for f in r['findings'])
+          assert all(w['necessity_status'] == 'not_confirmed' for w in r['commercial_work'])
+          PYCODE
       - run: lexradar legal-source prepare --metadata examples/legal-sources/metadata-v1.json --text examples/legal-sources/originals/v1.txt --event-date 2025-06-01 --output /tmp/lexradar-source-prepared
       - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2025-06-01 --output /tmp/lexradar-source-past
       - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2026-06-01 --output /tmp/lexradar-source-current

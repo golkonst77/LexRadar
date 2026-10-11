@@ -64,6 +64,12 @@ Collector не подключён к Gateway, не формирует юриди
 юридически неполный, HOLD/not_confirmed; клиентские материалы не создаются.
 [Запуск, этапы, сверка v2.5 и примеры](docs/primary-audit-methodology.md).
 
+`lexradar verify-primary` независимо повторно исследует сохранённое досье и
+проверяет находки/условные платные работы по исходным байтам. Четыре дополнительных
+внутренних отчёта сохраняют HOLD/not_confirmed; техническая сверка не подтверждает
+нарушение или необходимость услуги.
+[Команда, контракты и ограничения](docs/independent-local-verification.md).
+
 ## Independent AI Auditors
 
 `lexradar analyze work/audit --output work/analysis` по умолчанию работает offline без LLM.
