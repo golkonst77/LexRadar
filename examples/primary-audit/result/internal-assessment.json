@@ -1,0 +1,2203 @@
+{
+  "schema_version": "internal-assessment-0.1",
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_primary_sha256": "47ed0f92d5d831b8725871d5983a4685cdfe10fead26760ee8d8c9e5cf1e52dd",
+  "source_primary_report": "audit.json",
+  "source_primary_hash_scope": "canonical_validated_json_utf8_sorted_compact",
+  "review_trust": "untrusted_no_authenticated_legal_review",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
+  "materials": [
+    {
+      "origin": {
+        "kind": "unknown",
+        "acquisition_method": null,
+        "declared_source": null,
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "unknown",
+        "started_at_role": "unknown",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Acquisition origin/timestamp roles unknown; not authenticated"
+        ]
+      },
+      "static_inspection": {
+        "status": "complete",
+        "diagnostics": [],
+        "text_spans": [
+          {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          }
+        ],
+        "recovered_text_chars": 0,
+        "limitations": [],
+        "original_modified": false
+      },
+      "evidence_id": "page-0001",
+      "url": "https://clinic.example/",
+      "collection_status": "complete",
+      "reading": {
+        "original_saved": true,
+        "source_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "extraction_state": "complete",
+        "text_layer_extracted": true,
+        "text_truncated": false,
+        "original_chars": 420,
+        "supplied_chars": 420,
+        "page_count": 1,
+        "pages": [
+          {
+            "text_examination": "not_examined",
+            "page": 1,
+            "original_chars": 420,
+            "supplied_chars": 420,
+            "text_available": true,
+            "extraction_state": "complete",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": []
+          }
+        ],
+        "max_page_chars": 100000,
+        "max_total_chars": 100000,
+        "page_limit": 100,
+        "provenance": "reproduced",
+        "text_coverage_complete": true,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": [
+          "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+          "Extraction is not legal research"
+        ]
+      },
+      "artifacts": [
+        {
+          "path": "artifacts/page-0001.html",
+          "sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "size": 1613,
+          "kind": "html",
+          "representation": "original_html",
+          "notice": null
+        },
+        {
+          "path": "artifacts/page-0001.txt",
+          "sha256": "d324e39a84b917df866a0da5b14ae5eff87f53256402f1a479f9315c81f47144",
+          "size": 783,
+          "kind": "text",
+          "representation": "extracted_text",
+          "notice": null
+        },
+        {
+          "path": "artifacts/synthetic-pixel.png",
+          "sha256": "1f3b40322c29a8108ead1415f2aae739495eaee8b1952323ffcdc1a4258ea186",
+          "size": 68,
+          "kind": "screenshot",
+          "representation": "isolated_screenshot",
+          "notice": "Isolated screenshot: JavaScript and external resources disabled; not an exact reproduction of the live website"
+        }
+      ],
+      "checked_scope": "local_inventory_not_full_document_read",
+      "live_access_performed": false
+    }
+  ],
+  "legal_findings": [
+    {
+      "id": "finding-3c623b8a45df39564d29137f2aa2295a90bf2bf019bd91f7e08a57c1159164b6",
+      "category": "A",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "organization",
+          "source_id": "organization-0002",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Идентификация фактического оператора персональных данных",
+      "facts": [
+        {
+          "id": "fact-b95a1719a685b15908f366d86749dd42fda613b7c9f5893eb5e95b498784b29e",
+          "kind": "observed_fact",
+          "description": "Отдельное текстовое упоминание: ООО «Синтетические заявки»; роль не подтверждена",
+          "objects": [
+            {
+              "type": "organization",
+              "source_id": "organization-0002",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+              "page": 1,
+              "element": null
+            },
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "ООО «Синтетические заявки». Распределение ответственности не установлено. Запись на приём ",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-b95a1719a685b15908f366d86749dd42fda613b7c9f5893eb5e95b498784b29e"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Упоминание не устанавливает идентичность, собственника или оператора"
+      ],
+      "additional_checks": [
+        "Независимо установить личность и фактическую роль каждой организации",
+        "Раздельно установить владельца сайта, домена и оператора ПДн"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P1",
+      "priority_rationale": "Сначала установить применимость юридического документа",
+      "limitations": [
+        "Extraction is not legal research",
+        "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-aa979697282263295307e4fe6ad0a7e041ffc4e681f4b95980602af1013aea92",
+      "category": "A",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "organization",
+          "source_id": "organization-0001",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Идентификация фактического оператора персональных данных",
+      "facts": [
+        {
+          "id": "fact-9ddd39494dd0e0caf8ffd5df47bad89bc95e9cc9d5d31b71f8a948b817ad638c",
+          "kind": "observed_fact",
+          "description": "Отдельное текстовое упоминание: ООО «Синтетическая клиника»; роль не подтверждена",
+          "objects": [
+            {
+              "type": "organization",
+              "source_id": "organization-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться Подписка на новости ",
+              "page": 1,
+              "element": null
+            },
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-9ddd39494dd0e0caf8ffd5df47bad89bc95e9cc9d5d31b71f8a948b817ad638c"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Упоминание не устанавливает идентичность, собственника или оператора"
+      ],
+      "additional_checks": [
+        "Независимо установить личность и фактическую роль каждой организации",
+        "Раздельно установить владельца сайта, домена и оператора ПДн"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P1",
+      "priority_rationale": "Сначала установить применимость юридического документа",
+      "limitations": [
+        "Extraction is not legal research",
+        "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-ad140cfcf770bdbde27556d2a962fdda74692775960808b9baf47fb4bddbfc96",
+      "category": "B",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "form",
+          "source_id": "form-0002",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Сопоставление политики с формами и фактическими целями",
+      "facts": [
+        {
+          "id": "fact-8f963994f1093afb2b020c4482df997d4d2453eb2e426c348cc2b2edda83a5c4",
+          "kind": "observed_fact",
+          "description": "Доступен текстовый фрагмент документа-кандидата",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0013"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "интетическая клиника» Телефон Политика обработки персональных данных Записаться Подписка на новости ООО «Синтетические заявки» Email Согла",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d",
+          "kind": "observed_fact",
+          "description": "Сохранена форма: 2 наблюдаемых полей; 1 наблюдаемых checkbox; фактическая отправка не проверена",
+          "objects": [
+            {
+              "type": "form",
+              "source_id": "form-0002",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [
+            "declaration-0004"
+          ],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 13,
+                  "column": 60
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=2]"
+            },
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 6
+                },
+                "end_exclusive": {
+                  "line": 9,
+                  "column": 44
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "html_action"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-f62addcd8315d616abcb86499e6e41e476ffd78f6dd1c51d4dd47cf0ccc7711c",
+          "kind": "observed_fact",
+          "description": "Сохранённая ссылка-кандидат на документ",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0012"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 7,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 7,
+                  "column": 23
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "a[href=https://clinic.example/privacy.pdf]"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-8f963994f1093afb2b020c4482df997d4d2453eb2e426c348cc2b2edda83a5c4",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d",
+        "fact-f62addcd8315d616abcb86499e6e41e476ffd78f6dd1c51d4dd47cf0ccc7711c"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Полнота, применимость документа и его соответствие фактической обработке неизвестны"
+      ],
+      "additional_checks": [
+        "Получить полный действующий текст политики, включая непрочитанные страницы",
+        "Сопоставить подтверждённые цели, категории данных и роли с конкретной формой"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P1",
+      "priority_rationale": "Сначала установить применимость юридического документа",
+      "limitations": [
+        "Extraction is not legal research",
+        "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-d4eabfab955b991bcbb6daa4d8a96b36b0b5c12f98bc85c58b6959a8bd638ab2",
+      "category": "B",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "form",
+          "source_id": "form-0001",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Сопоставление политики с формами и фактическими целями",
+      "facts": [
+        {
+          "id": "fact-01648b6b6210aa78ce8468af162f0ead9cfc1a7b43059f72f1a5350c12fd44e9",
+          "kind": "observed_fact",
+          "description": "Сохранена форма: 1 наблюдаемых полей; 0 наблюдаемых checkbox; фактическая отправка не проверена",
+          "objects": [
+            {
+              "type": "form",
+              "source_id": "form-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [
+            "declaration-0003"
+          ],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 4,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 8,
+                  "column": 59
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=1]"
+            },
+            {
+              "static_span": {
+                "start": {
+                  "line": 4,
+                  "column": 6
+                },
+                "end_exclusive": {
+                  "line": 4,
+                  "column": 27
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "html_action"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-8f963994f1093afb2b020c4482df997d4d2453eb2e426c348cc2b2edda83a5c4",
+          "kind": "observed_fact",
+          "description": "Доступен текстовый фрагмент документа-кандидата",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0013"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "интетическая клиника» Телефон Политика обработки персональных данных Записаться Подписка на новости ООО «Синтетические заявки» Email Согла",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-f62addcd8315d616abcb86499e6e41e476ffd78f6dd1c51d4dd47cf0ccc7711c",
+          "kind": "observed_fact",
+          "description": "Сохранённая ссылка-кандидат на документ",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0012"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 7,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 7,
+                  "column": 23
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "a[href=https://clinic.example/privacy.pdf]"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-01648b6b6210aa78ce8468af162f0ead9cfc1a7b43059f72f1a5350c12fd44e9",
+        "fact-8f963994f1093afb2b020c4482df997d4d2453eb2e426c348cc2b2edda83a5c4",
+        "fact-f62addcd8315d616abcb86499e6e41e476ffd78f6dd1c51d4dd47cf0ccc7711c"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Полнота, применимость документа и его соответствие фактической обработке неизвестны"
+      ],
+      "additional_checks": [
+        "Получить полный действующий текст политики, включая непрочитанные страницы",
+        "Сопоставить подтверждённые цели, категории данных и роли с конкретной формой"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P1",
+      "priority_rationale": "Сначала установить применимость юридического документа",
+      "limitations": [
+        "Extraction is not legal research",
+        "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-16252cf9b4bfe10eba2d3ed8d3150e6d4c16d80a38ab5589a4bd9c5e41e0e236",
+      "category": "C",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "form",
+          "source_id": "form-0002",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Основания обработки и связь согласия с конкретной формой",
+      "facts": [
+        {
+          "id": "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+          "kind": "observed_fact",
+          "description": "Контекст ссылок/маршрутизации формы form-0001",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0006"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 4,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 8,
+                  "column": 59
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=1]"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+          "kind": "observed_fact",
+          "description": "Доступен текстовый фрагмент документа-кандидата",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0014"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": " «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+          "kind": "observed_fact",
+          "description": "Контекст ссылок/маршрутизации формы form-0002",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0009"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 13,
+                  "column": 60
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=2]"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d",
+          "kind": "observed_fact",
+          "description": "Сохранена форма: 2 наблюдаемых полей; 1 наблюдаемых checkbox; фактическая отправка не проверена",
+          "objects": [
+            {
+              "type": "form",
+              "source_id": "form-0002",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [
+            "declaration-0004"
+          ],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 13,
+                  "column": 60
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=2]"
+            },
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 6
+                },
+                "end_exclusive": {
+                  "line": 9,
+                  "column": 44
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "html_action"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Наличие/отсутствие checkbox не устанавливает правомерность обработки"
+      ],
+      "additional_checks": [
+        "Установить применимое основание обработки; согласие не предполагается обязательным",
+        "Проверить текст, интерфейс и доказательства получения согласия, если оно применимо"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P1",
+      "priority_rationale": "Сначала установить применимость юридического документа",
+      "limitations": [
+        "Extraction is not legal research",
+        "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-c0b9617b0e46629ebd336b0907df3a0d8f6718623f57d011fdff0c0f5439751f",
+      "category": "C",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "form",
+          "source_id": "form-0001",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Основания обработки и связь согласия с конкретной формой",
+      "facts": [
+        {
+          "id": "fact-01648b6b6210aa78ce8468af162f0ead9cfc1a7b43059f72f1a5350c12fd44e9",
+          "kind": "observed_fact",
+          "description": "Сохранена форма: 1 наблюдаемых полей; 0 наблюдаемых checkbox; фактическая отправка не проверена",
+          "objects": [
+            {
+              "type": "form",
+              "source_id": "form-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [
+            "declaration-0003"
+          ],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 4,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 8,
+                  "column": 59
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=1]"
+            },
+            {
+              "static_span": {
+                "start": {
+                  "line": 4,
+                  "column": 6
+                },
+                "end_exclusive": {
+                  "line": 4,
+                  "column": 27
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "html_action"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+          "kind": "observed_fact",
+          "description": "Контекст ссылок/маршрутизации формы form-0001",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0006"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 4,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 8,
+                  "column": 59
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=1]"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+          "kind": "observed_fact",
+          "description": "Доступен текстовый фрагмент документа-кандидата",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0014"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": " «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+          "kind": "observed_fact",
+          "description": "Контекст ссылок/маршрутизации формы form-0002",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0009"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 13,
+                  "column": 60
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=2]"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-01648b6b6210aa78ce8468af162f0ead9cfc1a7b43059f72f1a5350c12fd44e9",
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Наличие/отсутствие checkbox не устанавливает правомерность обработки"
+      ],
+      "additional_checks": [
+        "Установить применимое основание обработки; согласие не предполагается обязательным",
+        "Проверить текст, интерфейс и доказательства получения согласия, если оно применимо"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P1",
+      "priority_rationale": "Сначала установить применимость юридического документа",
+      "limitations": [
+        "Extraction is not legal research",
+        "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-f43cf045272de5d777929d6e73db14af3f3a8d6ecc856856c4f20aed1c3fc414",
+      "category": "D",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "form",
+          "source_id": "form-0002",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Применимость отдельного согласия на рекламные коммуникации",
+      "facts": [
+        {
+          "id": "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+          "kind": "observed_fact",
+          "description": "Контекст ссылок/маршрутизации формы form-0001",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0006"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 4,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 8,
+                  "column": 59
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=1]"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+          "kind": "observed_fact",
+          "description": "Доступен текстовый фрагмент документа-кандидата",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0014"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": " «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+          "kind": "observed_fact",
+          "description": "Контекст ссылок/маршрутизации формы form-0002",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0009"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 13,
+                  "column": 60
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=2]"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d",
+          "kind": "observed_fact",
+          "description": "Сохранена форма: 2 наблюдаемых полей; 1 наблюдаемых checkbox; фактическая отправка не проверена",
+          "objects": [
+            {
+              "type": "form",
+              "source_id": "form-0002",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [
+            "declaration-0004"
+          ],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 13,
+                  "column": 60
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "form[occurrence=2]"
+            },
+            {
+              "static_span": {
+                "start": {
+                  "line": 9,
+                  "column": 6
+                },
+                "end_exclusive": {
+                  "line": 9,
+                  "column": 44
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "html_action"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Маркер рекламы не устанавливает факт рассылки или обязательность согласия"
+      ],
+      "additional_checks": [
+        "Подтвердить фактические рекламные коммуникации и применимые актуальные нормы",
+        "Отдельно проверить основания и получение рекламного согласия, если требуется"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P1",
+      "priority_rationale": "Сначала установить применимость юридического документа",
+      "limitations": [
+        "Extraction is not legal research",
+        "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-60da88e9aa0886bfb6250d26e52037f183f8b058025a49f69e4a08322a43e4b2",
+      "category": "F",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "integration",
+          "source_id": "integration-0001",
+          "identity_or_operator_confirmed": false
+        },
+        {
+          "type": "integration",
+          "source_id": "integration-0002",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Фактическое поведение аналитических инструментов",
+      "facts": [
+        {
+          "id": "fact-9cb9b4c35cd210d3caf8a3a38bae2cd87138d374bf39b8f6f1331177f00a0432",
+          "kind": "observed_fact",
+          "description": "Группа объявлений yandex_metrika: 1 вхождений; не формы/перенаправления/передача",
+          "objects": [
+            {
+              "type": "integration",
+              "source_id": "integration-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [
+            "declaration-0001"
+          ],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 35
+                },
+                "end_exclusive": {
+                  "line": 1,
+                  "column": 76
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "script_src"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-d3f9a65034985e8ea0ad5b54e4831794e9771eca7b4a05d4b1ac9e1687947ccb",
+          "kind": "observed_fact",
+          "description": "Группа объявлений google_analytics: 1 вхождений; не формы/перенаправления/передача",
+          "objects": [
+            {
+              "type": "integration",
+              "source_id": "integration-0002",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [
+            "declaration-0002"
+          ],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 94
+                },
+                "end_exclusive": {
+                  "line": 1,
+                  "column": 140
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": null,
+              "page": null,
+              "element": "script_src"
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-9cb9b4c35cd210d3caf8a3a38bae2cd87138d374bf39b8f6f1331177f00a0432",
+        "fact-d3f9a65034985e8ea0ad5b54e4831794e9771eca7b4a05d4b1ac9e1687947ccb"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "GTM не доказывает GA; декларация ресурса не доказывает cookies или передачу"
+      ],
+      "additional_checks": [
+        "Отдельно разрешённой проверкой установить исполнение, cookies и маршруты",
+        "Проверить получателей, данные и применимые актуальные нормы"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P2",
+      "priority_rationale": "Сначала подтвердить фактическое поведение или независимые роли",
+      "limitations": [
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-dedf03fb09fed73fe16ff76c968aa7e6cc8197ada695bd0f7c0ead564ed9f780",
+      "category": "G",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "page",
+          "source_id": "page-0001",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Применимость и содержание медицинских раскрытий",
+      "facts": [
+        {
+          "id": "fact-044e118f2e8b6b4c2319d6592e922e74d971a60b66e45d17c0a1d302a7197726",
+          "kind": "observed_fact",
+          "description": "Текстовый кандидат медицинского раскрытия: organization_disclosures (content_candidate)",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0022"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 15,
+                  "column": 14
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки.",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-0910fbd9b8ca41e014d5277e4076a2c3bf1edc3bcccbf708609ff10c5669371a",
+          "kind": "observed_fact",
+          "description": "Текстовый кандидат медицинского раскрытия: services (content_candidate)",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0026"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 15,
+                  "column": 14
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки.",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-0e08ccfcd863dc9b0095d8a7dd2a34b71ce0ed39488ec9f8076865b6700ba29b",
+          "kind": "observed_fact",
+          "description": "Текстовый кандидат медицинского раскрытия: organization_disclosures (content_candidate)",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0025"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 15,
+                  "column": 14
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": "ООО «Синтетические заявки»",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-1b868804361c7386b4e934b54fb9e7b7557dd57a5820f58ca4a03ff99847bae2",
+          "kind": "observed_fact",
+          "description": "Текстовый кандидат медицинского раскрытия: licensed_entity (content_candidate)",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0020"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 15,
+                  "column": 14
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": "линика». Услуги стоматологии. Лицензия: требует проверки.",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-224bc0956476b375adb2284be3e3af77b56645f2bdfb3eb5bc3cade1d033ed06",
+          "kind": "observed_fact",
+          "description": "Текстовый кандидат медицинского раскрытия: organization_disclosures (content_candidate)",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0024"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 15,
+                  "column": 14
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": "ООО «Синтетическая клиника»",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-4704a1f644c4536a623d08dae7085d4d85e8da91fda5be388fe308c6c645191a",
+          "kind": "observed_fact",
+          "description": "Текстовый кандидат медицинского раскрытия: license_details (content_candidate)",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0021"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 15,
+                  "column": 14
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": "линика». Услуги стоматологии. Лицензия: требует проверки.",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-a6c96b5456e97697fb9a104f6a85b4d96036b60f20059f8489608428759bd8e5",
+          "kind": "observed_fact",
+          "description": "Текстовый кандидат медицинского раскрытия: organization_disclosures (content_candidate)",
+          "objects": [
+            {
+              "type": "page",
+              "source_id": "page-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [
+            "observation-0023"
+          ],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": {
+                "start": {
+                  "line": 1,
+                  "column": 0
+                },
+                "end_exclusive": {
+                  "line": 15,
+                  "column": 14
+                },
+                "status": "complete",
+                "limitations": [],
+                "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+              },
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "saved_html",
+              "quote": "ООО «Синтетические заявки». Распределение ответственности не установлено.",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-044e118f2e8b6b4c2319d6592e922e74d971a60b66e45d17c0a1d302a7197726",
+        "fact-0910fbd9b8ca41e014d5277e4076a2c3bf1edc3bcccbf708609ff10c5669371a",
+        "fact-0e08ccfcd863dc9b0095d8a7dd2a34b71ce0ed39488ec9f8076865b6700ba29b",
+        "fact-1b868804361c7386b4e934b54fb9e7b7557dd57a5820f58ca4a03ff99847bae2",
+        "fact-224bc0956476b375adb2284be3e3af77b56645f2bdfb3eb5bc3cade1d033ed06",
+        "fact-4704a1f644c4536a623d08dae7085d4d85e8da91fda5be388fe308c6c645191a",
+        "fact-a6c96b5456e97697fb9a104f6a85b4d96036b60f20059f8489608428759bd8e5"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Текстовый маркер не подтверждает лицензию или исполнение всех обязанностей"
+      ],
+      "additional_checks": [
+        "Подтвердить исполнителя, реквизиты и статус медицинской лицензии",
+        "Исследовать полный сайт и документы; установить действующие обязанности раскрытия"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P1",
+      "priority_rationale": "Сначала установить применимость юридического документа",
+      "limitations": [
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    },
+    {
+      "id": "finding-66f0abde8bf49406efab7bec9bea02235a74d7afd10f5cbbdbff6cb1c4f1f046",
+      "category": "H",
+      "kind": "review_question",
+      "objects": [
+        {
+          "type": "organization",
+          "source_id": "organization-0001",
+          "identity_or_operator_confirmed": false
+        },
+        {
+          "type": "organization",
+          "source_id": "organization-0002",
+          "identity_or_operator_confirmed": false
+        }
+      ],
+      "factual_description": "Разграничение ролей отдельно упомянутых организаций",
+      "facts": [
+        {
+          "id": "fact-9ddd39494dd0e0caf8ffd5df47bad89bc95e9cc9d5d31b71f8a948b817ad638c",
+          "kind": "observed_fact",
+          "description": "Отдельное текстовое упоминание: ООО «Синтетическая клиника»; роль не подтверждена",
+          "objects": [
+            {
+              "type": "organization",
+              "source_id": "organization-0001",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться Подписка на новости ",
+              "page": 1,
+              "element": null
+            },
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        },
+        {
+          "id": "fact-b95a1719a685b15908f366d86749dd42fda613b7c9f5893eb5e95b498784b29e",
+          "kind": "observed_fact",
+          "description": "Отдельное текстовое упоминание: ООО «Синтетические заявки»; роль не подтверждена",
+          "objects": [
+            {
+              "type": "organization",
+              "source_id": "organization-0002",
+              "identity_or_operator_confirmed": false
+            }
+          ],
+          "observation_ids": [],
+          "declaration_ids": [],
+          "citations": [
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+              "page": 1,
+              "element": null
+            },
+            {
+              "static_span": null,
+              "evidence_id": "page-0001",
+              "url": "https://clinic.example/",
+              "artifact_path": "artifacts/page-0001.html",
+              "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+              "basis": "reproduced_text",
+              "quote": "ООО «Синтетические заявки». Распределение ответственности не установлено. Запись на приём ",
+              "page": 1,
+              "element": null
+            }
+          ],
+          "traceability": "traceable_saved_material",
+          "source_authenticity_confirmed": false,
+          "legal_violation_established": false
+        }
+      ],
+      "established_fact_ids": [
+        "fact-9ddd39494dd0e0caf8ffd5df47bad89bc95e9cc9d5d31b71f8a948b817ad638c",
+        "fact-b95a1719a685b15908f366d86749dd42fda613b7c9f5893eb5e95b498784b29e"
+      ],
+      "evidence_completeness": "complete",
+      "evidence_scope": "supplied_saved_regions_only",
+      "chain_status": "traceable_saved_material",
+      "unconfirmed_assumptions": [
+        "Разные упоминания могут относиться к биографии/партнёрам, а не операторам сайта"
+      ],
+      "additional_checks": [
+        "Проверить контекст каждого упоминания, не предполагая нескольких операторов",
+        "Установить независимые роли и фактические связи организаций с формами"
+      ],
+      "possible_legal_consequences": [],
+      "consequences_status": "blocked_no_trusted_applicable_norm",
+      "legal_status": "not_confirmed",
+      "manual_review_priority": "P2",
+      "priority_rationale": "Сначала подтвердить фактическое поведение или независимые роли",
+      "limitations": [
+        "Extraction is not legal research",
+        "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+        "Доказательная цепочка не является аутентификацией источника или юридической экспертизой",
+        "Только сохранённые области; отсутствие на странице не означает отсутствие на сайте"
+      ],
+      "entire_site_examined": false
+    }
+  ],
+  "commercial_work": [
+    {
+      "id": "work-bfbedaec14894519413e8ec57b7a9ff02e25d128356b109320879b49e75c44fe",
+      "work_type": "advertising_consent",
+      "legal_finding_ids": [
+        "finding-f43cf045272de5d777929d6e73db14af3f3a8d6ecc856856c4f20aed1c3fc414"
+      ],
+      "support_fact_ids": [
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "discovered_scope": "Конкретный сохранённый текст/контекст позволяет предварительно очертить предмет, не необходимость работы",
+      "client_clarifications": [
+        "Подтвердить фактического исполнителя/оператора и цели обработки",
+        "Предоставить действующие документы, процессы и распределение ролей",
+        "Уточнить, требуется ли подготовка нового текста или действующий документ достаточен"
+      ],
+      "expected_paid_result": "Подготовка отдельного рекламного согласия, если его необходимость установлена",
+      "proposal_justification": "conditional_scope_candidate",
+      "necessity_conditions": [
+        "Независимая юридическая проверка актуальных норм и применимости",
+        "Заказчик подтвердил фактическую модель; установлен конкретный недостаток или потребность",
+        "Действующий комплект не покрывает подтверждённую потребность; объём отдельно согласован"
+      ],
+      "limitations": [
+        "Условный кандидат, не коммерческое предложение и не доказательство нарушения",
+        "Частичные фрагменты не подтверждают качество всего документа",
+        "Технические проверки предшествуют квалификации; исправление сайта не входит в основной продукт"
+      ],
+      "scope_policy": "separate_organization_and_form_scopes_until_verified",
+      "document_need_confirmed": false,
+      "violation_proof": false,
+      "offer_generated": false,
+      "customer_webmaster_implements": true,
+      "direct_site_fix_included": false
+    },
+    {
+      "id": "work-445bda9853686f8271436855f9481580354f2bfed2fd08a12f56f0ac9b830b94",
+      "work_type": "legal_webmaster_specification",
+      "legal_finding_ids": [
+        "finding-16252cf9b4bfe10eba2d3ed8d3150e6d4c16d80a38ab5589a4bd9c5e41e0e236",
+        "finding-ad140cfcf770bdbde27556d2a962fdda74692775960808b9baf47fb4bddbfc96",
+        "finding-d4eabfab955b991bcbb6daa4d8a96b36b0b5c12f98bc85c58b6959a8bd638ab2",
+        "finding-f43cf045272de5d777929d6e73db14af3f3a8d6ecc856856c4f20aed1c3fc414"
+      ],
+      "support_fact_ids": [
+        "fact-01648b6b6210aa78ce8468af162f0ead9cfc1a7b43059f72f1a5350c12fd44e9",
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-8f963994f1093afb2b020c4482df997d4d2453eb2e426c348cc2b2edda83a5c4",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "discovered_scope": "Есть условные документные кандидаты; техническое внедрение не предлагается",
+      "client_clarifications": [
+        "Согласовать подтверждённые документы и возможности вебмастера"
+      ],
+      "expected_paid_result": "Подробная письменная методичка/ТЗ вебмастеру по согласованным документам",
+      "proposal_justification": "conditional_scope_candidate",
+      "necessity_conditions": [
+        "Документные работы действительно необходимы и отдельно согласованы",
+        "Письменные требования нужны для внедрения утверждённых документов"
+      ],
+      "limitations": [
+        "Не включает исправление сайта или неопределённую техническую диагностику",
+        "Подробное ТЗ отсутствует в бесплатном предварительном обзоре"
+      ],
+      "scope_policy": "separate_organization_and_form_scopes_until_verified",
+      "document_need_confirmed": false,
+      "violation_proof": false,
+      "offer_generated": false,
+      "customer_webmaster_implements": true,
+      "direct_site_fix_included": false
+    },
+    {
+      "id": "work-36c0f5c644a57ee122613c6873362b29b72d45f4f16c375006fe3acce823e2de",
+      "work_type": "policy_document",
+      "legal_finding_ids": [
+        "finding-ad140cfcf770bdbde27556d2a962fdda74692775960808b9baf47fb4bddbfc96",
+        "finding-d4eabfab955b991bcbb6daa4d8a96b36b0b5c12f98bc85c58b6959a8bd638ab2"
+      ],
+      "support_fact_ids": [
+        "fact-01648b6b6210aa78ce8468af162f0ead9cfc1a7b43059f72f1a5350c12fd44e9",
+        "fact-8f963994f1093afb2b020c4482df997d4d2453eb2e426c348cc2b2edda83a5c4",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "discovered_scope": "Конкретный сохранённый текст/контекст позволяет предварительно очертить предмет, не необходимость работы",
+      "client_clarifications": [
+        "Подтвердить фактического исполнителя/оператора и цели обработки",
+        "Предоставить действующие документы, процессы и распределение ролей",
+        "Уточнить, требуется ли подготовка нового текста или действующий документ достаточен"
+      ],
+      "expected_paid_result": "Подготовка или переработка политики с учётом подтверждённой модели обработки",
+      "proposal_justification": "conditional_scope_candidate",
+      "necessity_conditions": [
+        "Независимая юридическая проверка актуальных норм и применимости",
+        "Заказчик подтвердил фактическую модель; установлен конкретный недостаток или потребность",
+        "Действующий комплект не покрывает подтверждённую потребность; объём отдельно согласован"
+      ],
+      "limitations": [
+        "Условный кандидат, не коммерческое предложение и не доказательство нарушения",
+        "Частичные фрагменты не подтверждают качество всего документа",
+        "Технические проверки предшествуют квалификации; исправление сайта не входит в основной продукт"
+      ],
+      "scope_policy": "separate_organization_and_form_scopes_until_verified",
+      "document_need_confirmed": false,
+      "violation_proof": false,
+      "offer_generated": false,
+      "customer_webmaster_implements": true,
+      "direct_site_fix_included": false
+    },
+    {
+      "id": "work-1c7195b81b56e523254f6b97af6bbd60a91200b655de1c1a3eb39e065389b165",
+      "work_type": "processing_consent",
+      "legal_finding_ids": [
+        "finding-16252cf9b4bfe10eba2d3ed8d3150e6d4c16d80a38ab5589a4bd9c5e41e0e236"
+      ],
+      "support_fact_ids": [
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "discovered_scope": "Конкретный сохранённый текст/контекст позволяет предварительно очертить предмет, не необходимость работы",
+      "client_clarifications": [
+        "Подтвердить фактического исполнителя/оператора и цели обработки",
+        "Предоставить действующие документы, процессы и распределение ролей",
+        "Уточнить, требуется ли подготовка нового текста или действующий документ достаточен"
+      ],
+      "expected_paid_result": "Подготовка применимого текста согласия и правил его документирования",
+      "proposal_justification": "conditional_scope_candidate",
+      "necessity_conditions": [
+        "Независимая юридическая проверка актуальных норм и применимости",
+        "Заказчик подтвердил фактическую модель; установлен конкретный недостаток или потребность",
+        "Действующий комплект не покрывает подтверждённую потребность; объём отдельно согласован"
+      ],
+      "limitations": [
+        "Условный кандидат, не коммерческое предложение и не доказательство нарушения",
+        "Частичные фрагменты не подтверждают качество всего документа",
+        "Технические проверки предшествуют квалификации; исправление сайта не входит в основной продукт"
+      ],
+      "scope_policy": "separate_organization_and_form_scopes_until_verified",
+      "document_need_confirmed": false,
+      "violation_proof": false,
+      "offer_generated": false,
+      "customer_webmaster_implements": true,
+      "direct_site_fix_included": false
+    }
+  ],
+  "additional_checks": [
+    "Исследовать полный сайт и документы; установить действующие обязанности раскрытия",
+    "Независимо установить личность и фактическую роль каждой организации",
+    "Осмотреть изображение и проверить основания публикации, если применимо",
+    "Отдельно проверить основания и получение рекламного согласия, если требуется",
+    "Отдельно разрешённой проверкой установить исполнение, cookies и маршруты",
+    "Подтвердить исполнителя, реквизиты и статус медицинской лицензии",
+    "Подтвердить фактические рекламные коммуникации и применимые актуальные нормы",
+    "Получить полный действующий текст политики, включая непрочитанные страницы",
+    "Проверить идентичность, запись РКН и сведения; установить применимость обязанности уведомления",
+    "Проверить контекст каждого упоминания, не предполагая нескольких операторов",
+    "Проверить нормы, применимость и опровержения; первичные гипотезы не являются выводами",
+    "Проверить поведение сервисов и cookies при отдельно разрешённом исследовании",
+    "Проверить получателей, данные и применимые актуальные нормы",
+    "Проверить реальные ссылки, доступный текст и нормы",
+    "Проверить текст, интерфейс и доказательства получения согласия, если оно применимо",
+    "Проверить фактический маршрут группы ресурса",
+    "Проверить характер коммуникаций и необходимость отдельного согласия",
+    "Раздельно установить владельца сайта, домена и оператора ПДн",
+    "Согласовать рабочие этапы с исходным v2.5, включая документальную готовность РКН",
+    "Сопоставить лицо, реквизиты лицензии, услуги и действующие обязанности раскрытия",
+    "Сопоставить подтверждённые цели, категории данных и роли с конкретной формой",
+    "Установить владельца сайта и фактического оператора",
+    "Установить независимые роли и фактические связи организаций с формами",
+    "Установить основания, применимость согласий и фактическую модель",
+    "Установить применимое основание обработки; согласие не предполагается обязательным",
+    "Установить фактические маршруты, получателей и применимость трансграничных правил"
+  ],
+  "limitations": [
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
+    "Acquisition origin/timestamp roles unknown; not authenticated",
+    "Collected pages are not a complete examination of the website",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "JavaScript, cookies, сетевые маршруты и функциональное поведение форм не проверялись",
+    "Operator identity and all normative references require independent verification",
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "page-0001: Acquisition origin/timestamp roles unknown; not authenticated",
+    "page-0001: Extraction is not legal research",
+    "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение",
+    "Изображения не осматривались; подписи не устанавливают личность изображённых",
+    "Квалификация — детерминированные вопросы, не юридическая экспертиза",
+    "Личность и роли организаций, нормативные основания и нарушения не подтверждены",
+    "Непроверенные редакции НПА не используются для последствий, штрафов или обязанностей",
+    "Обследованы сохранённые материалы, не живой сайт; полнота сайта неизвестна",
+    "Полное техническое досье и ТЗ не входят в предварительный внутренний обзор",
+    "Поля entities/forms из manifest не становятся фактами без повторного извлечения",
+    "Прежний commercial-opportunity.json — legacy scope hints, не квалифицированное предложение",
+    "РКН и реестры лицензий не запрашивались; недоступность не равна отсутствию записи",
+    "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
+    "Упоминания имён/ИНН/ОГРН не устанавливают оператора или реального получателя данных"
+  ],
+  "assessed_stage_ids": [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "11",
+    "12",
+    "13"
+  ],
+  "commercial_model": {
+    "preliminary_diagnosis": "free",
+    "main_paid_product": "legal_documents_and_written_webmaster_specification",
+    "seller_and_payment_recipient": "ИП Голубев",
+    "sales_site": "golwebstudio.ru",
+    "implementation": "customer_webmaster_normally_exception_separately_agreed",
+    "payment_or_message_action_available": false
+  },
+  "production_outcome": "HOLD",
+  "legal_status": "not_confirmed",
+  "technical_processing_completed": true,
+  "legal_research_completed": false,
+  "production_go_allowed": false,
+  "client_release_allowed": false,
+  "automatic_send_allowed": false
+}

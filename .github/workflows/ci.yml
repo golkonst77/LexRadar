@@ -37,6 +37,24 @@ jobs:
               assert not row['execution_confirmed'] and not row['data_transfer_confirmed']
               assert row['actual_recipient'] == 'unknown'
           PYCODE
+      - name: Check legal/commercial qualification never grants client release
+        run: |
+          python - <<'PYCODE'
+          import json
+          from pathlib import Path
+          from lexradar.primary.qualification_models import InternalAssessment, PreliminaryClientSummary
+          root = Path('/tmp/lexradar-primary')
+          assessment = InternalAssessment.model_validate_json((root / 'internal-assessment.json').read_text())
+          summary = PreliminaryClientSummary.model_validate_json((root / 'preliminary-client-summary.json').read_text())
+          assert assessment.legal_findings and len(assessment.assessed_stage_ids) == 13
+          assert assessment.production_outcome == 'HOLD' and not assessment.client_release_allowed
+          assert not assessment.automatic_send_allowed and not assessment.legal_research_completed
+          assert all(f.kind == 'review_question' and not f.possible_legal_consequences for f in assessment.legal_findings)
+          assert 'client_release_allowed' not in summary.model_dump() and not summary.dispatch_permitted
+          for name in ('legal-findings', 'commercial-work'):
+              report = json.loads((root / (name + '.json')).read_text())
+              assert report['audience'] == 'internal_only' and not report['client_release_allowed']
+          PYCODE
       - run: lexradar legal-source prepare --metadata examples/legal-sources/metadata-v1.json --text examples/legal-sources/originals/v1.txt --event-date 2025-06-01 --output /tmp/lexradar-source-prepared
       - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2025-06-01 --output /tmp/lexradar-source-past
       - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2026-06-01 --output /tmp/lexradar-source-current

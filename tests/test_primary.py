@@ -456,6 +456,10 @@ def test_cli_exports_only_internal_sidecars(tmp_path, monkeypatch):
         "declarations.json",
         "popup-relations.json",
         "integration-groups.json",
+        "legal-findings.json",
+        "commercial-work.json",
+        "internal-assessment.json",
+        "preliminary-client-summary.json",
         "observations.json",
         "hypotheses.json",
         "missing-checks.json",
@@ -463,7 +467,11 @@ def test_cli_exports_only_internal_sidecars(tmp_path, monkeypatch):
     }
     for p in output.iterdir():
         value = json.loads(p.read_text())
-        assert value["audience"] == "internal_only" and not value["client_release_allowed"]
+        assert value["audience"] == "internal_only"
+        if p.name == "preliminary-client-summary.json":
+            assert "client_release_allowed" not in value and not value["dispatch_permitted"]
+        else:
+            assert not value["client_release_allowed"]
 
 
 def test_output_cannot_modify_dossier_and_invalid_artifact_stops(tmp_path):
