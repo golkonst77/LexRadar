@@ -1,4 +1,20 @@
 {
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
   "schema_version": "primary-audit-0.1",
   "audience": "internal_only",
   "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
@@ -19,6 +35,7 @@
   "services": [],
   "medical_checks": [
     {
+      "content_level": "unknown",
       "check_id": "licensed_entity",
       "status": "not_checked",
       "observation_ids": [],
@@ -26,6 +43,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "license_details",
       "status": "not_checked",
       "observation_ids": [],
@@ -33,6 +51,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "organization_disclosures",
       "status": "not_checked",
       "observation_ids": [],
@@ -40,6 +59,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "services",
       "status": "not_checked",
       "observation_ids": [],
@@ -47,6 +67,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "prices",
       "status": "not_checked",
       "observation_ids": [],
@@ -54,6 +75,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "medical_staff",
       "status": "not_checked",
       "observation_ids": [],
@@ -61,6 +83,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "paid_service_rules",
       "status": "not_checked",
       "observation_ids": [],
@@ -68,6 +91,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "other_applicable_disclosures",
       "status": "not_checked",
       "observation_ids": [],
@@ -472,6 +496,7 @@
     "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
     "Collected pages are not a complete examination of the website",
     "Operator identity and all normative references require independent verification",
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
     "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
     "Обследованы сохранённые материалы, не живой сайт; полнота сайта неизвестна",
     "JavaScript, cookies, сетевые маршруты и функциональное поведение форм не проверялись",
@@ -480,7 +505,8 @@
     "Поля entities/forms из manifest не становятся фактами без повторного извлечения",
     "Изображения не осматривались; подписи не устанавливают личность изображённых",
     "РКН и реестры лицензий не запрашивались; недоступность не равна отсутствию записи",
-    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение"
+    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение",
+    "Acquisition origin/timestamp roles unknown; not authenticated"
   ],
   "technical_processing_completed": true,
   "audit_complete": false,

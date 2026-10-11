@@ -22,6 +22,7 @@ from .models import (
 )
 from .network import CollectionError, Fetcher, canonical_url, origin
 from .pdf import extract_inventory, legacy_result
+from .provenance import MaterialOrigin
 from .reading import extract_html
 
 
@@ -69,7 +70,18 @@ def collect(
 
 
 def _collect(url, limits, allowed, store, session):
-    result = CollectionResult(target_url=url, started_at=now(), limits=limits)
+    acquisition = MaterialOrigin(
+        kind="collector",
+        acquisition_method="bounded_static_http_collector",
+        declared_source=url,
+        captured_at_role="collection_observation",
+        started_at_role="collector_run",
+        limitations=[
+            "Collector timestamps are local observations, not server response dates",
+            "Local acquisition metadata does not authenticate publisher identity",
+        ],
+    )
+    result = CollectionResult(target_url=url, started_at=now(), limits=limits, origin=acquisition)
     queue = deque([url])
     seen = {url}
     document_urls = set()
@@ -102,7 +114,10 @@ def _collect(url, limits, allowed, store, session):
                     unavailable_reason="Not collected",
                 )
                 page_record = PageObservation(
-                    requested_url=current, captured_at=timestamp, evidence_id=eid
+                    requested_url=current,
+                    captured_at=timestamp,
+                    evidence_id=eid,
+                    origin=acquisition.model_copy(update={"declared_source": current}),
                 )
                 result.evidence.append(evidence)
                 result.pages.append(page_record)
@@ -275,7 +290,11 @@ def _collect(url, limits, allowed, store, session):
             available=False,
             unavailable_reason="Not collected",
         )
-        document = DocumentObservation(requested_url=current, evidence_id=eid)
+        document = DocumentObservation(
+            requested_url=current,
+            evidence_id=eid,
+            origin=result.origin.model_copy(update={"declared_source": current}),
+        )
         result.evidence.append(evidence)
         result.documents.append(document)
         try:

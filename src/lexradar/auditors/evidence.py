@@ -47,6 +47,10 @@ def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
         evidence = next(e for e in data.evidence if e.id == page.evidence_id)
         if evidence.source not in {page.requested_url, page.final_url}:
             raise DossierError("Page source mismatch")
+        if page.origin.source_sha256 is not None and not any(
+            a.kind == "html" and a.sha256 == page.origin.source_sha256 for a in evidence.artifacts
+        ):
+            raise DossierError("Declared acquisition hash does not match original HTML")
     for document in data.documents:
         evidence = next(e for e in data.evidence if e.id == document.evidence_id)
         if evidence.source not in {document.requested_url, document.final_url}:
@@ -87,6 +91,7 @@ def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
         "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
         "Collected pages are not a complete examination of the website",
         "Operator identity and all normative references require independent verification",
+        "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
     ]
     if any(e.status != "complete" for e in data.evidence):
         limitations.append("Collector contains partial/unavailable evidence")

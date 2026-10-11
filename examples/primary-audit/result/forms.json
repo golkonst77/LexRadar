@@ -2,9 +2,83 @@
   "audience": "internal_only",
   "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
   "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
+  "materials": [
+    {
+      "evidence_id": "page-0001",
+      "origin": {
+        "kind": "unknown",
+        "acquisition_method": null,
+        "declared_source": null,
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "unknown",
+        "started_at_role": "unknown",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Acquisition origin/timestamp roles unknown; not authenticated"
+        ]
+      },
+      "static_inspection": {
+        "status": "complete",
+        "diagnostics": [],
+        "text_spans": [
+          {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          }
+        ],
+        "recovered_text_chars": 0,
+        "limitations": [],
+        "original_modified": false
+      }
+    }
+  ],
   "client_release_allowed": false,
   "rows": [
     {
+      "field_spans": [
+        {
+          "start": {
+            "line": 6,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 6,
+            "column": 51
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        }
+      ],
       "id": "form-0001",
       "evidence_id": "page-0001",
       "url": "https://clinic.example/",
@@ -47,6 +121,20 @@
           "column": 14
         },
         "reasons": [],
+        "recovered": false,
+        "observed_region": {
+          "start": {
+            "line": 4,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 8,
+            "column": 59
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
         "list_scope": "observed_elements_in_trusted_region_only"
       },
@@ -61,6 +149,19 @@
         "Скриншот формы недоступен или связь не подтверждена"
       ],
       "citation": {
+        "static_span": {
+          "start": {
+            "line": 4,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 8,
+            "column": 59
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "evidence_id": "page-0001",
         "url": "https://clinic.example/",
         "artifact_path": "artifacts/page-0001.html",
@@ -78,6 +179,34 @@
       "lawfulness": "unestablished"
     },
     {
+      "field_spans": [
+        {
+          "start": {
+            "line": 10,
+            "column": 45
+          },
+          "end_exclusive": {
+            "line": 10,
+            "column": 78
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        {
+          "start": {
+            "line": 11,
+            "column": 7
+          },
+          "end_exclusive": {
+            "line": 11,
+            "column": 49
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        }
+      ],
       "id": "form-0002",
       "evidence_id": "page-0001",
       "url": "https://clinic.example/",
@@ -128,6 +257,20 @@
           "column": 14
         },
         "reasons": [],
+        "recovered": false,
+        "observed_region": {
+          "start": {
+            "line": 9,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 13,
+            "column": 60
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
         "list_scope": "observed_elements_in_trusted_region_only"
       },
@@ -142,6 +285,19 @@
         "Скриншот формы недоступен или связь не подтверждена"
       ],
       "citation": {
+        "static_span": {
+          "start": {
+            "line": 9,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 13,
+            "column": 60
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "evidence_id": "page-0001",
         "url": "https://clinic.example/",
         "artifact_path": "artifacts/page-0001.html",
@@ -166,6 +322,7 @@
     "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
     "Collected pages are not a complete examination of the website",
     "Operator identity and all normative references require independent verification",
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
     "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
     "page-0001: Extraction is not legal research",
     "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
@@ -176,6 +333,8 @@
     "Поля entities/forms из manifest не становятся фактами без повторного извлечения",
     "Изображения не осматривались; подписи не устанавливают личность изображённых",
     "РКН и реестры лицензий не запрашивались; недоступность не равна отсутствию записи",
-    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение"
+    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение",
+    "Acquisition origin/timestamp roles unknown; not authenticated",
+    "page-0001: Acquisition origin/timestamp roles unknown; not authenticated"
   ]
 }

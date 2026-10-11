@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 
 from ..collector.models import InputField
 from ..collector.reading import StaticText
-from .models import HTMLPosition, StaticFormCoverage
+from .models import HTMLPosition, ParseDiagnostic, StaticFormCoverage, StaticInspection, StaticSpan
 
 
 def compact(parts: list[str]) -> str:
@@ -37,6 +37,7 @@ class Link:
     url: str
     form_index: int | None
     parts: list[str] = field(default_factory=list)
+    span: StaticSpan | None = None
 
     @property
     def text(self):
@@ -53,12 +54,22 @@ class SavedForm:
     elements: list[str] = field(default_factory=list)
     start: tuple[int, int] | None = None
     end_exclusive: tuple[int, int] | None = None
+    recovered: bool = False
+    field_spans: list[StaticSpan] = field(default_factory=list)
+
+
+@dataclass
+class TextRegion:
+    start: tuple[int, int]
+    end: tuple[int, int] | None = None
+    parts: list[str] = field(default_factory=list)
+    recovered: bool = False
 
 
 class SavedMarkup(StaticText):
     """Bounded, conservative extraction; inherited ambiguity handling withholds suffixes."""
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, *, recover: bool = False):
         super().__init__()
         self.url = url
         self.forms: list[SavedForm] = []
@@ -79,6 +90,81 @@ class SavedMarkup(StaticText):
         self.end_position: tuple[int, int] | None = None
         self.decoding_loss = False
         self.closing_token: str | None = None
+        self.recover = recover
+        self.diagnostics: list[ParseDiagnostic] = []
+        self.regions = [TextRegion((1, 0))]
+        self.semantic_blocks: list[tuple[str, bool, int]] = []
+        self.block_parts: list[str] = []
+        self.block_navigation = False
+        self.block_region = 0
+        self.block_tags = {"a", "nav", "p", "div", "li", "td", "th", "h1", "h2", "h3", "h4"}
+
+    def flush_block(self):
+        text = compact(self.block_parts)
+        if text:
+            self.semantic_blocks.append((text, self.block_navigation, self.block_region))
+        self.block_parts = []
+
+    @staticmethod
+    def position(value):
+        return HTMLPosition(line=value[0], column=value[1])
+
+    @staticmethod
+    def token_end(start, token):
+        lines = token.split("\n")
+        return (
+            start[0] + len(lines) - 1,
+            start[1] + len(token) if len(lines) == 1 else len(lines[-1]),
+        )
+
+    def span(self, start, end, *, recovered=False):
+        unknown = self.decoding_loss
+        partial = recovered or bool(self.limitations)
+        reasons = list(self.limitations)
+        if unknown:
+            reasons.append("UTF-8 decoding loss; static coverage unknown")
+        if recovered:
+            reasons.append("After local HTML recovery; locally parsed observations only")
+        return StaticSpan(
+            start=self.position(start),
+            end_exclusive=self.position(end),
+            status="unknown" if unknown else "partial" if partial else "complete",
+            limitations=reasons,
+        )
+
+    def region_span(self, index):
+        region = self.regions[index]
+        return self.span(region.start, region.end, recovered=region.recovered)
+
+    def recover_token(self, reason, token, action):
+        self.flush_block()
+        point = self.getpos()
+        self.regions[-1].end = point
+        self.limitations.append(reason)
+        self.diagnostics.append(
+            ParseDiagnostic(position=self.position(point), reason=reason, action=action)
+        )
+        self.regions.append(TextRegion(self.token_end(point, token), recovered=True))
+
+    def inspection(self):
+        return StaticInspection(
+            status="unknown"
+            if self.decoding_loss
+            else "partial"
+            if self.limitations
+            else "complete",
+            diagnostics=self.diagnostics,
+            text_spans=[
+                self.region_span(i)
+                for i, r in enumerate(self.regions)
+                if r.parts and r.end and r.end > r.start
+            ],
+            recovered_text_chars=sum(len(compact(r.parts)) for r in self.regions if r.recovered),
+            limitations=[
+                *self.limitations,
+                *(["UTF-8 decoding loss"] if self.decoding_loss else []),
+            ],
+        )
 
     def parse_endtag(self, i):
         end = self.rawdata.find(">", i)
@@ -91,6 +177,14 @@ class SavedMarkup(StaticText):
     def uncertain(self, reason):
         if self.stop_position is None:
             self.stop_position = self.getpos()
+            self.flush_block()
+            self.regions[-1].end = self.getpos()
+        if not any(d.reason == reason for d in self.diagnostics):
+            self.diagnostics.append(
+                ParseDiagnostic(
+                    position=self.position(self.getpos()), reason=reason, action="suffix_withheld"
+                )
+            )
         super().uncertain(reason)
 
     def coverage(self, form: SavedForm) -> StaticFormCoverage:
@@ -103,7 +197,9 @@ class SavedMarkup(StaticText):
         status = (
             "unknown"
             if self.decoding_loss
-            else ("complete" if form.end_exclusive is not None else "partial")
+            else (
+                "complete" if form.end_exclusive is not None and not form.recovered else "partial"
+            )
         )
         reasons = list(self.limitations)
         if form.end_exclusive is None:
@@ -112,6 +208,10 @@ class SavedMarkup(StaticText):
             reasons.append("UTF-8 decoding loss; static coverage unknown")
         if page_status != "complete" and status == "complete":
             reasons.append("Only this closed form was parsed; the surrounding page is incomplete")
+        if form.recovered:
+            reasons.append("Form occurs after recovery; complete form inventory not established")
+        end = form.end_exclusive or self.stop_position or self.end_position
+        region = self.span(form.start, end, recovered=form.recovered) if end > form.start else None
         return StaticFormCoverage(
             status=status,
             page_status=page_status,
@@ -119,9 +219,40 @@ class SavedMarkup(StaticText):
             form_end_exclusive=position(form.end_exclusive),
             trusted_page_end_exclusive=position(self.stop_position or self.end_position),
             reasons=reasons,
+            recovered=form.recovered,
+            observed_region=region,
         )
 
     def handle_starttag(self, tag, attrs):
+        if tag in self.block_tags:
+            self.flush_block()
+        if self.recover and not self.quarantined:
+            names = [name for name, _ in attrs]
+            token = self.get_starttag_text()
+            start_syntax = (
+                r"<[a-zA-Z][a-zA-Z0-9:._-]*"
+                r"(?:\s+[a-zA-Z_:][a-zA-Z0-9_:.-]*"
+                r"(?:\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s\"'=<>`]+))?)*\s*/?>"
+            )
+            if len(names) != len(set(names)) or not re.fullmatch(start_syntax, token):
+                if (
+                    not self.form
+                    and not self.excluded
+                    and tag not in self.EXCLUDED
+                    and tag not in {"form", "input", "select", "textarea", "button"}
+                    and "<" not in token[1:]
+                    and len(self.diagnostics) < 100
+                ):
+                    # Keep only the explicit lexical tag name. Never reuse ambiguous
+                    # attributes for links, resources, labels, purposes or identities.
+                    self.recover_token(
+                        f"Ambiguous attributes of <{tag}> at {self.getpos()}; attributes ignored",
+                        token,
+                        "ignored_ambiguous_attributes",
+                    )
+                    attrs = []
+                else:
+                    self.uncertain("Ambiguous HTML attributes/start token; suffix withheld")
         previous_excluded = list(self.excluded)
         super().handle_starttag(tag, attrs)
         if self.quarantined:
@@ -147,6 +278,7 @@ class SavedMarkup(StaticText):
             )
             self.forms.append(self.form)
             self.form.start = self.getpos()
+            self.form.recovered = len(self.regions) > 1
         elif tag in {"input", "select", "textarea"} and self.form is not None:
             if len(self.form.fields) >= 100:
                 self.uncertain("Static field limit; suffix withheld")
@@ -164,6 +296,13 @@ class SavedMarkup(StaticText):
                 )
             )
             self.field_ids[(self.form.index, len(self.form.fields) - 1)] = values.get("id") or ""
+            self.form.field_spans.append(
+                self.span(
+                    self.getpos(),
+                    self.token_end(self.getpos(), self.get_starttag_text()),
+                    recovered=self.form.recovered,
+                )
+            )
         elif tag == "a" and values.get("href"):
             if len(self.links) >= 1000:
                 self.uncertain("Static link limit; suffix withheld")
@@ -172,6 +311,11 @@ class SavedMarkup(StaticText):
                 static_reference(self.url, values["href"]), self.form.index if self.form else None
             )
             self.links.append(self.anchor)
+            self.anchor.span = self.span(
+                self.getpos(),
+                self.token_end(self.getpos(), self.get_starttag_text()),
+                recovered=len(self.regions) > 1,
+            )
         elif tag == "img" and values.get("src"):
             if len(self.images) < 200:
                 self.images.append(
@@ -201,6 +345,13 @@ class SavedMarkup(StaticText):
         super().handle_data(data)
         if len(self.parts) == before:
             return
+        self.regions[-1].parts.append(data)
+        navigation = any(t in {"a", "nav"} for t in self.open_elements)
+        if self.block_parts and navigation != self.block_navigation:
+            self.flush_block()
+        self.block_navigation = navigation
+        self.block_region = len(self.regions) - 1
+        self.block_parts.append(data)
         if any(t in {"textarea", "option"} for t in self.open_elements):
             # A wrapped label must not absorb a pre-filled control's contents either.
             return
@@ -214,8 +365,31 @@ class SavedMarkup(StaticText):
             self.form.parts.append(data)
 
     def handle_endtag(self, tag):
+        was_excluded = bool(self.excluded)
+        # Recovery is deliberately narrow. A syntactically valid close of an ordinary
+        # element that was never opened changes no stack/attributes. Inside a form,
+        # excluded region, malformed token, ancestor mismatch or resource-limit failure
+        # we retain the original fail-closed behaviour. No browser repair is simulated.
+        if (
+            self.recover
+            and not self.quarantined
+            and not self.excluded
+            and self.form is None
+            and tag not in self.open_elements
+            and tag not in self.EXCLUDED
+            and tag not in {"form", "html", "body"}
+            and self.closing_token is not None
+            and re.fullmatch(r"</\s*[a-zA-Z][a-zA-Z0-9:._-]*\s*>", self.closing_token)
+            and len(self.diagnostics) < 100
+        ):
+            point = self.getpos()
+            reason = f"Mismatched HTML closing element </{tag}> at {point}; stray close ignored"
+            self.recover_token(reason, self.closing_token, "ignored_stray_close")
+            return
+        if tag in self.block_tags:
+            self.flush_block()
         super().handle_endtag(tag)
-        if self.quarantined:
+        if self.quarantined or was_excluded:
             return
         if tag == self.heading_tag:
             if self.form and not self.form.purpose:
@@ -254,6 +428,27 @@ class SavedMarkup(StaticText):
     def close(self):
         super().close()
         self.end_position = self.getpos()
+        self.flush_block()
+        if self.regions[-1].end is None:
+            self.regions[-1].end = self.end_position
+        # Field/link ranges acquired before a later page error retain their exact
+        # coordinates but must also expose the final page's incompleteness.
+        for form in self.forms:
+            form.field_spans = [
+                self.span(
+                    (s.start.line, s.start.column),
+                    (s.end_exclusive.line, s.end_exclusive.column),
+                    recovered=form.recovered,
+                )
+                for s in form.field_spans
+            ]
+        for link in self.links:
+            if link.span:
+                link.span = self.span(
+                    (link.span.start.line, link.span.start.column),
+                    (link.span.end_exclusive.line, link.span.end_exclusive.column),
+                    recovered=link.span.status != "complete",
+                )
         for form in self.forms:
             for index, input_field in enumerate(form.fields):
                 element_id = self.field_ids.get((form.index, index))

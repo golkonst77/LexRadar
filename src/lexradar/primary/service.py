@@ -42,11 +42,21 @@ MEDICAL_ITEMS = {
     "license_details": ("лиценз",),
     "organization_disclosures": ("ооо", "реквизит", "инн"),
     "services": ("услуг", "лечени"),
-    "prices": ("цен", "стоимост", "прайс"),
+    "prices": ("цена", "цены", "стоимость", "прайс"),
     "medical_staff": ("врач", "специалист", "медицинск работник"),
     "paid_service_rules": ("правила предоставления", "правила оказания", "платных медицинских"),
     "other_applicable_disclosures": (),
 }
+
+PRICE_PATTERN = re.compile(
+    r"\b(?:цен(?:а|ы|е|у|ой|ам|ах)|стоимост(?:ь|и|ью)|прайс(?:-лист|ы|а)?)\b"
+    r"|\b\d+(?:[ \u00a0]\d{3})*(?:[.,]\d{1,2})?\s*(?:руб(?:лей|ля|ль|\.)?|₽)",
+    re.IGNORECASE,
+)
+AMOUNT_PATTERN = re.compile(
+    r"\b\d+(?:[ \u00a0]\d{3})*(?:[.,]\d{1,2})?\s*(?:руб(?:лей|ля|ль|\.)?|₽)",
+    re.IGNORECASE,
+)
 
 
 def fingerprint(value) -> str:
@@ -71,6 +81,8 @@ def service_hint(reference: str) -> str | None:
         return "Google reCAPTCHA reference"
     if host == "api-maps.yandex.ru":
         return "Yandex Maps reference; not evidence of Metrika"
+    if host == "booking.medflex.ru":
+        return "Medflex booking link; actual recipient/transfer not established"
     return None
 
 
@@ -84,6 +96,7 @@ class Builder:
         self.tasks: list[CheckTask] = []
         self.work: list[CommercialOpportunity] = []
         self.texts: list[tuple[str, Citation]] = []
+        self.semantic_texts: list[tuple[str, Citation, bool]] = []
         self.markup: dict[str, SavedMarkup] = {}
         self.forms: list[FormRow] = []
         self.flows: list[FlowRow] = []
@@ -126,7 +139,9 @@ class Builder:
             stage.limitations = ["Нормативные ссылки — кандидаты, применимость не установлена"]
             stage.missing_information = ["Подтверждённая норма, редакция и применимость"]
 
-    def cite(self, eid: str, basis: str, *, quote=None, page=None, element=None) -> Citation:
+    def cite(
+        self, eid: str, basis: str, *, quote=None, page=None, element=None, span=None
+    ) -> Citation:
         evidence = self.evidence[eid]
         kind = "html" if eid in self.markup or basis == "saved_html" else "pdf"
         artifact = next((a for a in evidence.artifacts if a.kind == kind), None)
@@ -141,6 +156,7 @@ class Builder:
             element=element,
             artifact_path=artifact.path if artifact else None,
             artifact_sha256=artifact.sha256 if artifact else None,
+            static_span=span,
         )
 
     def observe(self, stage_id, kind, description, citations, scope) -> Observation:
@@ -216,7 +232,7 @@ class Builder:
                 raw = read_local(self.root / artifact.path, 20_000_000)
                 if hashlib.sha256(raw).hexdigest() != artifact.sha256:
                     raise ValueError("Original changed during primary inspection")
-                parser = SavedMarkup(str(evidence.source))
+                parser = SavedMarkup(str(evidence.source), recover=True)
                 try:
                     raw.decode("utf-8")
                 except UnicodeError:
@@ -226,13 +242,50 @@ class Builder:
                 self.markup[evidence.id] = parser
                 self.notes.extend(f"{evidence.id}: {reason}" for reason in parser.limitations)
             if page.text and page.reading.provenance == "reproduced":
-                self.texts.append((page.text, self.cite(evidence.id, "reproduced_text", page=1)))
+                parser = self.markup.get(evidence.id)
+                start = len(self.texts)
+                if parser and len(parser.regions) > 1:
+                    # New bounded local inspection of the unchanged original, NOT a
+                    # rewrite/claim of reproduction of the old strict derivative.
+                    budget = page.reading.max_total_chars
+                    for index, region in enumerate(parser.regions):
+                        text = compact(region.parts)[:budget]
+                        if text and region.end and region.end > region.start:
+                            self.texts.append(
+                                (
+                                    text,
+                                    self.cite(
+                                        evidence.id,
+                                        "saved_html",
+                                        page=1,
+                                        span=parser.region_span(index),
+                                    ),
+                                )
+                            )
+                            budget -= len(text)
+                    self.notes.append(
+                        f"{evidence.id}: Additional partial static text inspected from original "
+                        "HTML; saved strict derivative and its reading state remain unchanged"
+                    )
+                else:
+                    self.texts.append(
+                        (page.text, self.cite(evidence.id, "reproduced_text", page=1))
+                    )
+                inspected = self.texts[start:]
+                if parser:
+                    for text, navigation, index in parser.semantic_blocks:
+                        if any(text in available for available, _ in inspected):
+                            citation = self.cite(
+                                evidence.id, "saved_html", page=1, span=parser.region_span(index)
+                            )
+                            self.semantic_texts.append((text, citation, navigation))
         for document in self.packet.data.documents:
             if document.reading.provenance == "reproduced":
                 for number, text in sorted(document.page_texts.items()):
                     self.texts.append(
                         (text, self.cite(document.evidence_id, "reproduced_text", page=number))
                     )
+                    self.semantic_texts.append((text, self.texts[-1][1], False))
 
     def organization_matrix(self):
         mentions = {}
@@ -312,6 +365,7 @@ class Builder:
                     element=f"form[occurrence={saved.index}]",
                     purpose_hint=saved.purpose,
                     fields=saved.fields,
+                    field_spans=saved.field_spans,
                     policy_links=sorted(set(links["policy"])),
                     consent_links=sorted(set(links["consent"])),
                     advertising_links=sorted(set(links["advertising"])),
@@ -325,7 +379,10 @@ class Builder:
                         "Ссылки распознаны по маркерам; содержание требует проверки",
                     ],
                     citation=self.cite(
-                        page.evidence_id, "saved_html", element=f"form[occurrence={saved.index}]"
+                        page.evidence_id,
+                        "saved_html",
+                        element=f"form[occurrence={saved.index}]",
+                        span=parser.coverage(saved).observed_region,
                     ),
                 )
                 if form.static_coverage.status != "complete":
@@ -486,16 +543,24 @@ class Builder:
                             sid,
                             "static_markup",
                             "Сохранённая ссылка-кандидат на документ",
-                            [self.cite(eid, "saved_html", element=f"a[href={link.url}]")],
+                            [
+                                self.cite(
+                                    eid, "saved_html", element=f"a[href={link.url}]", span=link.span
+                                )
+                            ],
                             "Метка/адрес ссылки не подтверждают содержание документа",
                         )
             matched_text = []
             for text, citation in self.texts:
+                pattern = (
+                    r"политик\w*|privacy|policy" if kind == "policy" else r"согласи\w*|consent"
+                )
+                match = re.search(pattern, text, re.IGNORECASE)
                 if (
-                    link_kind(str(citation.url), text[:300]) == kind
+                    match is not None
+                    or link_kind(str(citation.url), "") == kind
                     or str(citation.url) in candidates
                 ):
-                    match = re.search(r"политик\w*|согласи\w*|privacy|consent", text, re.IGNORECASE)
                     quote = (
                         text[max(0, match.start() - 30) : match.end() + 100]
                         if match
@@ -558,13 +623,25 @@ class Builder:
 
     def resources_and_publications(self):
         for eid, parser in self.markup.items():
-            for kind, reference in parser.resources:
+            # Anchors are declared navigation, never proof of an active integration.
+            bookings = [
+                ("booking_anchor", link.url, link.span)
+                for link in parser.links
+                if service_hint(link.url)
+                == "Medflex booking link; actual recipient/transfer not established"
+            ]
+            for kind, reference, span in [
+                *((kind, reference, None) for kind, reference in parser.resources),
+                *bookings,
+            ]:
                 row = ServiceReference(
                     id=f"service-{len(self.services) + 1:04d}",
                     url_reference=reference,
                     reference_kind=kind,
                     service_hint=service_hint(reference),
-                    citation=self.cite(eid, "saved_html", element=f"{kind}[src]"),
+                    citation=self.cite(
+                        eid, "saved_html", element=f"{kind}[declared_reference]", span=span
+                    ),
                 )
                 self.services.append(row)
                 self.observe(
@@ -666,29 +743,42 @@ class Builder:
             sector = "medical"
         for kind, markers in MEDICAL_ITEMS.items():
             facts = []
+            levels = []
             if sector == "medical":
-                for text, citation in self.texts:
+                for text, citation, navigation in self.semantic_texts:
                     match = (
-                        re.search(
+                        PRICE_PATTERN.search(text)
+                        if kind == "prices"
+                        else re.search(
                             r"\b(?:" + "|".join(map(re.escape, markers)) + ")", text, re.IGNORECASE
                         )
                         if markers
                         else None
                     )
                     if match:
+                        level = "content_candidate"
+                        if kind in {"prices", "services", "medical_staff"}:
+                            words = re.findall(r"\w+", text)
+                            if navigation:
+                                level = "navigation_only"
+                            elif kind == "prices" and not AMOUNT_PATTERN.search(text):
+                                level = "section_candidate"
+                            elif len(words) <= 3 and kind != "prices":
+                                level = "section_candidate"
+                        levels.append(level)
                         quote = text[max(0, match.start() - 30) : match.end() + 100]
                         facts.append(
                             self.observe(
                                 "12",
                                 "text_quote",
-                                f"Текстовый маркер медицинского раскрытия: {kind}",
+                                f"Текстовый кандидат медицинского раскрытия: {kind} ({level})",
                                 [citation.model_copy(update={"quote": quote})],
                                 "Не проверка лицензии, обязательного содержания или полного сайта",
                             )
                         )
             status = (
                 "observed"
-                if facts
+                if "content_candidate" in levels
                 else "insufficient_evidence"
                 if sector == "medical"
                 else "not_checked"
@@ -698,6 +788,15 @@ class Builder:
             self.medical_checks.append(
                 MedicalCheck(
                     check_id=kind,
+                    content_level=(
+                        "content_candidate"
+                        if "content_candidate" in levels
+                        else "section_candidate"
+                        if "section_candidate" in levels
+                        else "navigation_only"
+                        if levels
+                        else "unknown"
+                    ),
                     status=status,
                     observation_ids=[f.id for f in facts],
                     limitation="Маркеры в ограниченных фрагментах; "
@@ -731,9 +830,9 @@ class Builder:
             self.observe(
                 "03",
                 "collection_metadata",
-                "Зарегистрирована попытка сбора материала",
+                "Зарегистрирован сохранённый материал; способ получения указан в происхождении",
                 [self.cite(evidence.id, "collector_manifest")],
-                "Сохранённая запись Collector; не проверка текущей доступности URL",
+                "Запись досье, возможно ручная/неизвестная; не проверка доступности URL",
             )
         self.stages["03"].status = "insufficient_evidence" if self.evidence else "not_checked"
         self.stages["03"].missing_information.append("Знаменатель всех страниц сайта неизвестен")
@@ -829,6 +928,7 @@ def audit_saved_dossier(
     ):
         raise ValueError("Dossier changed during primary inspection")
     return PrimaryAudit(
+        source_origin=packet.data.origin,
         target_url=packet.data.target_url,
         dossier_sha256=packet.manifest_sha256,
         artifact_inventory_sha256=fingerprint(inventory),
@@ -846,6 +946,12 @@ def audit_saved_dossier(
         ),
         materials=[
             MaterialReference(
+                origin=item.origin,
+                static_inspection=(
+                    builder.markup[item.evidence_id].inspection()
+                    if item.evidence_id in builder.markup
+                    else {}
+                ),
                 evidence_id=item.evidence_id,
                 url=builder.evidence[item.evidence_id].source,
                 collection_status=builder.evidence[item.evidence_id].status,
@@ -876,5 +982,15 @@ def audit_saved_dossier(
                 bool(s.observed_fact_ids) for s in builder.stages.values()
             ),
         ),
-        limitations=[*packet.limitations, *builder.notes],
+        limitations=[
+            *packet.limitations,
+            *builder.notes,
+            *packet.data.warnings,
+            *packet.data.origin.limitations,
+            *(
+                f"{item.evidence_id}: {reason}"
+                for item in [*pages, *documents]
+                for reason in item.origin.limitations
+            ),
+        ],
     )

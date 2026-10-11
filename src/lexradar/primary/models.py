@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import AwareDatetime, Field, HttpUrl, model_validator
 
 from ..collector.models import Artifact, InputField
+from ..collector.provenance import MaterialOrigin
 from ..collector.reading import ReadingState
 from ..models import Model
 from ..verifier.models import NormAssessment
@@ -23,7 +24,50 @@ WorkKind = Literal[
 ]
 
 
+class HTMLPosition(Model):
+    line: int = Field(ge=1)
+    column: int = Field(ge=0)
+
+
+class StaticSpan(Model):
+    start: HTMLPosition
+    end_exclusive: HTMLPosition
+    status: Literal["complete", "partial", "unknown"]
+    limitations: list[str] = Field(default_factory=list)
+    coordinate_scope: Literal["decoded_utf8_line_1_based_column_0_based"] = (
+        "decoded_utf8_line_1_based_column_0_based"
+    )
+
+    @model_validator(mode="after")
+    def valid_span(self):
+        if (self.end_exclusive.line, self.end_exclusive.column) <= (
+            self.start.line,
+            self.start.column,
+        ):
+            raise ValueError("Nonempty ordered static source range required")
+        if self.status != "complete" and not self.limitations:
+            raise ValueError("Partial/unknown range requires limitations")
+        return self
+
+
+class ParseDiagnostic(Model):
+    position: HTMLPosition
+    reason: str
+    action: Literal["ignored_stray_close", "ignored_ambiguous_attributes", "suffix_withheld"]
+
+
+class StaticInspection(Model):
+    status: Literal["complete", "partial", "unknown"] = "unknown"
+    diagnostics: list[ParseDiagnostic] = Field(default_factory=list)
+    text_spans: list[StaticSpan] = Field(default_factory=list)
+    recovered_text_chars: int = Field(default=0, ge=0)
+    limitations: list[str] = Field(default_factory=list)
+    original_modified: Literal[False] = False
+
+
 class MaterialReference(Model):
+    origin: MaterialOrigin = Field(default_factory=MaterialOrigin)
+    static_inspection: StaticInspection = Field(default_factory=StaticInspection)
     evidence_id: str
     url: HttpUrl
     collection_status: str
@@ -36,6 +80,7 @@ class MaterialReference(Model):
 
 
 class Citation(Model):
+    static_span: StaticSpan | None = None
     evidence_id: str
     url: HttpUrl
     artifact_path: str | None = None
@@ -110,11 +155,6 @@ class OrganizationRow(Model):
     operator_confirmed: Literal[False] = False
 
 
-class HTMLPosition(Model):
-    line: int = Field(ge=1)
-    column: int = Field(ge=0)
-
-
 class StaticFormCoverage(Model):
     status: Literal["complete", "partial", "unknown"] = "unknown"
     page_status: Literal["complete", "partial", "unknown"] = "unknown"
@@ -122,6 +162,8 @@ class StaticFormCoverage(Model):
     form_end_exclusive: HTMLPosition | None = None
     trusted_page_end_exclusive: HTMLPosition | None = None
     reasons: list[str] = Field(default_factory=lambda: ["Legacy result: static coverage unknown"])
+    recovered: bool = False
+    observed_region: StaticSpan | None = None
     boundary_scope: Literal["decoded_utf8_line_1_based_column_0_based"] = (
         "decoded_utf8_line_1_based_column_0_based"
     )
@@ -149,6 +191,7 @@ class StaticFormCoverage(Model):
 
 
 class FormRow(Model):
+    field_spans: list[StaticSpan] = Field(default_factory=list)
     id: str
     evidence_id: str
     url: HttpUrl
@@ -198,6 +241,9 @@ class ServiceReference(Model):
 
 
 class MedicalCheck(Model):
+    content_level: Literal[
+        "unknown", "navigation_only", "section_candidate", "content_candidate"
+    ] = "unknown"
     check_id: str
     status: StageStatus
     observation_ids: list[str]
@@ -251,6 +297,7 @@ class AuditCoverage(Model):
 
 
 class PrimaryAudit(Model):
+    source_origin: MaterialOrigin = Field(default_factory=MaterialOrigin)
     schema_version: Literal["primary-audit-0.1"] = "primary-audit-0.1"
     audience: Literal["internal_only"] = "internal_only"
     notice: str = "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ"
