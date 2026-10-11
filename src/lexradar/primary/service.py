@@ -631,7 +631,10 @@ class Builder:
                 == "Medflex booking link; actual recipient/transfer not established"
             ]
             for kind, reference, span in [
-                *((kind, reference, None) for kind, reference in parser.resources),
+                *(
+                    (kind, reference, parser.resource_spans[index])
+                    for index, (kind, reference) in enumerate(parser.resources)
+                ),
                 *bookings,
             ]:
                 row = ServiceReference(
@@ -672,13 +675,20 @@ class Builder:
                     ["Сетевой маршрут, данные и основание"],
                     [check],
                 )
-            for reference, alt in parser.images:
+            for index, (reference, alt) in enumerate(parser.images):
                 if re.search(r"пациент|отзыв|до.?после|результат|patient", alt, re.IGNORECASE):
                     fact = self.observe(
                         "10",
                         "static_markup",
                         "HTML img имеет тематическую подпись; содержимое не осмотрено",
-                        [self.cite(eid, "saved_html", element=f"img[src={reference},alt={alt}]")],
+                        [
+                            self.cite(
+                                eid,
+                                "saved_html",
+                                element=f"img[src={reference},alt={alt}]",
+                                span=parser.image_spans[index],
+                            )
+                        ],
                         "Атрибут подписи не доказывает изображение пациента или наличие ПДн",
                     )
                     check = self.task(

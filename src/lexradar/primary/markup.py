@@ -76,6 +76,8 @@ class SavedMarkup(StaticText):
         self.links: list[Link] = []
         self.resources: list[tuple[str, str]] = []
         self.images: list[tuple[str, str]] = []
+        self.resource_spans: list[StaticSpan] = []
+        self.image_spans: list[StaticSpan] = []
         self.form: SavedForm | None = None
         self.anchor: Link | None = None
         self.label_parts: list[str] | None = None
@@ -263,6 +265,13 @@ class SavedMarkup(StaticText):
             source = values.get("src")
             if source and len(self.resources) < 200:
                 self.resources.append((tag, static_reference(self.url, source)))
+                self.resource_spans.append(
+                    self.span(
+                        self.getpos(),
+                        self.token_end(self.getpos(), self.get_starttag_text()),
+                        recovered=len(self.regions) > 1,
+                    )
+                )
             elif source:
                 self.uncertain("Static resource reference limit; suffix withheld")
         if self.excluded or self.quarantined:
@@ -320,6 +329,13 @@ class SavedMarkup(StaticText):
             if len(self.images) < 200:
                 self.images.append(
                     (static_reference(self.url, values["src"]), values.get("alt") or "")
+                )
+                self.image_spans.append(
+                    self.span(
+                        self.getpos(),
+                        self.token_end(self.getpos(), self.get_starttag_text()),
+                        recovered=len(self.regions) > 1,
+                    )
                 )
             else:
                 self.uncertain("Static image reference limit; suffix withheld")
@@ -449,6 +465,19 @@ class SavedMarkup(StaticText):
                     (link.span.end_exclusive.line, link.span.end_exclusive.column),
                     recovered=link.span.status != "complete",
                 )
+        for name in ("resource_spans", "image_spans"):
+            setattr(
+                self,
+                name,
+                [
+                    self.span(
+                        (s.start.line, s.start.column),
+                        (s.end_exclusive.line, s.end_exclusive.column),
+                        recovered=s.status != "complete",
+                    )
+                    for s in getattr(self, name)
+                ],
+            )
         for form in self.forms:
             for index, input_field in enumerate(form.fields):
                 element_id = self.field_ids.get((form.index, index))

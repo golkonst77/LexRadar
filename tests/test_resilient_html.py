@@ -389,3 +389,17 @@ def test_no_go_from_recovered_source_even_if_manifest_claims_legal_identity(tmp_
     r = run(root)
     assert not r.organizations and r.forms[0].static_coverage.status == "partial"
     assert_internal(r)
+
+
+def test_resource_and_image_references_after_recovery_have_partial_source_ranges(tmp_path):
+    root, _ = make_dossier(
+        tmp_path,
+        '</span><script src="/inert.js"></script>'
+        '<img src="/synthetic.png" alt="Результат: изображение не осмотрено">',
+    )
+    r = run(root)
+    assert len(r.services) == 1 and r.services[0].citation.static_span.status == "partial"
+    assert r.services[0].citation.static_span.limitations
+    images = [o for o in r.observations if o.stage_id == "10"]
+    assert images and images[0].citations[0].static_span.status == "partial"
+    assert_internal(r)

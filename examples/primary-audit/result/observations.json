@@ -504,7 +504,19 @@
       "description": "В сохранённой разметке есть ссылка на ресурс",
       "citations": [
         {
-          "static_span": null,
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 27
+            },
+            "end_exclusive": {
+              "line": 1,
+              "column": 77
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -525,7 +537,19 @@
       "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
       "citations": [
         {
-          "static_span": null,
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 27
+            },
+            "end_exclusive": {
+              "line": 1,
+              "column": 77
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -546,7 +570,19 @@
       "description": "В сохранённой разметке есть ссылка на ресурс",
       "citations": [
         {
-          "static_span": null,
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 86
+            },
+            "end_exclusive": {
+              "line": 1,
+              "column": 141
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -567,7 +603,19 @@
       "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
       "citations": [
         {
-          "static_span": null,
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 86
+            },
+            "end_exclusive": {
+              "line": 1,
+              "column": 141
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -588,7 +636,19 @@
       "description": "HTML img имеет тематическую подпись; содержимое не осмотрено",
       "citations": [
         {
-          "static_span": null,
+          "static_span": {
+            "start": {
+              "line": 14,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 14,
+              "column": 97
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
