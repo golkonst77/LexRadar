@@ -1,0 +1,528 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "observation-0001",
+      "stage_id": "02",
+      "kind": "text_quote",
+      "description": "В доступном тексте обнаружено упоминание организации",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ",
+          "page": 1,
+          "element": null
+        },
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться Подписка на новости ",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Именованные фрагменты доступного текста",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0002",
+      "stage_id": "01",
+      "kind": "text_quote",
+      "description": "В материалах сайта упомянута организация; оператор не установлен",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ",
+          "page": 1,
+          "element": null
+        },
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться Подписка на новости ",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Идентификационные текстовые упоминания, не реестры",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0003",
+      "stage_id": "02",
+      "kind": "text_quote",
+      "description": "В доступном тексте обнаружено упоминание организации",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетические заявки». Распределение ответственности не установлено. Запись на приём ",
+          "page": 1,
+          "element": null
+        },
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Именованные фрагменты доступного текста",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0004",
+      "stage_id": "01",
+      "kind": "text_quote",
+      "description": "В материалах сайта упомянута организация; оператор не установлен",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетические заявки». Распределение ответственности не установлено. Запись на приём ",
+          "page": 1,
+          "element": null
+        },
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Идентификационные текстовые упоминания, не реестры",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0005",
+      "stage_id": "05",
+      "kind": "static_markup",
+      "description": "Статическая разметка формы form-0001",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "form[occurrence=1]"
+        }
+      ],
+      "scope": "Только сохранённые HTML-атрибуты; не live UI",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0006",
+      "stage_id": "06",
+      "kind": "static_markup",
+      "description": "Контекст ссылок/маршрутизации формы form-0001",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "form[occurrence=1]"
+        }
+      ],
+      "scope": "Сохранённая форма, не поведение и не передача",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0007",
+      "stage_id": "09",
+      "kind": "static_markup",
+      "description": "Контекст ссылок/маршрутизации формы form-0001",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "form[occurrence=1]"
+        }
+      ],
+      "scope": "Сохранённая форма, не поведение и не передача",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0008",
+      "stage_id": "05",
+      "kind": "static_markup",
+      "description": "Статическая разметка формы form-0002",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "form[occurrence=2]"
+        }
+      ],
+      "scope": "Только сохранённые HTML-атрибуты; не live UI",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0009",
+      "stage_id": "06",
+      "kind": "static_markup",
+      "description": "Контекст ссылок/маршрутизации формы form-0002",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "form[occurrence=2]"
+        }
+      ],
+      "scope": "Сохранённая форма, не поведение и не передача",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0010",
+      "stage_id": "09",
+      "kind": "static_markup",
+      "description": "Контекст ссылок/маршрутизации формы form-0002",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "form[occurrence=2]"
+        }
+      ],
+      "scope": "Сохранённая форма, не поведение и не передача",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0011",
+      "stage_id": "07",
+      "kind": "static_markup",
+      "description": "Маркер рекламы/рассылки в контексте формы",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "form[occurrence=2]"
+        }
+      ],
+      "scope": "Не подтверждает отправку маркетинговых сообщений",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0012",
+      "stage_id": "04",
+      "kind": "static_markup",
+      "description": "Сохранённая ссылка-кандидат на документ",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "a[href=https://clinic.example/privacy.pdf]"
+        }
+      ],
+      "scope": "Метка/адрес ссылки не подтверждают содержание документа",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0013",
+      "stage_id": "04",
+      "kind": "text_quote",
+      "description": "Доступен текстовый фрагмент документа-кандидата",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "интетическая клиника» Телефон Политика обработки персональных данных Записаться Подписка на новости ООО «Синтетические заявки» Email Согла",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Фрагмент документа; правовое содержание и полнота не подтверждены",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0014",
+      "stage_id": "08",
+      "kind": "static_markup",
+      "description": "В сохранённой разметке есть ссылка на ресурс",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "script[src]"
+        }
+      ],
+      "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0015",
+      "stage_id": "09",
+      "kind": "static_markup",
+      "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "script[src]"
+        }
+      ],
+      "scope": "Статический адрес не доказывает трансграничную передачу",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0016",
+      "stage_id": "08",
+      "kind": "static_markup",
+      "description": "В сохранённой разметке есть ссылка на ресурс",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "script[src]"
+        }
+      ],
+      "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0017",
+      "stage_id": "09",
+      "kind": "static_markup",
+      "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "script[src]"
+        }
+      ],
+      "scope": "Статический адрес не доказывает трансграничную передачу",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0018",
+      "stage_id": "10",
+      "kind": "static_markup",
+      "description": "HTML img имеет тематическую подпись; содержимое не осмотрено",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "img[src=https://clinic.example/synthetic-patient.png,alt=Учебная подпись: фото пациента; изображение не проверено]"
+        }
+      ],
+      "scope": "Атрибут подписи не доказывает изображение пациента или наличие ПДн",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0019",
+      "stage_id": "12",
+      "kind": "text_quote",
+      "description": "Текстовый маркер медицинского раскрытия: licensed_entity",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "линика». Услуги стоматологии. Лицензия: требует проверки. ООО «Синтетические заявки». Распределение ответственности не установлено. Запи",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0020",
+      "stage_id": "12",
+      "kind": "text_quote",
+      "description": "Текстовый маркер медицинского раскрытия: license_details",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "линика». Услуги стоматологии. Лицензия: требует проверки. ООО «Синтетические заявки». Распределение ответственности не установлено. Запи",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0021",
+      "stage_id": "12",
+      "kind": "text_quote",
+      "description": "Текстовый маркер медицинского раскрытия: organization_disclosures",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": "ская клиника — учебный пример ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ООО «Синтетические заявки",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0022",
+      "stage_id": "12",
+      "kind": "text_quote",
+      "description": "Текстовый маркер медицинского раскрытия: services",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "reproduced_text",
+          "quote": " ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ООО «Синтетические заявки». Распределение ответственност",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0023",
+      "stage_id": "03",
+      "kind": "collection_metadata",
+      "description": "Зарегистрирована попытка сбора материала",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": null,
+          "artifact_sha256": null,
+          "basis": "collector_manifest",
+          "quote": null,
+          "page": null,
+          "element": null
+        }
+      ],
+      "scope": "Сохранённая запись Collector; не проверка текущей доступности URL",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0024",
+      "stage_id": "13",
+      "kind": "collection_metadata",
+      "description": "Локальное структурирование выполнено; аудит неполон",
+      "citations": [
+        {
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": null,
+          "artifact_sha256": null,
+          "basis": "collector_manifest",
+          "quote": null,
+          "page": null,
+          "element": null
+        }
+      ],
+      "scope": "Сводка сохранённого досье, не подтверждение юридического исследования",
+      "legal_violation_established": false
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "flow-0001",
+      "form_id": "form-0001",
+      "action_reference": "https://clinic.example/appointment",
+      "organization_candidates": [
+        "organization-0001"
+      ],
+      "observed_scope": "declared_static_reference",
+      "actual_recipient": "unknown",
+      "network_route": "not_checked",
+      "cross_border_transfer": "unconfirmed",
+      "legal_basis": "unestablished"
+    },
+    {
+      "id": "flow-0002",
+      "form_id": "form-0002",
+      "action_reference": "https://intake.example/submit",
+      "organization_candidates": [
+        "organization-0002"
+      ],
+      "observed_scope": "declared_static_reference",
+      "actual_recipient": "unknown",
+      "network_route": "not_checked",
+      "cross_border_transfer": "unconfirmed",
+      "legal_basis": "unestablished"
+    }
+  ]
+}

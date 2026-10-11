@@ -1,0 +1,148 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "hypothesis-0001",
+      "stage_id": "06",
+      "question": "Какие основания и получатели относятся к form-0001?",
+      "observation_ids": [
+        "observation-0006"
+      ],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "required_checks": [
+        "check-0002"
+      ],
+      "status": "unconfirmed"
+    },
+    {
+      "id": "hypothesis-0002",
+      "stage_id": "09",
+      "question": "Какие основания и получатели относятся к form-0001?",
+      "observation_ids": [
+        "observation-0007"
+      ],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "required_checks": [
+        "check-0003"
+      ],
+      "status": "unconfirmed"
+    },
+    {
+      "id": "hypothesis-0003",
+      "stage_id": "06",
+      "question": "Какие основания и получатели относятся к form-0002?",
+      "observation_ids": [
+        "observation-0009"
+      ],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "required_checks": [
+        "check-0004"
+      ],
+      "status": "unconfirmed"
+    },
+    {
+      "id": "hypothesis-0004",
+      "stage_id": "09",
+      "question": "Какие основания и получатели относятся к form-0002?",
+      "observation_ids": [
+        "observation-0010"
+      ],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "required_checks": [
+        "check-0005"
+      ],
+      "status": "unconfirmed"
+    },
+    {
+      "id": "hypothesis-0005",
+      "stage_id": "07",
+      "question": "Применимо ли отдельное согласие на рекламу?",
+      "observation_ids": [
+        "observation-0011"
+      ],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Фактические коммуникации и правовое основание"
+      ],
+      "required_checks": [
+        "check-0006"
+      ],
+      "status": "unconfirmed"
+    },
+    {
+      "id": "hypothesis-0006",
+      "stage_id": "09",
+      "question": "Происходит ли передача по этой ссылке и каковы её условия?",
+      "observation_ids": [
+        "observation-0015"
+      ],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Сетевой маршрут, данные и основание"
+      ],
+      "required_checks": [
+        "check-0009"
+      ],
+      "status": "unconfirmed"
+    },
+    {
+      "id": "hypothesis-0007",
+      "stage_id": "09",
+      "question": "Происходит ли передача по этой ссылке и каковы её условия?",
+      "observation_ids": [
+        "observation-0017"
+      ],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Сетевой маршрут, данные и основание"
+      ],
+      "required_checks": [
+        "check-0010"
+      ],
+      "status": "unconfirmed"
+    },
+    {
+      "id": "hypothesis-0008",
+      "stage_id": "10",
+      "question": "Есть ли идентифицируемое изображение и применимые основания?",
+      "observation_ids": [
+        "observation-0018"
+      ],
+      "normative_reference_ids": [],
+      "missing_information": [
+        "Содержимое изображения, основания, внутренние согласия"
+      ],
+      "required_checks": [
+        "check-0011"
+      ],
+      "status": "unconfirmed"
+    }
+  ]
+}

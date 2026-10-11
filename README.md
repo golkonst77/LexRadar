@@ -56,6 +56,14 @@ lexradar examples/input.json --output work/report.json
 Для браузерных тестов установите Chromium: `python -m playwright install --with-deps chromium`.
 Collector не подключён к Gateway, не формирует юридические выводы и не отправляет сообщения.
 
+## Структурированный первичный аудит (PR #10)
+
+`lexradar primary-audit work/audit --output work/primary` работает offline с сохранённым
+досье. 13 рабочих направлений, матрицы организаций/форм, наблюдения, гипотезы,
+нормативные кандидаты и задания на перепроверку разделены. Результат внутренний,
+юридически неполный, HOLD/not_confirmed; клиентские материалы не создаются.
+[Запуск, этапы, сверка v2.5 и примеры](docs/primary-audit-methodology.md).
+
 ## Independent AI Auditors
 
 `lexradar analyze work/audit --output work/analysis` по умолчанию работает offline без LLM.

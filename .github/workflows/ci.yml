@@ -17,6 +17,9 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest -q
+      - run: lexradar primary-audit examples/primary-audit/dossier --sector medical --as-of 2026-10-10T00:00:00Z --output /tmp/lexradar-primary
+      - run: lexradar primary-audit examples/primary-audit/incomplete/dossier --as-of 2026-10-10T00:00:00Z --output /tmp/lexradar-primary-empty
+      - run: python -c "import json; a=json.load(open('/tmp/lexradar-primary/audit.json')); b=json.load(open('/tmp/lexradar-primary-empty/audit.json')); assert len(a['stages'])==len(b['stages'])==13; assert len(a['organizations'])==len(a['forms'])==2; assert not b['observations'] and not b['commercial_opportunity']; assert all(r['production_outcome']=='HOLD' and not r['audit_complete'] and not r['client_release_allowed'] and not r['automatic_send_allowed'] for r in (a,b)); assert all(not o['operator_confirmed'] for o in a['organizations'])"
       - run: lexradar legal-source prepare --metadata examples/legal-sources/metadata-v1.json --text examples/legal-sources/originals/v1.txt --event-date 2025-06-01 --output /tmp/lexradar-source-prepared
       - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2025-06-01 --output /tmp/lexradar-source-past
       - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2026-06-01 --output /tmp/lexradar-source-current

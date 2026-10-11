@@ -1,0 +1,102 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "0e810d19a1198065689e7fffc7524357c32e13aeae60007b78dbfb08b6872973",
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "form-0001",
+      "evidence_id": "page-0001",
+      "url": "https://clinic.example/",
+      "element": "form[occurrence=1]",
+      "purpose_hint": null,
+      "fields": [
+        {
+          "tag": "input",
+          "type": "tel",
+          "name": "phone",
+          "label": "Телефон",
+          "required": false,
+          "checked": null
+        }
+      ],
+      "policy_links": [],
+      "consent_links": [],
+      "advertising_links": [],
+      "interface_elements": [],
+      "submission_context": "Телефон",
+      "action_reference": null,
+      "static_coverage": {
+        "status": "partial",
+        "page_status": "partial",
+        "form_start": {
+          "line": 1,
+          "column": 40
+        },
+        "form_end_exclusive": null,
+        "trusted_page_end_exclusive": {
+          "line": 1,
+          "column": 104
+        },
+        "reasons": [
+          "Mismatched HTML closing element; suffix withheld",
+          "Unclosed HTML elements; complete extraction not established",
+          "Form closing boundary was not reliably parsed; inventories are partial"
+        ],
+        "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
+        "list_scope": "observed_elements_in_trusted_region_only"
+      },
+      "organization_candidates": [],
+      "recipient_hint": "Не установлен; HTML action и упоминания не доказывают получателя",
+      "unresolved_processing": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Частичный/неизвестный статический разбор: списки полей, согласий и ссылок не полны; пустой список не доказывает отсутствие элементов",
+        "Mismatched HTML closing element; suffix withheld",
+        "Unclosed HTML elements; complete extraction not established",
+        "Form closing boundary was not reliably parsed; inventories are partial",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "citation": {
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "078d9a22233e9f73c2b06266f945afdb9f281332cde8108a0259c55a3cf05673",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "form[occurrence=1]"
+      },
+      "screenshot": null,
+      "screenshot_scope": null,
+      "examination": "saved_static_markup",
+      "functional_test_performed": false,
+      "submitted": false,
+      "lawfulness": "unestablished"
+    }
+  ],
+  "inventory_scope": "observed_forms_only_not_proof_of_absence",
+  "limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+    "page-0001: Extraction is not legal research",
+    "page-0001: Mismatched HTML closing element; suffix withheld",
+    "page-0001: Unclosed HTML elements; complete extraction not established",
+    "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
+    "Обследованы сохранённые материалы, не живой сайт; полнота сайта неизвестна",
+    "JavaScript, cookies, сетевые маршруты и функциональное поведение форм не проверялись",
+    "Личность и роли организаций, нормативные основания и нарушения не подтверждены",
+    "Упоминания имён/ИНН/ОГРН не устанавливают оператора или реального получателя данных",
+    "Поля entities/forms из manifest не становятся фактами без повторного извлечения",
+    "Изображения не осматривались; подписи не устанавливают личность изображённых",
+    "РКН и реестры лицензий не запрашивались; недоступность не равна отсутствию записи",
+    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение",
+    "page-0001: Mismatched HTML closing element; suffix withheld",
+    "page-0001: Unclosed HTML elements; complete extraction not established"
+  ]
+}
