@@ -72,6 +72,26 @@ jobs:
           assert all(f['normative_status'] == 'normative_review_required' for f in r['findings'])
           assert all(w['necessity_status'] == 'not_confirmed' for w in r['commercial_work'])
           PYCODE
+      - name: Offline normative applicability remains unconfirmed
+        run: |
+          lexradar verify-norms examples/primary-audit/dossier --primary /tmp/lexradar-primary/audit.json --assessment /tmp/lexradar-primary/internal-assessment.json --registry examples/legal-sources/registry.json --event-date 2026-10-10 --as-of 2026-10-10T00:00:00Z --output /tmp/lexradar-normative
+          python - <<'PYCODE'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/lexradar-normative')
+          assert len(list(root.glob('*.json'))) == 3
+          for file in root.glob('*.json'):
+              r = json.loads(file.read_text())
+              assert r['audience'] == 'internal_only' and r['production_outcome'] == 'HOLD'
+              assert not r['client_release_allowed'] and not r['production_go_allowed']
+              assert not r['automatic_send_allowed'] and not r['sanctions']
+          req = json.loads((root / 'norm-requirements.json').read_text())
+          assert req['requirements'] and all(r['revision_check'] == 'revision_unverified' for r in req['requirements'])
+          app = json.loads((root / 'requirement-applicability.json').read_text())
+          assert app['question_summaries'] and all(r['status'] == 'source_unverified' for r in app['applicability'])
+          assert all(not r['absence_check']['absence_proven'] for r in app['applicability'])
+          assert all(not w['necessity_confirmed'] for w in app['commercial_work'])
+          PYCODE
       - run: lexradar legal-source prepare --metadata examples/legal-sources/metadata-v1.json --text examples/legal-sources/originals/v1.txt --event-date 2025-06-01 --output /tmp/lexradar-source-prepared
       - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2025-06-01 --output /tmp/lexradar-source-past
       - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2026-06-01 --output /tmp/lexradar-source-current
