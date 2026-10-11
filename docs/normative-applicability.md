@@ -126,6 +126,9 @@ the page or establishes currentness, public accessibility or legal sufficiency.
 Script, style, template, head, title and noscript contents are excluded. Detection
 is lexical (policy heading/identifier plus substantial personal-data text), not
 legal classification. Unidentified layouts can be missed; no absence is inferred.
+Complete nested documents take precedence over partial/banner wrappers; identical
+text in disjoint blocks retains distinct source ranges. The previous independently
+reproduced PDF-text path remains available, without claiming complete visual review.
 
 An optional `SourceRegistry.research_contexts` list preserves imported research
 without establishing production trust. Each entry binds to the exact card hash,
@@ -139,7 +142,9 @@ The output separates `imported_claim` from `mechanism_operations`: the latter li
 only the byte/hash and metadata comparisons actually performed. Missing, changed,
 unsafe or misbound research materials invalidate the context binding while keeping
 the original claim for diagnosis. Evidence is checked again before export. Even a
-consistent binding remains `production_trust=untrusted`, with official-portal
+context whose sidecars match is invalidated if the original normative text/quote is
+missing, changed or inconsistent. A consistent binding remains
+`production_trust=untrusted`, with official-portal
 verification and claim authentication false. Editable research conclusions cannot
 change `revision_check`, establish a violation, produce GO or release client text.
 An omitted context remains compatible with earlier registries and outputs.

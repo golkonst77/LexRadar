@@ -1,15 +1,30 @@
 """Real saved synthetic bytes, not browser access, legal attestations or client approval."""
 
 import hashlib
+import io
 import json
 
 import pytest
 from pydantic import ValidationError
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+from test_primary import NOW, run
+from test_reading_integrity import save_manifest
 from test_requirements import EVENT, setup, verify
 from test_requirements import offline as offline
 
+from lexradar.collector.artifacts import ArtifactStore
+from lexradar.collector.models import (
+    CollectedEvidence,
+    CollectionResult,
+    DocumentObservation,
+    Limits,
+)
+from lexradar.collector.pdf import extract_inventory, legacy_result
+from lexradar.primary.qualification import qualify_primary
 from lexradar.verifier.legal_cards import card_hash
 from lexradar.verifier.models import SourceRegistry
+from lexradar.verifier.requirement_models import NormativeVerification
 from lexradar.verifier.requirements import export_normative
 
 POLICY_TEXT = (
@@ -251,3 +266,141 @@ def test_research_material_changed_during_stage_is_rejected(tmp_path, monkeypatc
     monkeypatch.setattr(requirements, "policy_observations", changed)
     with pytest.raises(ValueError, match="Research evidence changed"):
         verify(args)
+
+
+@pytest.mark.parametrize("padding", [0, 60000])
+def test_banner_wrapper_cannot_hide_full_nested_document(tmp_path, padding):
+    body = '<div id="privacy-banner"><p>Персональные данные: информационный баннер. '
+    body += "x" * 100 + "</p>" + POLICY + "x" * padding + "</div>"
+    result = verify(setup(tmp_path, body))
+    assert len(result.saved_policy_observations) == 1
+    document = result.saved_policy_observations[0]
+    assert document.reading_completeness == "complete"
+    assert "информационный баннер" not in document.text
+
+
+def test_identical_disjoint_documents_keep_both_source_ranges(tmp_path):
+    result = verify(setup(tmp_path, POLICY + POLICY.replace("popup__policy", "second_policy")))
+    docs = result.saved_policy_observations
+    assert len(docs) == 2 and docs[0].text == docs[1].text
+    assert docs[0].id != docs[1].id and docs[0].block != docs[1].block
+
+
+@pytest.mark.parametrize("mutation", ["bytes", "missing", "quote"])
+def test_invalid_original_norm_invalidates_research_binding(tmp_path, mutation):
+    args = setup(tmp_path)
+    data = add_context(args)
+    if mutation == "missing":
+        (args[-1].parent / "original.txt").unlink()
+    elif mutation == "bytes":
+        (args[-1].parent / "original.txt").write_bytes(b"changed normative source")
+    else:
+        data["cards"][0]["norm_text"] = "absent quote"
+        card = SourceRegistry.model_validate(data).cards[0]
+        data["research_contexts"][0]["card_sha256"] = card_hash(card)
+        args[-1].write_text(json.dumps(data))
+    requirement = verify(args).requirements[0]
+    assert requirement.text_check != "matched_saved_text"
+    assert requirement.research_context.binding_status == "invalidated"
+
+
+def synthetic_unicode_pdf(text, blank_page=False):
+    """Actual PDF text layer with a small explicit Unicode map; synthetic content only."""
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=600, height=600)
+    codes = {c: i + 1 for i, c in enumerate(dict.fromkeys(text))}
+    cmap = DecodedStreamObject()
+    mapping = " ".join(f"<{code:02x}> <{ord(char):04x}>" for char, code in codes.items())
+    cmap.set_data(
+        (
+            "/CIDInit /ProcSet findresource begin 12 dict begin begincmap /CMapType 2 def "
+            "1 begincodespacerange <00> <FF> endcodespacerange "
+            f"{len(codes)} beginbfchar {mapping} endbfchar endcmap end end"
+        ).encode()
+    )
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+            NameObject("/ToUnicode"): writer._add_object(cmap),
+        }
+    )
+    page[NameObject("/Resources")] = DictionaryObject(
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): writer._add_object(font)})}
+    )
+    stream = DecodedStreamObject()
+    encoded = "".join(f"{codes[c]:02x}" for c in text)
+    stream.set_data(f"BT /F1 12 Tf 20 500 Td <{encoded}> Tj ET".encode())
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    if blank_page:
+        writer.add_blank_page(width=600, height=600)
+    output = io.BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
+@pytest.mark.parametrize("blank_page", [False, True])
+def test_saved_pdf_policy_remains_supported_without_claiming_whole_review(tmp_path, blank_page):
+    args = setup(
+        tmp_path,
+        '<form><input name="phone"><a href="/policy.pdf">Политика</a></form>',
+        conditions=["policy_text_available"],
+    )
+    root, _, _, registry = args
+    data = CollectionResult.model_validate_json((root / "collection.json").read_bytes())
+    store = ArtifactStore(tmp_path / "pdf-store", Limits())
+    artifact = store.save("policy.pdf", synthetic_unicode_pdf(POLICY_TEXT, blank_page), "pdf")
+    (root / artifact.path).write_bytes((store.root / artifact.path).read_bytes())
+    inventory = extract_inventory(root / artifact.path, 100, 10, 100000, 1000000)
+    text, status, reason = legacy_result(inventory)
+    evidence = CollectedEvidence(
+        id="document-policy",
+        source="https://clinic.example/policy.pdf",
+        captured_at=NOW,
+        observed_fact="Synthetic saved PDF",
+        available=True,
+        status="complete",
+        artifacts=[artifact],
+        artifact_path=artifact.path,
+        sha256=artifact.sha256,
+    )
+    data.evidence.append(evidence)
+    data.documents.append(
+        DocumentObservation(
+            requested_url=evidence.source,
+            evidence_id=evidence.id,
+            text=text,
+            extraction_status=status,
+            extraction_reason=reason,
+            reading=inventory.reading,
+            page_texts=inventory.page_texts,
+        )
+    )
+    save_manifest(root, data)
+    primary = run(root)
+    result = verify((root, primary, qualify_primary(primary), registry))
+    assert not result.saved_policy_observations  # HTML-specific inventory, no fake PDF block.
+    if blank_page:
+        assert all(
+            c.status == "unknown" for row in result.applicability for c in row.condition_checks
+        )
+    else:
+        assert any(
+            c.status == "supported_static_fact" and "document-policy" in c.evidence_ids
+            for row in result.applicability
+            for c in row.condition_checks
+        )
+    assert all(not row.sufficient_for_legal_conclusion for row in result.applicability)
+
+
+def test_previous_export_contract_loads_with_optional_fields_omitted(tmp_path):
+    result = verify(setup(tmp_path, POLICY))
+    previous = result.model_dump(mode="json")
+    previous.pop("saved_policy_observations")
+    for requirement in previous["requirements"]:
+        requirement.pop("research_context")
+    restored = NormativeVerification.model_validate(previous)
+    assert restored.saved_policy_observations == []
+    assert all(r.research_context is None for r in restored.requirements)
+    assert not restored.client_release_allowed and restored.production_outcome == "HOLD"

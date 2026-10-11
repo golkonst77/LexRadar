@@ -172,7 +172,7 @@ def build_requirement(spec, source, record, registry, event, now):
         activity_scope=spec.activity_scope,
         limitations=sorted(set(reasons)),
         intake_status=intake_status,
-        research_context=research_context(source, registry, event),
+        research_context=research_context(source, registry, event, assessment),
     )
 
 
@@ -215,7 +215,7 @@ def absence_check(independent, research):
 
 def check_condition(condition, finding, independent_row, research, policies=()):
     ids, eids = [], []
-    if condition.predicate in {"policy_text_available", "saved_policy_text_present"}:
+    if condition.predicate in {"policy_text_available", "saved_policy_text_present"} and policies:
         # Document presence belongs to Stage I material inventory, not a finding's quotes.
         return ConditionCheck(
             condition_id=condition.condition_id,
@@ -260,6 +260,15 @@ def check_condition(condition, finding, independent_row, research, policies=()):
                 elif predicate == "multiple_organization_mentions":
                     supported = (
                         len({o.source_id for o in fresh.objects if o.type == "organization"}) > 1
+                    )
+                elif predicate in {"policy_text_available", "saved_policy_text_present"}:
+                    # Preserve the PR15 path for independently reproduced saved PDF text.
+                    # A page/organization quote cannot masquerade as a document.
+                    supported = (
+                        len(quote) >= 80
+                        and "персональн" in quote
+                        and "политик" in quote
+                        and any(o.type == "document" for o in objects)
                     )
                 elif predicate == "consent_marker_declared":
                     supported = "соглас" in quote or "consent" in quote
@@ -453,7 +462,12 @@ def verify_normative(
         cards = {c.id: c for c in registry.cards}
         for requirement in requirements:
             if requirement.research_context and requirement.source_card_id in cards:
-                repeated = research_context(cards[requirement.source_card_id], registry, event_date)
+                repeated = research_context(
+                    cards[requirement.source_card_id],
+                    registry,
+                    event_date,
+                    end_records[requirement.source_card_id].card_assessment,
+                )
                 if repeated != requirement.research_context:
                     raise ValueError("Research evidence changed during normative verification")
     # Recheck bytes after the additional normative stage, without creating client permission.

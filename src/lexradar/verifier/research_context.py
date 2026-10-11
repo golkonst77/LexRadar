@@ -7,11 +7,15 @@ from .legal_cards import card_hash, read_local
 from .requirement_models import NormResearchContext
 
 
-def research_context(source, registry, event):
+def research_context(source, registry, event, source_assessment):
     claim = next((c for c in registry.research_contexts if c.source_card_id == source.id), None)
     if claim is None:
         return None
     operations, failures = [], []
+    if source_assessment is None or source_assessment.technical_integrity != "consistent":
+        failures.append("Normative source bytes/quote unavailable, inconsistent or ambiguous")
+    else:
+        operations.append("Compared saved normative source hash and exact quote")
     if claim.card_sha256 != card_hash(source):
         failures.append("Source card binding changed")
     else:

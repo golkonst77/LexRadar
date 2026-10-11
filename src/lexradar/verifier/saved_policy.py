@@ -98,15 +98,20 @@ def policy_observations(research):
         decoding_loss = decoded.encode("utf-8") != raw
         parser.feed(decoded)
         parser.close()
-        seen = set()
         selected_ranges = []
-        # Prefer an explicit popup/document identifier over enclosing title/trigger wrappers.
+
+        # A partial outer banner must not hide a complete nested document. Prefer
+        # locally complete, titled blocks, then explicit document IDs and deeper blocks.
+        def candidate_rank(block):
+            text = compact(block.parts)
+            complete = block.complete and not block.truncated and len(text) <= 50000
+            titled = re.match(r"^(?:политика\b|privacy policy\b)", text, re.I)
+            identified = re.search(r"policy|privacy|политик", block.identifier, re.I)
+            return (not complete, not bool(titled), not bool(identified), -block.depth, block.start)
+
         ordered = sorted(
             parser.policy_blocks,
-            key=lambda b: (
-                not bool(re.search(r"policy|privacy|политик", b.identifier, re.I)),
-                b.start,
-            ),
+            key=candidate_rank,
         )
         for block in ordered:
             text = compact(block.parts)
@@ -120,7 +125,6 @@ def policy_observations(research):
                 not (title or identified)
                 or not personal
                 or len(text) < 80
-                or text in seen
                 or block.end is None
                 or block.end <= block.start
                 or any(
@@ -130,7 +134,6 @@ def policy_observations(research):
                 )
             ):
                 continue
-            seen.add(text)
             selected_ranges.append((block.start, block.end))
             complete = block.complete and not block.truncated and not decoding_loss
             limitations = [
