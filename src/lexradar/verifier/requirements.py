@@ -17,6 +17,8 @@ from .requirement_models import (
     RequirementApplicability,
     RequirementCondition,
 )
+from .research_context import research_context
+from .saved_policy import policy_observations
 
 DOMAIN_CATEGORIES = {
     "personal_data": list("ABCDEFH"),
@@ -170,6 +172,7 @@ def build_requirement(spec, source, record, registry, event, now):
         activity_scope=spec.activity_scope,
         limitations=sorted(set(reasons)),
         intake_status=intake_status,
+        research_context=research_context(source, registry, event),
     )
 
 
@@ -210,8 +213,21 @@ def absence_check(independent, research):
     )
 
 
-def check_condition(condition, finding, independent_row, research):
+def check_condition(condition, finding, independent_row, research, policies=()):
     ids, eids = [], []
+    if condition.predicate in {"policy_text_available", "saved_policy_text_present"}:
+        # Document presence belongs to Stage I material inventory, not a finding's quotes.
+        return ConditionCheck(
+            condition_id=condition.condition_id,
+            predicate=condition.predicate,
+            status="supported_static_fact" if policies else "unknown",
+            fact_ids=[p.id for p in policies],
+            evidence_ids=sorted({p.evidence_id for p in policies}),
+            reason="Saved policy text independently reproduced; reading scope is in observations; "
+            "live accessibility, completeness of the site and legal sufficiency unknown"
+            if policies
+            else "No bounded policy text reproduced; no inference of website-wide absence",
+        )
     if (
         research
         and independent_row
@@ -244,13 +260,6 @@ def check_condition(condition, finding, independent_row, research):
                 elif predicate == "multiple_organization_mentions":
                     supported = (
                         len({o.source_id for o in fresh.objects if o.type == "organization"}) > 1
-                    )
-                elif predicate == "policy_text_available":
-                    supported = (
-                        len(quote) >= 80
-                        and "персональн" in quote
-                        and "политик" in quote
-                        and any(o.type == "document" for o in objects)
                     )
                 elif predicate == "consent_marker_declared":
                     supported = "соглас" in quote or "consent" in quote
@@ -336,6 +345,7 @@ def verify_normative(
             for r in requirements
         )
     rows, summaries = [], []
+    policies = policy_observations(research)
     absence = absence_check(independent, research)
     independent_findings = {f.source_finding.id: f for f in independent.findings}
     tasks = search_tasks(assessment.legal_findings)
@@ -343,7 +353,9 @@ def verify_normative(
         applicable = [r for r in requirements if finding.category in r.categories]
         for requirement in applicable:
             conditions = [
-                check_condition(c, finding, independent_findings.get(finding.id), research)
+                check_condition(
+                    c, finding, independent_findings.get(finding.id), research, policies
+                )
                 for c in requirement.conditions
             ]
             actions = [
@@ -438,6 +450,12 @@ def verify_normative(
             {k: v.model_dump(mode="json") for k, v in end_records.items()}
         ):
             raise ValueError("Saved normative source changed during verification")
+        cards = {c.id: c for c in registry.cards}
+        for requirement in requirements:
+            if requirement.research_context and requirement.source_card_id in cards:
+                repeated = research_context(cards[requirement.source_card_id], registry, event_date)
+                if repeated != requirement.research_context:
+                    raise ValueError("Research evidence changed during normative verification")
     # Recheck bytes after the additional normative stage, without creating client permission.
     if research:
         from ..auditors.evidence import load_packet
@@ -459,6 +477,7 @@ def verify_normative(
         question_summaries=summaries,
         source_search_tasks=tasks,
         gaps=sorted(set(gaps)),
+        saved_policy_observations=policies,
     )
 
 
