@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from .qualification import preliminary_outline, qualify_primary
 from .service import audit_saved_dossier
 
 
@@ -14,6 +15,8 @@ def write_report(report, output: Path, source: Path):
         p.is_symlink() for p in (output, *output.parents)
     ):
         raise ValueError("Output must be new and outside the source dossier")
+    assessment = qualify_primary(report)
+    outline = preliminary_outline(assessment)
     output.mkdir(parents=True, exist_ok=False)
     (output / "audit.json").write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     for name, rows in (
@@ -52,6 +55,40 @@ def write_report(report, output: Path, source: Path):
         (output / f"{name}.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
+
+    for name, payload in (
+        (
+            "legal-findings",
+            {"rows": [f.model_dump(mode="json") for f in assessment.legal_findings]},
+        ),
+        (
+            "commercial-work",
+            {"rows": [w.model_dump(mode="json") for w in assessment.commercial_work]},
+        ),
+    ):
+        payload.update(
+            {
+                "audience": "internal_only",
+                "notice": assessment.notice,
+                "source_primary_sha256": assessment.source_primary_sha256,
+                "source_primary_hash_scope": assessment.source_primary_hash_scope,
+                "source_dossier_sha256": assessment.source_dossier_sha256,
+                "source_origin": assessment.source_origin.model_dump(mode="json"),
+                "production_outcome": "HOLD",
+                "legal_status": "not_confirmed",
+                "client_release_allowed": False,
+                "automatic_send_allowed": False,
+            }
+        )
+        (output / f"{name}.json").write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    (output / "internal-assessment.json").write_text(
+        assessment.model_dump_json(indent=2) + "\n", encoding="utf-8"
+    )
+    (output / "preliminary-client-summary.json").write_text(
+        outline.model_dump_json(indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def primary_main(argv: list[str]):

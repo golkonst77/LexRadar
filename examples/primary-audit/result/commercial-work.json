@@ -1,0 +1,178 @@
+{
+  "rows": [
+    {
+      "id": "work-bfbedaec14894519413e8ec57b7a9ff02e25d128356b109320879b49e75c44fe",
+      "work_type": "advertising_consent",
+      "legal_finding_ids": [
+        "finding-f43cf045272de5d777929d6e73db14af3f3a8d6ecc856856c4f20aed1c3fc414"
+      ],
+      "support_fact_ids": [
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "discovered_scope": "Конкретный сохранённый текст/контекст позволяет предварительно очертить предмет, не необходимость работы",
+      "client_clarifications": [
+        "Подтвердить фактического исполнителя/оператора и цели обработки",
+        "Предоставить действующие документы, процессы и распределение ролей",
+        "Уточнить, требуется ли подготовка нового текста или действующий документ достаточен"
+      ],
+      "expected_paid_result": "Подготовка отдельного рекламного согласия, если его необходимость установлена",
+      "proposal_justification": "conditional_scope_candidate",
+      "necessity_conditions": [
+        "Независимая юридическая проверка актуальных норм и применимости",
+        "Заказчик подтвердил фактическую модель; установлен конкретный недостаток или потребность",
+        "Действующий комплект не покрывает подтверждённую потребность; объём отдельно согласован"
+      ],
+      "limitations": [
+        "Условный кандидат, не коммерческое предложение и не доказательство нарушения",
+        "Частичные фрагменты не подтверждают качество всего документа",
+        "Технические проверки предшествуют квалификации; исправление сайта не входит в основной продукт"
+      ],
+      "scope_policy": "separate_organization_and_form_scopes_until_verified",
+      "document_need_confirmed": false,
+      "violation_proof": false,
+      "offer_generated": false,
+      "customer_webmaster_implements": true,
+      "direct_site_fix_included": false
+    },
+    {
+      "id": "work-445bda9853686f8271436855f9481580354f2bfed2fd08a12f56f0ac9b830b94",
+      "work_type": "legal_webmaster_specification",
+      "legal_finding_ids": [
+        "finding-16252cf9b4bfe10eba2d3ed8d3150e6d4c16d80a38ab5589a4bd9c5e41e0e236",
+        "finding-ad140cfcf770bdbde27556d2a962fdda74692775960808b9baf47fb4bddbfc96",
+        "finding-d4eabfab955b991bcbb6daa4d8a96b36b0b5c12f98bc85c58b6959a8bd638ab2",
+        "finding-f43cf045272de5d777929d6e73db14af3f3a8d6ecc856856c4f20aed1c3fc414"
+      ],
+      "support_fact_ids": [
+        "fact-01648b6b6210aa78ce8468af162f0ead9cfc1a7b43059f72f1a5350c12fd44e9",
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-8f963994f1093afb2b020c4482df997d4d2453eb2e426c348cc2b2edda83a5c4",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "discovered_scope": "Есть условные документные кандидаты; техническое внедрение не предлагается",
+      "client_clarifications": [
+        "Согласовать подтверждённые документы и возможности вебмастера"
+      ],
+      "expected_paid_result": "Подробная письменная методичка/ТЗ вебмастеру по согласованным документам",
+      "proposal_justification": "conditional_scope_candidate",
+      "necessity_conditions": [
+        "Документные работы действительно необходимы и отдельно согласованы",
+        "Письменные требования нужны для внедрения утверждённых документов"
+      ],
+      "limitations": [
+        "Не включает исправление сайта или неопределённую техническую диагностику",
+        "Подробное ТЗ отсутствует в бесплатном предварительном обзоре"
+      ],
+      "scope_policy": "separate_organization_and_form_scopes_until_verified",
+      "document_need_confirmed": false,
+      "violation_proof": false,
+      "offer_generated": false,
+      "customer_webmaster_implements": true,
+      "direct_site_fix_included": false
+    },
+    {
+      "id": "work-36c0f5c644a57ee122613c6873362b29b72d45f4f16c375006fe3acce823e2de",
+      "work_type": "policy_document",
+      "legal_finding_ids": [
+        "finding-ad140cfcf770bdbde27556d2a962fdda74692775960808b9baf47fb4bddbfc96",
+        "finding-d4eabfab955b991bcbb6daa4d8a96b36b0b5c12f98bc85c58b6959a8bd638ab2"
+      ],
+      "support_fact_ids": [
+        "fact-01648b6b6210aa78ce8468af162f0ead9cfc1a7b43059f72f1a5350c12fd44e9",
+        "fact-8f963994f1093afb2b020c4482df997d4d2453eb2e426c348cc2b2edda83a5c4",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "discovered_scope": "Конкретный сохранённый текст/контекст позволяет предварительно очертить предмет, не необходимость работы",
+      "client_clarifications": [
+        "Подтвердить фактического исполнителя/оператора и цели обработки",
+        "Предоставить действующие документы, процессы и распределение ролей",
+        "Уточнить, требуется ли подготовка нового текста или действующий документ достаточен"
+      ],
+      "expected_paid_result": "Подготовка или переработка политики с учётом подтверждённой модели обработки",
+      "proposal_justification": "conditional_scope_candidate",
+      "necessity_conditions": [
+        "Независимая юридическая проверка актуальных норм и применимости",
+        "Заказчик подтвердил фактическую модель; установлен конкретный недостаток или потребность",
+        "Действующий комплект не покрывает подтверждённую потребность; объём отдельно согласован"
+      ],
+      "limitations": [
+        "Условный кандидат, не коммерческое предложение и не доказательство нарушения",
+        "Частичные фрагменты не подтверждают качество всего документа",
+        "Технические проверки предшествуют квалификации; исправление сайта не входит в основной продукт"
+      ],
+      "scope_policy": "separate_organization_and_form_scopes_until_verified",
+      "document_need_confirmed": false,
+      "violation_proof": false,
+      "offer_generated": false,
+      "customer_webmaster_implements": true,
+      "direct_site_fix_included": false
+    },
+    {
+      "id": "work-1c7195b81b56e523254f6b97af6bbd60a91200b655de1c1a3eb39e065389b165",
+      "work_type": "processing_consent",
+      "legal_finding_ids": [
+        "finding-16252cf9b4bfe10eba2d3ed8d3150e6d4c16d80a38ab5589a4bd9c5e41e0e236"
+      ],
+      "support_fact_ids": [
+        "fact-3a8ef25824817ced024fb88a4b6e861ce4b17135772fb3a4c129978f83057c75",
+        "fact-9e3156e5baeb6aaca2c08731e0faadbab28a393f5dd517183b6ba9366b850708",
+        "fact-e46a3e0ad9eb8a1b516176726b6b8184ed533108fe03c9b9e5fc591bf7e26da0",
+        "fact-f43ae19d57bd0067c22933db830a56b17c7921fc63149a4915fa2fcd773fb41d"
+      ],
+      "discovered_scope": "Конкретный сохранённый текст/контекст позволяет предварительно очертить предмет, не необходимость работы",
+      "client_clarifications": [
+        "Подтвердить фактического исполнителя/оператора и цели обработки",
+        "Предоставить действующие документы, процессы и распределение ролей",
+        "Уточнить, требуется ли подготовка нового текста или действующий документ достаточен"
+      ],
+      "expected_paid_result": "Подготовка применимого текста согласия и правил его документирования",
+      "proposal_justification": "conditional_scope_candidate",
+      "necessity_conditions": [
+        "Независимая юридическая проверка актуальных норм и применимости",
+        "Заказчик подтвердил фактическую модель; установлен конкретный недостаток или потребность",
+        "Действующий комплект не покрывает подтверждённую потребность; объём отдельно согласован"
+      ],
+      "limitations": [
+        "Условный кандидат, не коммерческое предложение и не доказательство нарушения",
+        "Частичные фрагменты не подтверждают качество всего документа",
+        "Технические проверки предшествуют квалификации; исправление сайта не входит в основной продукт"
+      ],
+      "scope_policy": "separate_organization_and_form_scopes_until_verified",
+      "document_need_confirmed": false,
+      "violation_proof": false,
+      "offer_generated": false,
+      "customer_webmaster_implements": true,
+      "direct_site_fix_included": false
+    }
+  ],
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_primary_sha256": "47ed0f92d5d831b8725871d5983a4685cdfe10fead26760ee8d8c9e5cf1e52dd",
+  "source_primary_hash_scope": "canonical_validated_json_utf8_sorted_compact",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
+  "production_outcome": "HOLD",
+  "legal_status": "not_confirmed",
+  "client_release_allowed": false,
+  "automatic_send_allowed": false
+}

@@ -129,3 +129,5 @@ lexradar collect https://example.org/ --output work/public-pilot \
 исходник, не исполняет JS и не отменяет production HOLD.
 
 Статические AJAX/popup/booking/ресурсные декларации: [модели, экспорт и ограничения](docs/static-data-mechanisms.md).
+
+Внутренние юридические вопросы и условные документные работы: [правила квалификации и четыре новых экспорта](docs/legal-commercial-qualification.md).
