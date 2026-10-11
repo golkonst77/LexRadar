@@ -271,6 +271,7 @@ def test_manual_origin_cannot_claim_authentication_or_http_time(field, value):
         "<p>Лицензия центра</p>",
         "<p>Ценный опыт</p>",
         "<p>Сценарий консультации</p>",
+        "<p>5 рубежей исследования</p>",
     ],
 )
 def test_center_is_not_price_evidence(tmp_path, body):
