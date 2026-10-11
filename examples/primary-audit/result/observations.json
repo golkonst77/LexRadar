@@ -501,17 +501,17 @@
       "id": "observation-0015",
       "stage_id": "08",
       "kind": "static_markup",
-      "description": "В сохранённой разметке есть ссылка на ресурс",
+      "description": "Группа статических деклараций ресурса",
       "citations": [
         {
           "static_span": {
             "start": {
               "line": 1,
-              "column": 27
+              "column": 35
             },
             "end_exclusive": {
               "line": 1,
-              "column": 77
+              "column": 76
             },
             "status": "complete",
             "limitations": [],
@@ -524,27 +524,27 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[declared_reference]"
+          "element": "script_src"
         }
       ],
-      "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
+      "scope": "Вхождения сохранены отдельно; выполнение/cookies/передача неизвестны",
       "legal_violation_established": false
     },
     {
       "id": "observation-0016",
       "stage_id": "09",
       "kind": "static_markup",
-      "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
+      "description": "Декларируемый ресурс, не установленный получатель",
       "citations": [
         {
           "static_span": {
             "start": {
               "line": 1,
-              "column": 27
+              "column": 35
             },
             "end_exclusive": {
               "line": 1,
-              "column": 77
+              "column": 76
             },
             "status": "complete",
             "limitations": [],
@@ -557,27 +557,27 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[declared_reference]"
+          "element": "script_src"
         }
       ],
-      "scope": "Статический адрес не доказывает трансграничную передачу",
+      "scope": "Не доказывает сетевой запрос или трансграничную передачу",
       "legal_violation_established": false
     },
     {
       "id": "observation-0017",
       "stage_id": "08",
       "kind": "static_markup",
-      "description": "В сохранённой разметке есть ссылка на ресурс",
+      "description": "Группа статических деклараций ресурса",
       "citations": [
         {
           "static_span": {
             "start": {
               "line": 1,
-              "column": 86
+              "column": 94
             },
             "end_exclusive": {
               "line": 1,
-              "column": 141
+              "column": 140
             },
             "status": "complete",
             "limitations": [],
@@ -590,27 +590,27 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[declared_reference]"
+          "element": "script_src"
         }
       ],
-      "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
+      "scope": "Вхождения сохранены отдельно; выполнение/cookies/передача неизвестны",
       "legal_violation_established": false
     },
     {
       "id": "observation-0018",
       "stage_id": "09",
       "kind": "static_markup",
-      "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
+      "description": "Декларируемый ресурс, не установленный получатель",
       "citations": [
         {
           "static_span": {
             "start": {
               "line": 1,
-              "column": 86
+              "column": 94
             },
             "end_exclusive": {
               "line": 1,
-              "column": 141
+              "column": 140
             },
             "status": "complete",
             "limitations": [],
@@ -623,10 +623,10 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[declared_reference]"
+          "element": "script_src"
         }
       ],
-      "scope": "Статический адрес не доказывает трансграничную передачу",
+      "scope": "Не доказывает сетевой запрос или трансграничную передачу",
       "legal_violation_established": false
     },
     {

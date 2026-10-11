@@ -275,6 +275,8 @@ class SavedMarkup(StaticText):
             elif source:
                 self.uncertain("Static resource reference limit; suffix withheld")
         if self.excluded or self.quarantined:
+            if not self.quarantined:
+                self.record_declarations(tag, values, previous_excluded)
             return
         if tag == "form":
             if self.form is not None or len(self.forms) >= 30:
@@ -349,6 +351,11 @@ class SavedMarkup(StaticText):
             if tag != "button":
                 self.heading_tag = tag
                 self.heading_parts = []
+        if not self.quarantined:
+            self.record_declarations(tag, values, previous_excluded)
+
+    def record_declarations(self, tag, values, previous_excluded):
+        """Extension point after attribute/structure checks; excluded text stays excluded."""
 
     def handle_startendtag(self, tag, attrs):
         if tag in self.VOID:

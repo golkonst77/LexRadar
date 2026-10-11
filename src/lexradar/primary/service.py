@@ -13,6 +13,7 @@ from ..collector.models import SCREENSHOT_NOTICE
 from ..verifier.legal_cards import read_local
 from ..verifier.registry import assess_registry, load_registry
 from .markup import SavedMarkup, compact, link_kind
+from .mechanisms import MechanismMarkup
 from .models import (
     AuditCoverage,
     CheckTask,
@@ -21,14 +22,17 @@ from .models import (
     FlowRow,
     FormRow,
     Hypothesis,
+    IntegrationGroup,
     MaterialReference,
     MedicalCheck,
     NormReference,
     Observation,
     OrganizationRow,
+    PopupRelation,
     PrimaryAudit,
     ServiceReference,
     StageResult,
+    StaticDeclaration,
 )
 from .stages import STAGES
 
@@ -104,6 +108,9 @@ class Builder:
         self.organizations: list[OrganizationRow] = []
         self.medical_checks: list[MedicalCheck] = []
         self.norms: list[NormReference] = []
+        self.declarations = []
+        self.popup_relations = []
+        self.integration_groups = []
         self.registry_hash = None
         self.notes = [
             "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
@@ -232,7 +239,7 @@ class Builder:
                 raw = read_local(self.root / artifact.path, 20_000_000)
                 if hashlib.sha256(raw).hexdigest() != artifact.sha256:
                     raise ValueError("Original changed during primary inspection")
-                parser = SavedMarkup(str(evidence.source), recover=True)
+                parser = MechanismMarkup(str(evidence.source), recover=True)
                 try:
                     raw.decode("utf-8")
                 except UnicodeError:
@@ -621,57 +628,195 @@ class Builder:
                     "подготовки нового документа не установлена",
                 )
 
-    def resources_and_publications(self):
+    def static_mechanisms(self):
         for eid, parser in self.markup.items():
-            # Anchors are declared navigation, never proof of an active integration.
-            bookings = [
-                ("booking_anchor", link.url, link.span)
-                for link in parser.links
-                if service_hint(link.url)
-                == "Medflex booking link; actual recipient/transfer not established"
-            ]
-            for kind, reference, span in [
-                *(
-                    (kind, reference, parser.resource_spans[index])
-                    for index, (kind, reference) in enumerate(parser.resources)
-                ),
-                *bookings,
-            ]:
-                row = ServiceReference(
-                    id=f"service-{len(self.services) + 1:04d}",
-                    url_reference=reference,
-                    reference_kind=kind,
-                    service_hint=service_hint(reference),
-                    citation=self.cite(
-                        eid, "saved_html", element=f"{kind}[declared_reference]", span=span
+            forms = {
+                int(f.element.split("=")[-1].rstrip("]")): f
+                for f in self.forms
+                if f.evidence_id == eid
+            }
+            page_rows = []
+            for raw in sorted(parser.declarations, key=lambda d: (d.start, d.end, d.kind)):
+                span = parser.span(raw.start, raw.end)
+                scope_limits = [v for v in raw.limitations if "not inspected" in v or "limit" in v]
+                if scope_limits and span.status == "complete":
+                    span = span.model_copy(
+                        update={"status": "partial", "limitations": scope_limits}
+                    )
+                row = StaticDeclaration(
+                    id=f"declaration-{len(self.declarations) + 1:04d}",
+                    declaration_type=raw.kind,
+                    original_value=raw.raw,
+                    normalized_value=raw.normalized,
+                    normalization=raw.normalization,
+                    service_kind=raw.service,
+                    target_id=raw.target,
+                    form_id=forms[raw.form].id if raw.form in forms else None,
+                    citation=self.cite(eid, "saved_html", element=raw.kind, span=span),
+                    completeness=span.status,
+                    limitations=list(
+                        dict.fromkeys(
+                            [
+                                "Static declaration; execution, display, cookies, recipient "
+                                "and legal adequacy unconfirmed",
+                                *span.limitations,
+                                *raw.limitations,
+                            ]
+                        )
                     ),
                 )
-                self.services.append(row)
+                self.declarations.append(row)
+                page_rows.append(row)
+                if raw.form in forms:
+                    mechanism = forms[raw.form].mechanism
+                    fields = {
+                        "html_action": "html_route_ids",
+                        "data_route": "alternative_route_ids",
+                        "js_route": "js_route_candidate_ids",
+                        "inline_handler": "handler_declaration_ids",
+                        "handler_reference": "handler_declaration_ids",
+                    }
+                    if raw.kind in fields:
+                        getattr(mechanism, fields[raw.kind]).append(row.id)
+                    elif raw.kind == "form_method":
+                        mechanism.declared_method = row.normalized_value
+            for form in forms.values():
+                form.mechanism.hidden_field_names = [
+                    f.name for f in form.fields if f.type == "hidden"
+                ]
+            for trigger in (r for r in page_rows if r.declaration_type == "popup_trigger"):
+                targets = [
+                    r
+                    for r in page_rows
+                    if r.declaration_type == "popup_target" and r.target_id == trigger.target_id
+                ]
+                kinds = set()
+                classification_citations = []
+                for target in parser.targets:
+                    if target.value != trigger.target_id:
+                        continue
+                    classification_citations.append(
+                        self.cite(
+                            eid,
+                            "saved_html",
+                            element="popup_candidate_region",
+                            span=parser.span(
+                                target.declaration.start,
+                                target.end or parser.stop_position or parser.end_position,
+                            ),
+                        )
+                    )
+                    text = compact(target.parts).lower()
+                    if "политик" in text or "privacy" in text:
+                        kinds.add("policy_text_candidate")
+                    if "соглас" in text or "consent" in text:
+                        kinds.add("consent_text_candidate")
+                    if target.forms:
+                        kinds.add("contact_form_candidate")
+                    if "запис" in text or "booking" in text:
+                        kinds.add("booking_modal_candidate")
+                self.popup_relations.append(
+                    PopupRelation(
+                        id=f"popup-{len(self.popup_relations) + 1:04d}",
+                        trigger_declaration_id=trigger.id,
+                        target_declaration_ids=[r.id for r in targets],
+                        candidate_kinds=sorted(kinds),
+                        classification_citations=classification_citations,
+                        relation_status="declared_unique_target"
+                        if len(targets) == 1
+                        else "ambiguous_target"
+                        if targets
+                        else "target_not_inspected",
+                        limitations=[
+                            "Declared linkage; heuristic target classification; visibility, "
+                            "accessibility and legal sufficiency unknown",
+                            *[v for r in targets for v in r.limitations],
+                        ],
+                    )
+                )
+            self.notes.extend(parser.mechanism_limits)
+        grouped = {}
+        resource_kinds = {
+            "script_src",
+            "iframe_src",
+            "noscript_iframe",
+            "lazy_resource",
+            "inline_resource",
+            "booking_anchor",
+        }
+        for row in self.declarations:
+            if row.declaration_type not in resource_kinds:
+                continue
+            kind = (
+                "booking"
+                if row.service_kind == "medflex" or row.declaration_type == "booking_anchor"
+                else (
+                    "form_library" if row.service_kind == "form_library_candidate" else "resource"
+                )
+            )
+            key = (kind, row.normalized_value or row.id)
+            if key not in grouped:
+                group = IntegrationGroup(
+                    id=f"integration-{len(grouped) + 1:04d}",
+                    kind=kind,
+                    normalized_url=row.normalized_value,
+                    service_kind=row.service_kind,
+                    occurrence_ids=[row.id],
+                )
+                grouped[key] = group
+            else:
+                grouped[key].occurrence_ids.append(row.id)
+        self.integration_groups = list(grouped.values())
+
+    def resources_and_publications(self):
+        for eid, parser in self.markup.items():
+            declarations = {r.id: r for r in self.declarations}
+            for group in self.integration_groups:
+                occurrences = [
+                    declarations[i]
+                    for i in group.occurrence_ids
+                    if declarations[i].citation.evidence_id == eid
+                ]
+                if not occurrences:
+                    continue
+                for occurrence in occurrences:
+                    self.services.append(
+                        ServiceReference(
+                            id=f"service-{len(self.services) + 1:04d}",
+                            url_reference=occurrence.normalized_value or occurrence.original_value,
+                            reference_kind=occurrence.declaration_type,
+                            service_hint=service_hint(
+                                occurrence.normalized_value or occurrence.original_value
+                            ),
+                            citation=occurrence.citation,
+                        )
+                    )
+                citations = [r.citation for r in occurrences]
                 self.observe(
                     "08",
                     "static_markup",
-                    "В сохранённой разметке есть ссылка на ресурс",
-                    [row.citation],
-                    "Статическая ссылка; cookies/выполнение/передача не проверены",
+                    "Группа статических деклараций ресурса",
+                    citations,
+                    "Вхождения сохранены отдельно; выполнение/cookies/передача неизвестны",
                 )
-                flow_fact = self.observe(
+                fact = self.observe(
                     "09",
                     "static_markup",
-                    "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
-                    [row.citation],
-                    "Статический адрес не доказывает трансграничную передачу",
+                    "Декларируемый ресурс, не установленный получатель",
+                    citations,
+                    "Не доказывает сетевой запрос или трансграничную передачу",
                 )
                 check = self.task(
                     "09",
                     "resource_route_review",
-                    "Установить реальное выполнение, маршрут и получателя по ресурсу",
+                    "Проверить фактический маршрут группы ресурса",
                     evidence=[eid],
                     external=True,
                 )
                 self.hypothesis(
                     "09",
-                    "Происходит ли передача по этой ссылке и каковы её условия?",
-                    [flow_fact],
+                    "Есть ли реальная передача и применимые основания?",
+                    [fact],
                     ["Сетевой маршрут, данные и основание"],
                     [check],
                 )
@@ -917,6 +1062,7 @@ def audit_saved_dossier(
     builder.load_materials()
     builder.organization_matrix()
     builder.form_matrix()
+    builder.static_mechanisms()
     builder.policy_and_consents()
     builder.resources_and_publications()
     builder.registry_tasks()
@@ -970,6 +1116,9 @@ def audit_saved_dossier(
             )
             for item in [*pages, *documents]
         ],
+        declarations=builder.declarations,
+        popup_relations=builder.popup_relations,
+        integration_groups=builder.integration_groups,
         forms=builder.forms,
         flows=builder.flows,
         services=builder.services,

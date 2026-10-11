@@ -1,4 +1,207 @@
 {
+  "declarations": [
+    {
+      "id": "declaration-0001",
+      "declaration_type": "script_src",
+      "original_value": "https://mc.yandex.ru/metrika/tag.js",
+      "normalized_value": "https://mc.yandex.ru/metrika/tag.js",
+      "normalization": "reference",
+      "service_kind": "yandex_metrika",
+      "form_id": null,
+      "target_id": null,
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 1,
+            "column": 35
+          },
+          "end_exclusive": {
+            "line": 1,
+            "column": 76
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "script_src"
+      },
+      "completeness": "complete",
+      "limitations": [
+        "Static declaration; execution, display, cookies, recipient and legal adequacy unconfirmed"
+      ],
+      "literal_present_in_source": true,
+      "execution_confirmed": false,
+      "display_confirmed": false,
+      "redirect_confirmed": false,
+      "data_transfer_confirmed": false,
+      "actual_recipient": "unknown",
+      "legal_status": "not_confirmed"
+    },
+    {
+      "id": "declaration-0002",
+      "declaration_type": "script_src",
+      "original_value": "https://www.googletagmanager.com/gtag/js",
+      "normalized_value": "https://www.googletagmanager.com/gtag/js",
+      "normalization": "reference",
+      "service_kind": "google_analytics",
+      "form_id": null,
+      "target_id": null,
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 1,
+            "column": 94
+          },
+          "end_exclusive": {
+            "line": 1,
+            "column": 140
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "script_src"
+      },
+      "completeness": "complete",
+      "limitations": [
+        "Static declaration; execution, display, cookies, recipient and legal adequacy unconfirmed"
+      ],
+      "literal_present_in_source": true,
+      "execution_confirmed": false,
+      "display_confirmed": false,
+      "redirect_confirmed": false,
+      "data_transfer_confirmed": false,
+      "actual_recipient": "unknown",
+      "legal_status": "not_confirmed"
+    },
+    {
+      "id": "declaration-0003",
+      "declaration_type": "html_action",
+      "original_value": "/appointment",
+      "normalized_value": "https://clinic.example/appointment",
+      "normalization": "reference",
+      "service_kind": null,
+      "form_id": "form-0001",
+      "target_id": null,
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 4,
+            "column": 6
+          },
+          "end_exclusive": {
+            "line": 4,
+            "column": 27
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "html_action"
+      },
+      "completeness": "complete",
+      "limitations": [
+        "Static declaration; execution, display, cookies, recipient and legal adequacy unconfirmed"
+      ],
+      "literal_present_in_source": true,
+      "execution_confirmed": false,
+      "display_confirmed": false,
+      "redirect_confirmed": false,
+      "data_transfer_confirmed": false,
+      "actual_recipient": "unknown",
+      "legal_status": "not_confirmed"
+    },
+    {
+      "id": "declaration-0004",
+      "declaration_type": "html_action",
+      "original_value": "https://intake.example/submit",
+      "normalized_value": "https://intake.example/submit",
+      "normalization": "reference",
+      "service_kind": null,
+      "form_id": "form-0002",
+      "target_id": null,
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 9,
+            "column": 6
+          },
+          "end_exclusive": {
+            "line": 9,
+            "column": 44
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "html_action"
+      },
+      "completeness": "complete",
+      "limitations": [
+        "Static declaration; execution, display, cookies, recipient and legal adequacy unconfirmed"
+      ],
+      "literal_present_in_source": true,
+      "execution_confirmed": false,
+      "display_confirmed": false,
+      "redirect_confirmed": false,
+      "data_transfer_confirmed": false,
+      "actual_recipient": "unknown",
+      "legal_status": "not_confirmed"
+    }
+  ],
+  "popup_relations": [],
+  "integration_groups": [
+    {
+      "id": "integration-0001",
+      "kind": "resource",
+      "normalized_url": "https://mc.yandex.ru/metrika/tag.js",
+      "service_kind": "yandex_metrika",
+      "occurrence_ids": [
+        "declaration-0001"
+      ],
+      "network_action_confirmed": false,
+      "independent_form_count": 0
+    },
+    {
+      "id": "integration-0002",
+      "kind": "resource",
+      "normalized_url": "https://www.googletagmanager.com/gtag/js",
+      "service_kind": "google_analytics",
+      "occurrence_ids": [
+        "declaration-0002"
+      ],
+      "network_action_confirmed": false,
+      "independent_form_count": 0
+    }
+  ],
   "source_origin": {
     "kind": "unknown",
     "acquisition_method": null,
@@ -229,6 +432,18 @@
   ],
   "forms": [
     {
+      "mechanism": {
+        "declared_method": null,
+        "html_route_ids": [
+          "declaration-0003"
+        ],
+        "alternative_route_ids": [],
+        "js_route_candidate_ids": [],
+        "handler_declaration_ids": [],
+        "hidden_field_names": [],
+        "actual_route": "unknown",
+        "actual_recipient": "unknown"
+      },
       "field_spans": [
         {
           "start": {
@@ -344,6 +559,18 @@
       "lawfulness": "unestablished"
     },
     {
+      "mechanism": {
+        "declared_method": null,
+        "html_route_ids": [
+          "declaration-0004"
+        ],
+        "alternative_route_ids": [],
+        "js_route_candidate_ids": [],
+        "handler_declaration_ids": [],
+        "hidden_field_names": [],
+        "actual_route": "unknown",
+        "actual_recipient": "unknown"
+      },
       "field_spans": [
         {
           "start": {
@@ -512,17 +739,17 @@
     {
       "id": "service-0001",
       "url_reference": "https://mc.yandex.ru/metrika/tag.js",
-      "reference_kind": "script",
+      "reference_kind": "script_src",
       "service_hint": "Yandex Metrika reference",
       "citation": {
         "static_span": {
           "start": {
             "line": 1,
-            "column": 27
+            "column": 35
           },
           "end_exclusive": {
             "line": 1,
-            "column": 77
+            "column": 76
           },
           "status": "complete",
           "limitations": [],
@@ -535,7 +762,7 @@
         "basis": "saved_html",
         "quote": null,
         "page": null,
-        "element": "script[declared_reference]"
+        "element": "script_src"
       },
       "execution_confirmed": false,
       "data_transfer_confirmed": false,
@@ -544,17 +771,17 @@
     {
       "id": "service-0002",
       "url_reference": "https://www.googletagmanager.com/gtag/js",
-      "reference_kind": "script",
+      "reference_kind": "script_src",
       "service_hint": "Google Tag Manager reference; analytics execution not established",
       "citation": {
         "static_span": {
           "start": {
             "line": 1,
-            "column": 86
+            "column": 94
           },
           "end_exclusive": {
             "line": 1,
-            "column": 141
+            "column": 140
           },
           "status": "complete",
           "limitations": [],
@@ -567,7 +794,7 @@
         "basis": "saved_html",
         "quote": null,
         "page": null,
-        "element": "script[declared_reference]"
+        "element": "script_src"
       },
       "execution_confirmed": false,
       "data_transfer_confirmed": false,
@@ -1471,17 +1698,17 @@
       "id": "observation-0015",
       "stage_id": "08",
       "kind": "static_markup",
-      "description": "В сохранённой разметке есть ссылка на ресурс",
+      "description": "Группа статических деклараций ресурса",
       "citations": [
         {
           "static_span": {
             "start": {
               "line": 1,
-              "column": 27
+              "column": 35
             },
             "end_exclusive": {
               "line": 1,
-              "column": 77
+              "column": 76
             },
             "status": "complete",
             "limitations": [],
@@ -1494,27 +1721,27 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[declared_reference]"
+          "element": "script_src"
         }
       ],
-      "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
+      "scope": "Вхождения сохранены отдельно; выполнение/cookies/передача неизвестны",
       "legal_violation_established": false
     },
     {
       "id": "observation-0016",
       "stage_id": "09",
       "kind": "static_markup",
-      "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
+      "description": "Декларируемый ресурс, не установленный получатель",
       "citations": [
         {
           "static_span": {
             "start": {
               "line": 1,
-              "column": 27
+              "column": 35
             },
             "end_exclusive": {
               "line": 1,
-              "column": 77
+              "column": 76
             },
             "status": "complete",
             "limitations": [],
@@ -1527,27 +1754,27 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[declared_reference]"
+          "element": "script_src"
         }
       ],
-      "scope": "Статический адрес не доказывает трансграничную передачу",
+      "scope": "Не доказывает сетевой запрос или трансграничную передачу",
       "legal_violation_established": false
     },
     {
       "id": "observation-0017",
       "stage_id": "08",
       "kind": "static_markup",
-      "description": "В сохранённой разметке есть ссылка на ресурс",
+      "description": "Группа статических деклараций ресурса",
       "citations": [
         {
           "static_span": {
             "start": {
               "line": 1,
-              "column": 86
+              "column": 94
             },
             "end_exclusive": {
               "line": 1,
-              "column": 141
+              "column": 140
             },
             "status": "complete",
             "limitations": [],
@@ -1560,27 +1787,27 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[declared_reference]"
+          "element": "script_src"
         }
       ],
-      "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
+      "scope": "Вхождения сохранены отдельно; выполнение/cookies/передача неизвестны",
       "legal_violation_established": false
     },
     {
       "id": "observation-0018",
       "stage_id": "09",
       "kind": "static_markup",
-      "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
+      "description": "Декларируемый ресурс, не установленный получатель",
       "citations": [
         {
           "static_span": {
             "start": {
               "line": 1,
-              "column": 86
+              "column": 94
             },
             "end_exclusive": {
               "line": 1,
-              "column": 141
+              "column": 140
             },
             "status": "complete",
             "limitations": [],
@@ -1593,10 +1820,10 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[declared_reference]"
+          "element": "script_src"
         }
       ],
-      "scope": "Статический адрес не доказывает трансграничную передачу",
+      "scope": "Не доказывает сетевой запрос или трансграничную передачу",
       "legal_violation_established": false
     },
     {
@@ -2002,7 +2229,7 @@
     {
       "id": "hypothesis-0006",
       "stage_id": "09",
-      "question": "Происходит ли передача по этой ссылке и каковы её условия?",
+      "question": "Есть ли реальная передача и применимые основания?",
       "observation_ids": [
         "observation-0016"
       ],
@@ -2018,7 +2245,7 @@
     {
       "id": "hypothesis-0007",
       "stage_id": "09",
-      "question": "Происходит ли передача по этой ссылке и каковы её условия?",
+      "question": "Есть ли реальная передача и применимые основания?",
       "observation_ids": [
         "observation-0018"
       ],
@@ -2187,7 +2414,7 @@
       "id": "check-0009",
       "stage_id": "09",
       "type": "resource_route_review",
-      "question": "Установить реальное выполнение, маршрут и получателя по ресурсу",
+      "question": "Проверить фактический маршрут группы ресурса",
       "organization_ids": [],
       "form_ids": [],
       "evidence_ids": [
@@ -2201,7 +2428,7 @@
       "id": "check-0010",
       "stage_id": "09",
       "type": "resource_route_review",
-      "question": "Установить реальное выполнение, маршрут и получателя по ресурсу",
+      "question": "Проверить фактический маршрут группы ресурса",
       "organization_ids": [],
       "form_ids": [],
       "evidence_ids": [
