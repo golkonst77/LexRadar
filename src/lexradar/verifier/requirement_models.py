@@ -13,6 +13,8 @@ Predicate = Literal[
     "multiple_organization_mentions",
     "static_form_declared",
     "policy_text_available",
+    "saved_policy_text_present",
+    "live_policy_accessibility",
     "consent_marker_declared",
     "advertising_marker_declared",
     "booking_reference_declared",
@@ -61,6 +63,70 @@ class SourceIntake(Model):
     authenticated: Literal[False] = False
 
 
+class ResearchMaterial(Model):
+    path: str = Field(min_length=1, max_length=500)
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    role: str = Field(min_length=1, max_length=500)
+
+
+class ImportedNormResearch(Model):
+    """Research claims are preserved, never promoted to authenticated evidence."""
+
+    source_card_id: str
+    card_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    provision: str = Field(min_length=1, max_length=200)
+    event_date: date
+    provenance_method: Literal["user_attested", "unknown"] = "unknown"
+    edition_basis: Literal["secondary_SPS_consolidation", "unknown"] = "unknown"
+    declared_revision: str = Field(min_length=1, max_length=300)
+    review_scope: list[str] = Field(min_length=1, max_length=30)
+    claimed_result: Literal["current_in_scope", "unverified", "blocked"] = "unverified"
+    materials: list[ResearchMaterial] = Field(min_length=1, max_length=30)
+    limitations: list[str] = Field(min_length=1, max_length=100)
+
+
+class NormResearchContext(Model):
+    imported_claim: ImportedNormResearch
+    binding_status: Literal["consistent", "invalidated"]
+    mechanism_operations: list[str]
+    limitations: list[str]
+    claim_authenticated: Literal[False] = False
+    independent_official_portal_verification: Literal[False] = False
+    production_trust: Literal["untrusted"] = "untrusted"
+
+
+class PolicyPosition(Model):
+    line: int = Field(ge=1)
+    column: int = Field(ge=0)
+
+
+class PolicyBlock(Model):
+    start: PolicyPosition
+    end_exclusive: PolicyPosition
+    status: Literal["complete", "partial", "unknown"]
+    limitations: list[str]
+    coordinate_scope: Literal["decoded_utf8_line_1_based_column_0_based"] = (
+        "decoded_utf8_line_1_based_column_0_based"
+    )
+
+
+class SavedPolicyObservation(Model):
+    id: str
+    evidence_id: str
+    source_url: str
+    artifact_path: str
+    artifact_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    block: PolicyBlock
+    text: str = Field(min_length=80, max_length=50000)
+    text_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    reading_completeness: Literal["complete", "partial", "unknown"]
+    page_completeness: Literal["complete", "partial", "unknown"]
+    saved_text_present: Literal[True] = True
+    live_interface_accessibility: Literal["unknown"] = "unknown"
+    policy_sufficiency: Literal["unknown"] = "unknown"
+    limitations: list[str]
+
+
 class NormRequirement(Model):
     requirement_id: str
     source_card_id: str
@@ -94,6 +160,7 @@ class NormRequirement(Model):
     limitations: list[str]
     intake_status: Literal["not_supplied", "untrusted", "invalidated"] = "not_supplied"
     legal_requirement_confirmed: Literal[False] = False
+    research_context: NormResearchContext | None = None
 
 
 class ConditionCheck(Model):
@@ -182,6 +249,7 @@ class NormativeVerification(Model):
     question_summaries: list[dict]
     source_search_tasks: list[dict]
     gaps: list[str]
+    saved_policy_observations: list[SavedPolicyObservation] = Field(default_factory=list)
     technical_processing_completed: Literal[True] = True
     legal_research_completed: Literal[False] = False
     legal_status: Literal["not_confirmed"] = "not_confirmed"

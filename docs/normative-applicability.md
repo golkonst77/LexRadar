@@ -112,3 +112,41 @@ PDF, не выполняет OCR и не удостоверяет происхо
 Техническое завершение не означает завершённости нормативной/юридической проверки.
 Актуальность законодательства на октябрь 2026 года не заявляется. Доверенный human
 workflow и положительный production допуск требуют отдельной будущей реализации.
+# Saved policy observations and research context
+
+`verify-norms` independently inspects the original saved HTML for bounded embedded
+policy candidates. `saved_policy_observations` includes the evidence ID, source URL,
+original artifact hash/path, decoded-source coordinates, extracted text/hash,
+local reading completeness and separate page completeness. The legacy predicate
+`policy_text_available` and explicit `saved_policy_text_present` mean **saved text
+presence only**. They do not mean the policy applies to a particular form/operator.
+`live_policy_accessibility` remains unknown offline. Hidden popup contents may be
+read completely even when a different page region is damaged; that never upgrades
+the page or establishes currentness, public accessibility or legal sufficiency.
+Script, style, template, head, title and noscript contents are excluded. Detection
+is lexical (policy heading/identifier plus substantial personal-data text), not
+legal classification. Unidentified layouts can be missed; no absence is inferred.
+Complete nested documents take precedence over partial/banner wrappers; identical
+text in disjoint blocks retains distinct source ranges. The previous independently
+reproduced PDF-text path remains available, without claiming complete visual review.
+Recovery of a document's own opening tag keeps that block partial, with the concrete
+parser diagnostic; recovery outside the block does not by itself invalidate its reading.
+
+An optional `SourceRegistry.research_contexts` list preserves imported research
+without establishing production trust. Each entry binds to the exact card hash,
+provision, declared revision and control date, with local materials (relative path,
+SHA-256, role), scope, claimed conclusion and limitations. `provenance_method` may
+be `user_attested`; `edition_basis` may be `secondary_SPS_consolidation`. Those are
+explicit **imported declarations**, not an independently authenticated official
+source or an editorial-history check performed by the program.
+
+The output separates `imported_claim` from `mechanism_operations`: the latter lists
+only the byte/hash and metadata comparisons actually performed. Missing, changed,
+unsafe or misbound research materials invalidate the context binding while keeping
+the original claim for diagnosis. Evidence is checked again before export. Even a
+context whose sidecars match is invalidated if the original normative text/quote is
+missing, changed or inconsistent. A consistent binding remains
+`production_trust=untrusted`, with official-portal
+verification and claim authentication false. Editable research conclusions cannot
+change `revision_check`, establish a violation, produce GO or release client text.
+An omitted context remains compatible with earlier registries and outputs.

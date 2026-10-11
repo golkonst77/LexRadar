@@ -11,7 +11,7 @@ from ..auditors.models import AIFinding, AnalysisConfig, ModelSettings, Topic, U
 from ..collector.reading import ReadingState
 from ..models import Model, Signal
 from .legal_cards import LegalSourceCard, SourceCardAssessment
-from .requirement_models import NormRequirementSpec, SourceIntake
+from .requirement_models import ImportedNormResearch, NormRequirementSpec, SourceIntake
 
 Status = Literal[
     "verified_issue", "potential_issue", "rejected", "insufficient_evidence", "no_issue_observed"
@@ -80,6 +80,7 @@ class SourceRegistry(Model):
     cards: list[LegalSourceCard] = Field(default_factory=list, max_length=100)
     requirements: list[NormRequirementSpec] = Field(default_factory=list, max_length=200)
     source_intakes: list[SourceIntake] = Field(default_factory=list, max_length=100)
+    research_contexts: list[ImportedNormResearch] = Field(default_factory=list, max_length=100)
     _source_root: Path | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
@@ -96,6 +97,10 @@ class SourceRegistry(Model):
                 raise ValueError("Duplicate condition IDs")
         if len({i.source_card_id for i in self.source_intakes}) != len(self.source_intakes):
             raise ValueError("Duplicate source intake")
+        if len({i.source_card_id for i in self.research_contexts}) != len(self.research_contexts):
+            raise ValueError("Duplicate research context")
+        if any(c.source_card_id not in {s.id for s in self.cards} for c in self.research_contexts):
+            raise ValueError("Research context must reference an existing source card")
         return self
 
 
