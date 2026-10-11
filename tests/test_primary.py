@@ -592,7 +592,7 @@ def test_wrapped_label_never_captures_prefilled_control_value(tmp_path):
             "partial",
             ["first"],
         ),
-        ('<div></span><form><input name="first"></form>', None, "partial", []),
+        ('<div></span><form><input name="first"></form>', "partial", "partial", ["first"]),
         ('<form><input name="first"></form><div></span>', "complete", "partial", ["first"]),
         ('<form><input name="first">', "partial", "partial", ["first"]),
     ],
@@ -616,7 +616,7 @@ def test_form_coverage_and_export(tmp_path, body, form_status, page_status, fiel
     assert coverage.status == form_status and coverage.page_status == page_status
     assert [f.name for f in form.fields] == fields
     assert coverage.form_start and coverage.trusted_page_end_exclusive
-    assert bool(coverage.form_end_exclusive) == (form_status == "complete")
+    assert bool(coverage.form_end_exclusive) == (form_status == "complete" or coverage.recovered)
     assert rows[0]["static_coverage"] == coverage.model_dump(mode="json")
     if page_status == "partial":
         assert coverage.reasons

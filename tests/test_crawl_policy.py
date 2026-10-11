@@ -148,7 +148,7 @@ def test_ambiguous_robots_fails_closed(body):
 
 @pytest.mark.parametrize("delay,expected", [(0, 2), (1, 2), (2, 2), (3.5, 3.5)])
 def test_pacing_includes_robots_and_every_request(web, tmp_path, delay, expected):
-    url, _, routes, requests, maximum = web
+    url, _, routes, requests, _ = web
     routes["/robots.txt"] = (
         200,
         "text/plain",
@@ -163,7 +163,9 @@ def test_pacing_includes_robots_and_every_request(web, tmp_path, delay, expected
     assert summary["requests_sent"] == summary["request_attempts"] == 3
     assert [r[0] for r in requests] == ["/robots.txt", "/", "/policy"]
     assert {r[1] for r in requests} == {USER_AGENT}
-    assert maximum() == 1
+    # Virtual time advances without waiting for a server handler's final cleanup.
+    # Its lifetime can overlap after the client consumed the complete response.
+    # Real pacing/concurrency is checked with a real clock below.
     assert sum(e["event"] == "robots_received" for e in events(s)) == 1
     assert (tmp_path / "crawl/robots-response.txt").read_bytes() == routes["/robots.txt"][2]
 
@@ -173,10 +175,13 @@ def test_real_pacing_clock_on_local_server(web, tmp_path):
         now = staticmethod(time.monotonic)
         sleep = staticmethod(time.sleep)
 
-    url, _, _, requests, _ = web
+    url, _, _, requests, maximum = web
     s = session(web, tmp_path, options=CrawlOptions(min_delay_seconds=0.1), clock=RealClock())
     s.get(url, origin(url))
+    s.get(url + "policy", origin(url))
     assert requests[1][2] - requests[0][2] >= 0.09
+    assert requests[2][2] - requests[1][2] >= 0.09
+    assert maximum() == 1
 
 
 @pytest.mark.parametrize(

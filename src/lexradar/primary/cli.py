@@ -29,6 +29,15 @@ def write_report(report, output: Path, source: Path):
             "audience": "internal_only",
             "notice": report.notice,
             "source_dossier_sha256": report.dossier_sha256,
+            "source_origin": report.source_origin.model_dump(mode="json"),
+            "materials": [
+                {
+                    "evidence_id": material.evidence_id,
+                    "origin": material.origin.model_dump(mode="json"),
+                    "static_inspection": material.static_inspection.model_dump(mode="json"),
+                }
+                for material in report.materials
+            ],
             "client_release_allowed": False,
             "rows": [row.model_dump(mode="json") for row in rows],
         }

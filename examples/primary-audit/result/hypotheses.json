@@ -2,6 +2,65 @@
   "audience": "internal_only",
   "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
   "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
+  "materials": [
+    {
+      "evidence_id": "page-0001",
+      "origin": {
+        "kind": "unknown",
+        "acquisition_method": null,
+        "declared_source": null,
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "unknown",
+        "started_at_role": "unknown",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Acquisition origin/timestamp roles unknown; not authenticated"
+        ]
+      },
+      "static_inspection": {
+        "status": "complete",
+        "diagnostics": [],
+        "text_spans": [
+          {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          }
+        ],
+        "recovered_text_chars": 0,
+        "limitations": [],
+        "original_modified": false
+      }
+    }
+  ],
   "client_release_allowed": false,
   "rows": [
     {
@@ -101,7 +160,7 @@
       "stage_id": "09",
       "question": "Происходит ли передача по этой ссылке и каковы её условия?",
       "observation_ids": [
-        "observation-0015"
+        "observation-0016"
       ],
       "normative_reference_ids": [],
       "missing_information": [
@@ -117,7 +176,7 @@
       "stage_id": "09",
       "question": "Происходит ли передача по этой ссылке и каковы её условия?",
       "observation_ids": [
-        "observation-0017"
+        "observation-0018"
       ],
       "normative_reference_ids": [],
       "missing_information": [
@@ -133,7 +192,7 @@
       "stage_id": "10",
       "question": "Есть ли идентифицируемое изображение и применимые основания?",
       "observation_ids": [
-        "observation-0018"
+        "observation-0019"
       ],
       "normative_reference_ids": [],
       "missing_information": [

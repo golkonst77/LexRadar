@@ -176,6 +176,11 @@ def collected(server, tmp_path):
 
 def test_forms_entities_documents(collected):
     result, output, requests = collected
+    assert result.origin.kind == "collector"
+    assert result.origin.started_at_role == "collector_run"
+    assert not result.origin.origin_authenticated and result.origin.http_response_at is None
+    assert all(p.origin.captured_at_role == "collection_observation" for p in result.pages)
+    assert all(d.origin.kind == "collector" for d in result.documents)
     page = result.pages[0]
     assert page.http_status == 200
     assert "Контакты" in page.title

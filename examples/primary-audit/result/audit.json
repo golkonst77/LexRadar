@@ -1,4 +1,20 @@
 {
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
   "schema_version": "primary-audit-0.1",
   "audience": "internal_only",
   "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
@@ -27,6 +43,7 @@
       ],
       "identification_sources": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -37,6 +54,7 @@
           "element": null
         },
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -70,6 +88,7 @@
       ],
       "identification_sources": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -80,6 +99,7 @@
           "element": null
         },
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -102,6 +122,44 @@
   "operator_situation": "multiple_roles_unestablished",
   "materials": [
     {
+      "origin": {
+        "kind": "unknown",
+        "acquisition_method": null,
+        "declared_source": null,
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "unknown",
+        "started_at_role": "unknown",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Acquisition origin/timestamp roles unknown; not authenticated"
+        ]
+      },
+      "static_inspection": {
+        "status": "complete",
+        "diagnostics": [],
+        "text_spans": [
+          {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          }
+        ],
+        "recovered_text_chars": 0,
+        "limitations": [],
+        "original_modified": false
+      },
       "evidence_id": "page-0001",
       "url": "https://clinic.example/",
       "collection_status": "complete",
@@ -171,6 +229,21 @@
   ],
   "forms": [
     {
+      "field_spans": [
+        {
+          "start": {
+            "line": 6,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 6,
+            "column": 51
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        }
+      ],
       "id": "form-0001",
       "evidence_id": "page-0001",
       "url": "https://clinic.example/",
@@ -213,6 +286,20 @@
           "column": 14
         },
         "reasons": [],
+        "recovered": false,
+        "observed_region": {
+          "start": {
+            "line": 4,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 8,
+            "column": 59
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
         "list_scope": "observed_elements_in_trusted_region_only"
       },
@@ -227,6 +314,19 @@
         "Скриншот формы недоступен или связь не подтверждена"
       ],
       "citation": {
+        "static_span": {
+          "start": {
+            "line": 4,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 8,
+            "column": 59
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "evidence_id": "page-0001",
         "url": "https://clinic.example/",
         "artifact_path": "artifacts/page-0001.html",
@@ -244,6 +344,34 @@
       "lawfulness": "unestablished"
     },
     {
+      "field_spans": [
+        {
+          "start": {
+            "line": 10,
+            "column": 45
+          },
+          "end_exclusive": {
+            "line": 10,
+            "column": 78
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        {
+          "start": {
+            "line": 11,
+            "column": 7
+          },
+          "end_exclusive": {
+            "line": 11,
+            "column": 49
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        }
+      ],
       "id": "form-0002",
       "evidence_id": "page-0001",
       "url": "https://clinic.example/",
@@ -294,6 +422,20 @@
           "column": 14
         },
         "reasons": [],
+        "recovered": false,
+        "observed_region": {
+          "start": {
+            "line": 9,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 13,
+            "column": 60
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
         "list_scope": "observed_elements_in_trusted_region_only"
       },
@@ -308,6 +450,19 @@
         "Скриншот формы недоступен или связь не подтверждена"
       ],
       "citation": {
+        "static_span": {
+          "start": {
+            "line": 9,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 13,
+            "column": 60
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "evidence_id": "page-0001",
         "url": "https://clinic.example/",
         "artifact_path": "artifacts/page-0001.html",
@@ -360,6 +515,19 @@
       "reference_kind": "script",
       "service_hint": "Yandex Metrika reference",
       "citation": {
+        "static_span": {
+          "start": {
+            "line": 1,
+            "column": 27
+          },
+          "end_exclusive": {
+            "line": 1,
+            "column": 77
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "evidence_id": "page-0001",
         "url": "https://clinic.example/",
         "artifact_path": "artifacts/page-0001.html",
@@ -367,7 +535,7 @@
         "basis": "saved_html",
         "quote": null,
         "page": null,
-        "element": "script[src]"
+        "element": "script[declared_reference]"
       },
       "execution_confirmed": false,
       "data_transfer_confirmed": false,
@@ -379,6 +547,19 @@
       "reference_kind": "script",
       "service_hint": "Google Tag Manager reference; analytics execution not established",
       "citation": {
+        "static_span": {
+          "start": {
+            "line": 1,
+            "column": 86
+          },
+          "end_exclusive": {
+            "line": 1,
+            "column": 141
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
         "evidence_id": "page-0001",
         "url": "https://clinic.example/",
         "artifact_path": "artifacts/page-0001.html",
@@ -386,7 +567,7 @@
         "basis": "saved_html",
         "quote": null,
         "page": null,
-        "element": "script[src]"
+        "element": "script[declared_reference]"
       },
       "execution_confirmed": false,
       "data_transfer_confirmed": false,
@@ -395,16 +576,8 @@
   ],
   "medical_checks": [
     {
+      "content_level": "content_candidate",
       "check_id": "licensed_entity",
-      "status": "insufficient_evidence",
-      "observation_ids": [
-        "observation-0019"
-      ],
-      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
-      "applicable_obligation_confirmed": false
-    },
-    {
-      "check_id": "license_details",
       "status": "insufficient_evidence",
       "observation_ids": [
         "observation-0020"
@@ -413,8 +586,9 @@
       "applicable_obligation_confirmed": false
     },
     {
-      "check_id": "organization_disclosures",
-      "status": "observed",
+      "content_level": "content_candidate",
+      "check_id": "license_details",
+      "status": "insufficient_evidence",
       "observation_ids": [
         "observation-0021"
       ],
@@ -422,15 +596,30 @@
       "applicable_obligation_confirmed": false
     },
     {
-      "check_id": "services",
+      "content_level": "content_candidate",
+      "check_id": "organization_disclosures",
       "status": "observed",
       "observation_ids": [
-        "observation-0022"
+        "observation-0022",
+        "observation-0023",
+        "observation-0024",
+        "observation-0025"
       ],
       "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "content_candidate",
+      "check_id": "services",
+      "status": "observed",
+      "observation_ids": [
+        "observation-0026"
+      ],
+      "limitation": "Маркеры в ограниченных фрагментах; исполнители, реквизиты лицензии, обязательность и полнота независимо не проверены",
+      "applicable_obligation_confirmed": false
+    },
+    {
+      "content_level": "unknown",
       "check_id": "prices",
       "status": "insufficient_evidence",
       "observation_ids": [],
@@ -438,6 +627,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "medical_staff",
       "status": "insufficient_evidence",
       "observation_ids": [],
@@ -445,6 +635,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "paid_service_rules",
       "status": "insufficient_evidence",
       "observation_ids": [],
@@ -452,6 +643,7 @@
       "applicable_obligation_confirmed": false
     },
     {
+      "content_level": "unknown",
       "check_id": "other_applicable_disclosures",
       "status": "insufficient_evidence",
       "observation_ids": [],
@@ -523,7 +715,7 @@
         "page-0001"
       ],
       "observed_fact_ids": [
-        "observation-0023"
+        "observation-0027"
       ],
       "hypothesis_ids": [],
       "normative_reference_ids": [],
@@ -605,7 +797,8 @@
       ],
       "observed_fact_ids": [
         "observation-0006",
-        "observation-0009"
+        "observation-0009",
+        "observation-0014"
       ],
       "hypothesis_ids": [
         "hypothesis-0001",
@@ -627,7 +820,7 @@
         "check-0008"
       ],
       "possible_paid_legal_work": true,
-      "paid_work_rationale": "Форма form-0002 имеет наблюдаемые элементы; возможна отдельная оценка основания и распределения ролей, необходимость документов не установлена"
+      "paid_work_rationale": "Есть конкретные фрагменты документа для оценки; необходимость подготовки нового документа не установлена"
     },
     {
       "stage_id": "07",
@@ -667,8 +860,8 @@
         "page-0001"
       ],
       "observed_fact_ids": [
-        "observation-0014",
-        "observation-0016"
+        "observation-0015",
+        "observation-0017"
       ],
       "hypothesis_ids": [],
       "normative_reference_ids": [],
@@ -697,8 +890,8 @@
       "observed_fact_ids": [
         "observation-0007",
         "observation-0010",
-        "observation-0015",
-        "observation-0017"
+        "observation-0016",
+        "observation-0018"
       ],
       "hypothesis_ids": [
         "hypothesis-0002",
@@ -734,7 +927,7 @@
         "page-0001"
       ],
       "observed_fact_ids": [
-        "observation-0018"
+        "observation-0019"
       ],
       "hypothesis_ids": [
         "hypothesis-0008"
@@ -786,10 +979,13 @@
         "page-0001"
       ],
       "observed_fact_ids": [
-        "observation-0019",
         "observation-0020",
         "observation-0021",
-        "observation-0022"
+        "observation-0022",
+        "observation-0023",
+        "observation-0024",
+        "observation-0025",
+        "observation-0026"
       ],
       "hypothesis_ids": [],
       "normative_reference_ids": [],
@@ -816,7 +1012,7 @@
         "page-0001"
       ],
       "observed_fact_ids": [
-        "observation-0024"
+        "observation-0028"
       ],
       "hypothesis_ids": [],
       "normative_reference_ids": [],
@@ -844,6 +1040,7 @@
       "description": "В доступном тексте обнаружено упоминание организации",
       "citations": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -854,6 +1051,7 @@
           "element": null
         },
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -874,6 +1072,7 @@
       "description": "В материалах сайта упомянута организация; оператор не установлен",
       "citations": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -884,6 +1083,7 @@
           "element": null
         },
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -904,6 +1104,7 @@
       "description": "В доступном тексте обнаружено упоминание организации",
       "citations": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -914,6 +1115,7 @@
           "element": null
         },
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -934,6 +1136,7 @@
       "description": "В материалах сайта упомянута организация; оператор не установлен",
       "citations": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -944,6 +1147,7 @@
           "element": null
         },
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -964,6 +1168,19 @@
       "description": "Статическая разметка формы form-0001",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 4,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 8,
+              "column": 59
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -984,6 +1201,19 @@
       "description": "Контекст ссылок/маршрутизации формы form-0001",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 4,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 8,
+              "column": 59
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1004,6 +1234,19 @@
       "description": "Контекст ссылок/маршрутизации формы form-0001",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 4,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 8,
+              "column": 59
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1024,6 +1267,19 @@
       "description": "Статическая разметка формы form-0002",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 9,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 13,
+              "column": 60
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1044,6 +1300,19 @@
       "description": "Контекст ссылок/маршрутизации формы form-0002",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 9,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 13,
+              "column": 60
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1064,6 +1333,19 @@
       "description": "Контекст ссылок/маршрутизации формы form-0002",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 9,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 13,
+              "column": 60
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1084,6 +1366,19 @@
       "description": "Маркер рекламы/рассылки в контексте формы",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 9,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 13,
+              "column": 60
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1104,6 +1399,19 @@
       "description": "Сохранённая ссылка-кандидат на документ",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 7,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 7,
+              "column": 23
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1124,6 +1432,7 @@
       "description": "Доступен текстовый фрагмент документа-кандидата",
       "citations": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1139,51 +1448,45 @@
     },
     {
       "id": "observation-0014",
-      "stage_id": "08",
-      "kind": "static_markup",
-      "description": "В сохранённой разметке есть ссылка на ресурс",
+      "stage_id": "06",
+      "kind": "text_quote",
+      "description": "Доступен текстовый фрагмент документа-кандидата",
       "citations": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
           "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
-          "basis": "saved_html",
-          "quote": null,
-          "page": null,
-          "element": "script[src]"
+          "basis": "reproduced_text",
+          "quote": " «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+          "page": 1,
+          "element": null
         }
       ],
-      "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
+      "scope": "Фрагмент документа; правовое содержание и полнота не подтверждены",
       "legal_violation_established": false
     },
     {
       "id": "observation-0015",
-      "stage_id": "09",
-      "kind": "static_markup",
-      "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
-      "citations": [
-        {
-          "evidence_id": "page-0001",
-          "url": "https://clinic.example/",
-          "artifact_path": "artifacts/page-0001.html",
-          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
-          "basis": "saved_html",
-          "quote": null,
-          "page": null,
-          "element": "script[src]"
-        }
-      ],
-      "scope": "Статический адрес не доказывает трансграничную передачу",
-      "legal_violation_established": false
-    },
-    {
-      "id": "observation-0016",
       "stage_id": "08",
       "kind": "static_markup",
       "description": "В сохранённой разметке есть ссылка на ресурс",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 27
+            },
+            "end_exclusive": {
+              "line": 1,
+              "column": 77
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1191,19 +1494,32 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[src]"
+          "element": "script[declared_reference]"
         }
       ],
       "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
       "legal_violation_established": false
     },
     {
-      "id": "observation-0017",
+      "id": "observation-0016",
       "stage_id": "09",
       "kind": "static_markup",
       "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 27
+            },
+            "end_exclusive": {
+              "line": 1,
+              "column": 77
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1211,19 +1527,98 @@
           "basis": "saved_html",
           "quote": null,
           "page": null,
-          "element": "script[src]"
+          "element": "script[declared_reference]"
         }
       ],
       "scope": "Статический адрес не доказывает трансграничную передачу",
       "legal_violation_established": false
     },
     {
+      "id": "observation-0017",
+      "stage_id": "08",
+      "kind": "static_markup",
+      "description": "В сохранённой разметке есть ссылка на ресурс",
+      "citations": [
+        {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 86
+            },
+            "end_exclusive": {
+              "line": 1,
+              "column": 141
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "script[declared_reference]"
+        }
+      ],
+      "scope": "Статическая ссылка; cookies/выполнение/передача не проверены",
+      "legal_violation_established": false
+    },
+    {
       "id": "observation-0018",
+      "stage_id": "09",
+      "kind": "static_markup",
+      "description": "Сохранён URL ресурса; сетевой запрос и получатель не установлены",
+      "citations": [
+        {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 86
+            },
+            "end_exclusive": {
+              "line": 1,
+              "column": 141
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": null,
+          "page": null,
+          "element": "script[declared_reference]"
+        }
+      ],
+      "scope": "Статический адрес не доказывает трансграничную передачу",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0019",
       "stage_id": "10",
       "kind": "static_markup",
       "description": "HTML img имеет тематическую подпись; содержимое не осмотрено",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 14,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 14,
+              "column": 97
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
@@ -1238,38 +1633,31 @@
       "legal_violation_established": false
     },
     {
-      "id": "observation-0019",
-      "stage_id": "12",
-      "kind": "text_quote",
-      "description": "Текстовый маркер медицинского раскрытия: licensed_entity",
-      "citations": [
-        {
-          "evidence_id": "page-0001",
-          "url": "https://clinic.example/",
-          "artifact_path": "artifacts/page-0001.html",
-          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
-          "basis": "reproduced_text",
-          "quote": "линика». Услуги стоматологии. Лицензия: требует проверки. ООО «Синтетические заявки». Распределение ответственности не установлено. Запи",
-          "page": 1,
-          "element": null
-        }
-      ],
-      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
-      "legal_violation_established": false
-    },
-    {
       "id": "observation-0020",
       "stage_id": "12",
       "kind": "text_quote",
-      "description": "Текстовый маркер медицинского раскрытия: license_details",
+      "description": "Текстовый кандидат медицинского раскрытия: licensed_entity (content_candidate)",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
           "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
-          "basis": "reproduced_text",
-          "quote": "линика». Услуги стоматологии. Лицензия: требует проверки. ООО «Синтетические заявки». Распределение ответственности не установлено. Запи",
+          "basis": "saved_html",
+          "quote": "линика». Услуги стоматологии. Лицензия: требует проверки.",
           "page": 1,
           "element": null
         }
@@ -1281,15 +1669,28 @@
       "id": "observation-0021",
       "stage_id": "12",
       "kind": "text_quote",
-      "description": "Текстовый маркер медицинского раскрытия: organization_disclosures",
+      "description": "Текстовый кандидат медицинского раскрытия: license_details (content_candidate)",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
           "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
-          "basis": "reproduced_text",
-          "quote": "ская клиника — учебный пример ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ООО «Синтетические заявки",
+          "basis": "saved_html",
+          "quote": "линика». Услуги стоматологии. Лицензия: требует проверки.",
           "page": 1,
           "element": null
         }
@@ -1301,15 +1702,28 @@
       "id": "observation-0022",
       "stage_id": "12",
       "kind": "text_quote",
-      "description": "Текстовый маркер медицинского раскрытия: services",
+      "description": "Текстовый кандидат медицинского раскрытия: organization_disclosures (content_candidate)",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": "artifacts/page-0001.html",
           "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
-          "basis": "reproduced_text",
-          "quote": " ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки. ООО «Синтетические заявки». Распределение ответственност",
+          "basis": "saved_html",
+          "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки.",
           "page": 1,
           "element": null
         }
@@ -1319,11 +1733,144 @@
     },
     {
       "id": "observation-0023",
-      "stage_id": "03",
-      "kind": "collection_metadata",
-      "description": "Зарегистрирована попытка сбора материала",
+      "stage_id": "12",
+      "kind": "text_quote",
+      "description": "Текстовый кандидат медицинского раскрытия: organization_disclosures (content_candidate)",
       "citations": [
         {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": "ООО «Синтетические заявки». Распределение ответственности не установлено.",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0024",
+      "stage_id": "12",
+      "kind": "text_quote",
+      "description": "Текстовый кандидат медицинского раскрытия: organization_disclosures (content_candidate)",
+      "citations": [
+        {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": "ООО «Синтетическая клиника»",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0025",
+      "stage_id": "12",
+      "kind": "text_quote",
+      "description": "Текстовый кандидат медицинского раскрытия: organization_disclosures (content_candidate)",
+      "citations": [
+        {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": "ООО «Синтетические заявки»",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0026",
+      "stage_id": "12",
+      "kind": "text_quote",
+      "description": "Текстовый кандидат медицинского раскрытия: services (content_candidate)",
+      "citations": [
+        {
+          "static_span": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          },
+          "evidence_id": "page-0001",
+          "url": "https://clinic.example/",
+          "artifact_path": "artifacts/page-0001.html",
+          "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+          "basis": "saved_html",
+          "quote": "ООО «Синтетическая клиника». Услуги стоматологии. Лицензия: требует проверки.",
+          "page": 1,
+          "element": null
+        }
+      ],
+      "scope": "Не проверка лицензии, обязательного содержания или полного сайта",
+      "legal_violation_established": false
+    },
+    {
+      "id": "observation-0027",
+      "stage_id": "03",
+      "kind": "collection_metadata",
+      "description": "Зарегистрирован сохранённый материал; способ получения указан в происхождении",
+      "citations": [
+        {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": null,
@@ -1334,16 +1881,17 @@
           "element": null
         }
       ],
-      "scope": "Сохранённая запись Collector; не проверка текущей доступности URL",
+      "scope": "Запись досье, возможно ручная/неизвестная; не проверка доступности URL",
       "legal_violation_established": false
     },
     {
-      "id": "observation-0024",
+      "id": "observation-0028",
       "stage_id": "13",
       "kind": "collection_metadata",
       "description": "Локальное структурирование выполнено; аудит неполон",
       "citations": [
         {
+          "static_span": null,
           "evidence_id": "page-0001",
           "url": "https://clinic.example/",
           "artifact_path": null,
@@ -1456,7 +2004,7 @@
       "stage_id": "09",
       "question": "Происходит ли передача по этой ссылке и каковы её условия?",
       "observation_ids": [
-        "observation-0015"
+        "observation-0016"
       ],
       "normative_reference_ids": [],
       "missing_information": [
@@ -1472,7 +2020,7 @@
       "stage_id": "09",
       "question": "Происходит ли передача по этой ссылке и каковы её условия?",
       "observation_ids": [
-        "observation-0017"
+        "observation-0018"
       ],
       "normative_reference_ids": [],
       "missing_information": [
@@ -1488,7 +2036,7 @@
       "stage_id": "10",
       "question": "Есть ли идентифицируемое изображение и применимые основания?",
       "observation_ids": [
-        "observation-0018"
+        "observation-0019"
       ],
       "normative_reference_ids": [],
       "missing_information": [
@@ -1853,15 +2401,37 @@
     },
     {
       "id": "work-0004",
+      "kind": "additional_legal_expertise",
+      "stage_ids": [
+        "06"
+      ],
+      "observation_ids": [
+        "observation-0014"
+      ],
+      "rationale": "Есть конкретные фрагменты документа для оценки; необходимость подготовки нового документа не установлена",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    },
+    {
+      "id": "work-0005",
       "kind": "medical_disclosure_review",
       "stage_ids": [
         "12"
       ],
       "observation_ids": [
-        "observation-0019",
         "observation-0020",
         "observation-0021",
-        "observation-0022"
+        "observation-0022",
+        "observation-0023",
+        "observation-0024",
+        "observation-0025",
+        "observation-0026"
       ],
       "rationale": "Медицинские текстовые маркеры позволяют определить предмет проверки; необходимость доработки и её объём ещё не установлены",
       "prerequisites": [
@@ -1895,6 +2465,7 @@
     "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
     "Collected pages are not a complete examination of the website",
     "Operator identity and all normative references require independent verification",
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
     "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
     "page-0001: Extraction is not legal research",
     "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
@@ -1905,7 +2476,9 @@
     "Поля entities/forms из manifest не становятся фактами без повторного извлечения",
     "Изображения не осматривались; подписи не устанавливают личность изображённых",
     "РКН и реестры лицензий не запрашивались; недоступность не равна отсутствию записи",
-    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение"
+    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение",
+    "Acquisition origin/timestamp roles unknown; not authenticated",
+    "page-0001: Acquisition origin/timestamp roles unknown; not authenticated"
   ],
   "technical_processing_completed": true,
   "audit_complete": false,

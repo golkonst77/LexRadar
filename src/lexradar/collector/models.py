@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import AwareDatetime, Field, HttpUrl, model_validator
 
 from ..models import Evidence, Model
+from .provenance import MaterialOrigin
 from .reading import ReadingState
 
 
@@ -95,6 +96,7 @@ class EntityObservation(Model):
 
 
 class PageObservation(Model):
+    origin: MaterialOrigin = Field(default_factory=MaterialOrigin)
     reading: ReadingState = Field(default_factory=ReadingState)
     requested_url: HttpUrl
     final_url: HttpUrl | None = None
@@ -107,8 +109,17 @@ class PageObservation(Model):
     forms: list[FormObservation] = Field(default_factory=list)
     evidence_id: str
 
+    @model_validator(mode="after")
+    def manual_metadata(self):
+        if self.origin.kind == "manual_html_import" and (
+            self.captured_at != self.origin.imported_at or self.http_status is not None
+        ):
+            raise ValueError("Manual capture field must be local import; HTTP status not observed")
+        return self
+
 
 class DocumentObservation(Model):
+    origin: MaterialOrigin = Field(default_factory=MaterialOrigin)
     reading: ReadingState = Field(default_factory=ReadingState)
     page_texts: dict[int, str] = Field(default_factory=dict)
     requested_url: HttpUrl
@@ -121,6 +132,7 @@ class DocumentObservation(Model):
 
 
 class CollectionResult(Model):
+    origin: MaterialOrigin = Field(default_factory=MaterialOrigin)
     schema_version: Literal["0.2"] = "0.2"
     target_url: HttpUrl
     started_at: AwareDatetime
@@ -134,6 +146,8 @@ class CollectionResult(Model):
 
     @model_validator(mode="after")
     def evidence_status_consistency(self):
+        if self.origin.kind == "manual_html_import" and self.started_at != self.origin.imported_at:
+            raise ValueError("Manual dossier start must identify local import time")
         for evidence in self.evidence:
             if evidence.status == "unavailable":
                 if evidence.available or evidence.artifacts or not evidence.unavailable_reason:
