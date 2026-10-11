@@ -41,7 +41,7 @@ class PolicyMarkup(SavedMarkup):
         # Attributes ignored by recovery cannot nominate a document.
         identifier = dict(attrs).get("id", "") if diagnostics == len(self.diagnostics) else ""
         self.active_blocks.append(
-            Block(self.getpos(), len(self.open_elements), identifier, len(self.diagnostics))
+            Block(self.getpos(), len(self.open_elements), identifier, diagnostics)
         )
 
     def uncertain(self, reason):
@@ -142,6 +142,13 @@ def policy_observations(research):
             ]
             if not complete:
                 limitations.append("Unclosed, damaged, decoding-loss or truncated policy block")
+                limitations.extend(
+                    d.reason
+                    for d in parser.diagnostics
+                    if block.start <= (d.position.line, d.position.column) <= block.end
+                )
+                if block.truncated:
+                    limitations.append("Retained policy text limited to 50000 characters")
             observations.append(
                 SavedPolicyObservation(
                     id="saved-policy-"

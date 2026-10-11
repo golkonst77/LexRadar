@@ -129,6 +129,8 @@ legal classification. Unidentified layouts can be missed; no absence is inferred
 Complete nested documents take precedence over partial/banner wrappers; identical
 text in disjoint blocks retains distinct source ranges. The previous independently
 reproduced PDF-text path remains available, without claiming complete visual review.
+Recovery of a document's own opening tag keeps that block partial, with the concrete
+parser diagnostic; recovery outside the block does not by itself invalidate its reading.
 
 An optional `SourceRegistry.research_contexts` list preserves imported research
 without establishing production trust. Each entry binds to the exact card hash,

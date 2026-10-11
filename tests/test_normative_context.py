@@ -404,3 +404,12 @@ def test_previous_export_contract_loads_with_optional_fields_omitted(tmp_path):
     assert restored.saved_policy_observations == []
     assert all(r.research_context is None for r in restored.requirements)
     assert not restored.client_release_allowed and restored.production_outcome == "HOLD"
+
+
+@pytest.mark.parametrize("opening", ['<div class"broken">', '<div id="policy" id="other">'])
+def test_recovered_policy_opening_cannot_be_complete(tmp_path, opening):
+    result = verify(setup(tmp_path, opening + "<p>" + POLICY_TEXT + "</p></div>"))
+    assert len(result.saved_policy_observations) == 1
+    document = result.saved_policy_observations[0]
+    assert document.reading_completeness == document.block.status == "partial"
+    assert any("Ambiguous attributes" in reason for reason in document.block.limitations)
