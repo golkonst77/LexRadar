@@ -91,6 +91,88 @@ class Citation(Model):
     element: str | None = None
 
 
+class StaticDeclaration(Model):
+    id: str
+    declaration_type: Literal[
+        "form_method",
+        "html_action",
+        "data_route",
+        "js_route",
+        "inline_handler",
+        "handler_reference",
+        "popup_trigger",
+        "popup_target",
+        "popup_marker",
+        "booking_anchor",
+        "script_src",
+        "iframe_src",
+        "noscript_iframe",
+        "lazy_resource",
+        "inline_resource",
+    ]
+    original_value: str
+    normalized_value: str | None = None
+    normalization: Literal["reference", "fragment", "method", "none"] = "none"
+    service_kind: str | None = None
+    form_id: str | None = None
+    target_id: str | None = None
+    citation: Citation
+    completeness: Literal["complete", "partial", "unknown"]
+    limitations: list[str] = Field(min_length=1)
+    literal_present_in_source: Literal[True] = True
+    execution_confirmed: Literal[False] = False
+    display_confirmed: Literal[False] = False
+    redirect_confirmed: Literal[False] = False
+    data_transfer_confirmed: Literal[False] = False
+    actual_recipient: Literal["unknown"] = "unknown"
+    legal_status: Literal["not_confirmed"] = "not_confirmed"
+
+    @model_validator(mode="after")
+    def source_required(self):
+        if not (
+            self.citation.artifact_sha256
+            and self.citation.artifact_path
+            and self.citation.static_span
+        ):
+            raise ValueError("Declaration requires original artifact and source range")
+        if self.completeness != self.citation.static_span.status:
+            raise ValueError("Declaration must inherit source completeness")
+        return self
+
+
+class FormMechanism(Model):
+    declared_method: str | None = None
+    html_route_ids: list[str] = Field(default_factory=list)
+    alternative_route_ids: list[str] = Field(default_factory=list)
+    js_route_candidate_ids: list[str] = Field(default_factory=list)
+    handler_declaration_ids: list[str] = Field(default_factory=list)
+    hidden_field_names: list[str | None] = Field(default_factory=list)
+    actual_route: Literal["unknown"] = "unknown"
+    actual_recipient: Literal["unknown"] = "unknown"
+
+
+class PopupRelation(Model):
+    id: str
+    trigger_declaration_id: str
+    target_declaration_ids: list[str] = Field(default_factory=list)
+    candidate_kinds: list[str] = Field(default_factory=list)
+    classification_citations: list[Citation] = Field(default_factory=list)
+    relation_status: Literal["declared_unique_target", "ambiguous_target", "target_not_inspected"]
+    limitations: list[str] = Field(min_length=1)
+    display_confirmed: Literal[False] = False
+    document_legally_reviewed: Literal[False] = False
+
+
+class IntegrationGroup(Model):
+    id: str
+    kind: Literal["booking", "resource", "form_library"]
+    normalized_url: str | None = None
+    service_kind: str | None = None
+    occurrence_ids: list[str] = Field(min_length=1)
+    network_action_confirmed: Literal[False] = False
+    independent_form_count: Literal[0] = 0
+
+
 class Observation(Model):
     id: str
     stage_id: str
@@ -191,6 +273,7 @@ class StaticFormCoverage(Model):
 
 
 class FormRow(Model):
+    mechanism: FormMechanism = Field(default_factory=FormMechanism)
     field_spans: list[StaticSpan] = Field(default_factory=list)
     id: str
     evidence_id: str
@@ -297,6 +380,9 @@ class AuditCoverage(Model):
 
 
 class PrimaryAudit(Model):
+    declarations: list[StaticDeclaration] = Field(default_factory=list)
+    popup_relations: list[PopupRelation] = Field(default_factory=list)
+    integration_groups: list[IntegrationGroup] = Field(default_factory=list)
     source_origin: MaterialOrigin = Field(default_factory=MaterialOrigin)
     schema_version: Literal["primary-audit-0.1"] = "primary-audit-0.1"
     audience: Literal["internal_only"] = "internal_only"
@@ -340,6 +426,9 @@ class PrimaryAudit(Model):
         if [s.stage_id for s in self.stages] != [s.stage_id for s in STAGES]:
             raise ValueError("Exactly thirteen ordered working stages required")
         collections = {
+            "declaration": self.declarations,
+            "popup": self.popup_relations,
+            "integration": self.integration_groups,
             "material": self.materials,
             "organization": self.organizations,
             "form": self.forms,
@@ -357,6 +446,36 @@ class PrimaryAudit(Model):
             if len(ids) != len(set(ids)):
                 raise ValueError("Duplicate primary IDs")
             keys[kind] = set(ids)
+        for d in self.declarations:
+            if d.citation.evidence_id not in keys["material"] or (
+                d.form_id is not None and d.form_id not in keys["form"]
+            ):
+                raise ValueError("Unknown declaration material/form")
+        for p in self.popup_relations:
+            if (
+                p.trigger_declaration_id not in keys["declaration"]
+                or not set(p.target_declaration_ids) <= keys["declaration"]
+            ):
+                raise ValueError("Unknown popup declaration")
+        for popup in self.popup_relations:
+            if any(c.evidence_id not in keys["material"] for c in popup.classification_citations):
+                raise ValueError("Unknown popup classification material")
+        for group in self.integration_groups:
+            if not set(group.occurrence_ids) <= keys["declaration"]:
+                raise ValueError("Unknown integration occurrence")
+        for form in self.forms:
+            for ids in (
+                form.mechanism.html_route_ids,
+                form.mechanism.alternative_route_ids,
+                form.mechanism.js_route_candidate_ids,
+                form.mechanism.handler_declaration_ids,
+            ):
+                if any(
+                    d not in keys["declaration"]
+                    or next(item for item in self.declarations if item.id == d).form_id != form.id
+                    for d in ids
+                ):
+                    raise ValueError("Unknown or foreign form mechanism declaration")
         for stage in self.stages:
             for kind, refs in (
                 ("material", stage.checked_materials),

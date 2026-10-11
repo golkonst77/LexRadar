@@ -87,6 +87,16 @@
   "client_release_allowed": false,
   "rows": [
     {
+      "mechanism": {
+        "declared_method": null,
+        "html_route_ids": [],
+        "alternative_route_ids": [],
+        "js_route_candidate_ids": [],
+        "handler_declaration_ids": [],
+        "hidden_field_names": [],
+        "actual_route": "unknown",
+        "actual_recipient": "unknown"
+      },
       "field_spans": [
         {
           "start": {

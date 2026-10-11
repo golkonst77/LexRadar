@@ -127,3 +127,5 @@ lexradar collect https://example.org/ --output work/public-pilot \
 и различение меню/содержательных медицинских кандидатов описаны в
 [PR #11: доказательства HTML](docs/resilient-html-evidence.md). Восстановление не меняет
 исходник, не исполняет JS и не отменяет production HOLD.
+
+Статические AJAX/popup/booking/ресурсные декларации: [модели, экспорт и ограничения](docs/static-data-mechanisms.md).
