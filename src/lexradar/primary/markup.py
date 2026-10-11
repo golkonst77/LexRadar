@@ -6,6 +6,7 @@ from urllib.parse import urljoin
 
 from ..collector.models import InputField
 from ..collector.reading import StaticText
+from .models import HTMLPosition, StaticFormCoverage
 
 
 def compact(parts: list[str]) -> str:
@@ -50,6 +51,8 @@ class SavedForm:
     fields: list[InputField] = field(default_factory=list)
     parts: list[str] = field(default_factory=list)
     elements: list[str] = field(default_factory=list)
+    start: tuple[int, int] | None = None
+    end_exclusive: tuple[int, int] | None = None
 
 
 class SavedMarkup(StaticText):
@@ -72,6 +75,51 @@ class SavedMarkup(StaticText):
         self.heading_parts: list[str] = []
         self.labels: dict[tuple[int, str], str] = {}
         self.field_ids: dict[tuple[int, int], str] = {}
+        self.stop_position: tuple[int, int] | None = None
+        self.end_position: tuple[int, int] | None = None
+        self.decoding_loss = False
+        self.closing_token: str | None = None
+
+    def parse_endtag(self, i):
+        end = self.rawdata.find(">", i)
+        self.closing_token = self.rawdata[i : end + 1] if end >= 0 else None
+        try:
+            return super().parse_endtag(i)
+        finally:
+            self.closing_token = None
+
+    def uncertain(self, reason):
+        if self.stop_position is None:
+            self.stop_position = self.getpos()
+        super().uncertain(reason)
+
+    def coverage(self, form: SavedForm) -> StaticFormCoverage:
+        def position(value):
+            return HTMLPosition(line=value[0], column=value[1]) if value else None
+
+        page_status = (
+            "unknown" if self.decoding_loss else ("partial" if self.limitations else "complete")
+        )
+        status = (
+            "unknown"
+            if self.decoding_loss
+            else ("complete" if form.end_exclusive is not None else "partial")
+        )
+        reasons = list(self.limitations)
+        if form.end_exclusive is None:
+            reasons.append("Form closing boundary was not reliably parsed; inventories are partial")
+        if self.decoding_loss:
+            reasons.append("UTF-8 decoding loss; static coverage unknown")
+        if page_status != "complete" and status == "complete":
+            reasons.append("Only this closed form was parsed; the surrounding page is incomplete")
+        return StaticFormCoverage(
+            status=status,
+            page_status=page_status,
+            form_start=position(form.start),
+            form_end_exclusive=position(form.end_exclusive),
+            trusted_page_end_exclusive=position(self.stop_position or self.end_position),
+            reasons=reasons,
+        )
 
     def handle_starttag(self, tag, attrs):
         previous_excluded = list(self.excluded)
@@ -98,6 +146,7 @@ class SavedMarkup(StaticText):
                 values.get("aria-label"),
             )
             self.forms.append(self.form)
+            self.form.start = self.getpos()
         elif tag in {"input", "select", "textarea"} and self.form is not None:
             if len(self.form.fields) >= 100:
                 self.uncertain("Static field limit; suffix withheld")
@@ -174,6 +223,17 @@ class SavedMarkup(StaticText):
             self.heading_tag = None
             self.heading_parts = []
         if tag == "form":
+            if self.form is not None:
+                # End-tag callbacks precede HTMLParser's position update. Preserve the exact
+                # token end, including whitespace/newlines, rather than assuming </form>.
+                line, column = self.getpos()
+                token = self.closing_token
+                if token:
+                    lines = token.split("\n")
+                    self.form.end_exclusive = (
+                        line + len(lines) - 1,
+                        column + len(token) if len(lines) == 1 else len(lines[-1]),
+                    )
             self.form = None
         elif tag == "a":
             self.anchor = None
@@ -193,6 +253,7 @@ class SavedMarkup(StaticText):
 
     def close(self):
         super().close()
+        self.end_position = self.getpos()
         for form in self.forms:
             for index, input_field in enumerate(form.fields):
                 element_id = self.field_ids.get((form.index, index))

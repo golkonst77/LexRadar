@@ -197,6 +197,25 @@
       ],
       "submission_context": "Запись на приём ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться",
       "action_reference": "https://clinic.example/appointment",
+      "static_coverage": {
+        "status": "complete",
+        "page_status": "complete",
+        "form_start": {
+          "line": 4,
+          "column": 0
+        },
+        "form_end_exclusive": {
+          "line": 8,
+          "column": 59
+        },
+        "trusted_page_end_exclusive": {
+          "line": 15,
+          "column": 14
+        },
+        "reasons": [],
+        "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
+        "list_scope": "observed_elements_in_trusted_region_only"
+      },
       "organization_candidates": [
         "organization-0001"
       ],
@@ -259,6 +278,25 @@
       ],
       "submission_context": "Подписка на новости ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
       "action_reference": "https://intake.example/submit",
+      "static_coverage": {
+        "status": "complete",
+        "page_status": "complete",
+        "form_start": {
+          "line": 9,
+          "column": 0
+        },
+        "form_end_exclusive": {
+          "line": 13,
+          "column": 60
+        },
+        "trusted_page_end_exclusive": {
+          "line": 15,
+          "column": 14
+        },
+        "reasons": [],
+        "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
+        "list_scope": "observed_elements_in_trusted_region_only"
+      },
       "organization_candidates": [
         "organization-0002"
       ],

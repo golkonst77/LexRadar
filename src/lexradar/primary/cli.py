@@ -32,6 +32,11 @@ def write_report(report, output: Path, source: Path):
             "client_release_allowed": False,
             "rows": [row.model_dump(mode="json") for row in rows],
         }
+        if name == "forms":
+            # Empty rows can mean the parser never reached a form. Preserve limitations
+            # even when there is no FormRow in which to carry them.
+            payload["inventory_scope"] = "observed_forms_only_not_proof_of_absence"
+            payload["limitations"] = report.limitations
         (output / f"{name}.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )

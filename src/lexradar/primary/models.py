@@ -110,6 +110,44 @@ class OrganizationRow(Model):
     operator_confirmed: Literal[False] = False
 
 
+class HTMLPosition(Model):
+    line: int = Field(ge=1)
+    column: int = Field(ge=0)
+
+
+class StaticFormCoverage(Model):
+    status: Literal["complete", "partial", "unknown"] = "unknown"
+    page_status: Literal["complete", "partial", "unknown"] = "unknown"
+    form_start: HTMLPosition | None = None
+    form_end_exclusive: HTMLPosition | None = None
+    trusted_page_end_exclusive: HTMLPosition | None = None
+    reasons: list[str] = Field(default_factory=lambda: ["Legacy result: static coverage unknown"])
+    boundary_scope: Literal["decoded_utf8_line_1_based_column_0_based"] = (
+        "decoded_utf8_line_1_based_column_0_based"
+    )
+    list_scope: Literal["observed_elements_in_trusted_region_only"] = (
+        "observed_elements_in_trusted_region_only"
+    )
+
+    @model_validator(mode="after")
+    def bounded_status(self):
+        if self.status == "complete" and (
+            self.form_start is None
+            or self.form_end_exclusive is None
+            or self.trusted_page_end_exclusive is None
+        ):
+            raise ValueError("Complete static form requires explicit trusted boundaries")
+        if (self.status != "complete" or self.page_status != "complete") and not self.reasons:
+            raise ValueError("Incomplete/unknown static coverage requires limitations")
+        if self.form_start and self.form_end_exclusive:
+            start = (self.form_start.line, self.form_start.column)
+            end = (self.form_end_exclusive.line, self.form_end_exclusive.column)
+            boundary = self.trusted_page_end_exclusive
+            if end <= start or (boundary and end > (boundary.line, boundary.column)):
+                raise ValueError("Form extends outside trusted static region")
+        return self
+
+
 class FormRow(Model):
     id: str
     evidence_id: str
@@ -123,6 +161,7 @@ class FormRow(Model):
     interface_elements: list[str]
     submission_context: str
     action_reference: str | None
+    static_coverage: StaticFormCoverage = Field(default_factory=StaticFormCoverage)
     organization_candidates: list[str] = Field(default_factory=list)
     recipient_hint: str = "Не установлен; HTML action и упоминания не доказывают получателя"
     unresolved_processing: list[str] = Field(min_length=1)

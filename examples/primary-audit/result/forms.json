@@ -31,6 +31,25 @@
       ],
       "submission_context": "Запись на приём ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться",
       "action_reference": "https://clinic.example/appointment",
+      "static_coverage": {
+        "status": "complete",
+        "page_status": "complete",
+        "form_start": {
+          "line": 4,
+          "column": 0
+        },
+        "form_end_exclusive": {
+          "line": 8,
+          "column": 59
+        },
+        "trusted_page_end_exclusive": {
+          "line": 15,
+          "column": 14
+        },
+        "reasons": [],
+        "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
+        "list_scope": "observed_elements_in_trusted_region_only"
+      },
       "organization_candidates": [
         "organization-0001"
       ],
@@ -93,6 +112,25 @@
       ],
       "submission_context": "Подписка на новости ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
       "action_reference": "https://intake.example/submit",
+      "static_coverage": {
+        "status": "complete",
+        "page_status": "complete",
+        "form_start": {
+          "line": 9,
+          "column": 0
+        },
+        "form_end_exclusive": {
+          "line": 13,
+          "column": 60
+        },
+        "trusted_page_end_exclusive": {
+          "line": 15,
+          "column": 14
+        },
+        "reasons": [],
+        "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
+        "list_scope": "observed_elements_in_trusted_region_only"
+      },
       "organization_candidates": [
         "organization-0002"
       ],
@@ -120,5 +158,24 @@
       "submitted": false,
       "lawfulness": "unestablished"
     }
+  ],
+  "inventory_scope": "observed_forms_only_not_proof_of_absence",
+  "limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+    "page-0001: Extraction is not legal research",
+    "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
+    "Обследованы сохранённые материалы, не живой сайт; полнота сайта неизвестна",
+    "JavaScript, cookies, сетевые маршруты и функциональное поведение форм не проверялись",
+    "Личность и роли организаций, нормативные основания и нарушения не подтверждены",
+    "Упоминания имён/ИНН/ОГРН не устанавливают оператора или реального получателя данных",
+    "Поля entities/forms из manifest не становятся фактами без повторного извлечения",
+    "Изображения не осматривались; подписи не устанавливают личность изображённых",
+    "РКН и реестры лицензий не запрашивались; недоступность не равна отсутствию записи",
+    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение"
   ]
 }

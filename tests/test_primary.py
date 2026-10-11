@@ -580,3 +580,120 @@ def test_wrapped_label_never_captures_prefilled_control_value(tmp_path):
     form = run(root).forms[0]
     assert "SYNTHETIC_DEFAULT" not in form.model_dump_json()
     assert form.fields[0].label == "Комментарий" and form.fields[1].label == "Выбор"
+
+
+@pytest.mark.parametrize(
+    "body,form_status,page_status,fields",
+    [
+        ('<form><input name="first"></form>', "complete", "complete", ["first"]),
+        (
+            '<form><input name="first"><div></span><input name="second"></form>',
+            "partial",
+            "partial",
+            ["first"],
+        ),
+        ('<div></span><form><input name="first"></form>', None, "partial", []),
+        ('<form><input name="first"></form><div></span>', "complete", "partial", ["first"]),
+        ('<form><input name="first">', "partial", "partial", ["first"]),
+    ],
+)
+def test_form_coverage_and_export(tmp_path, body, form_status, page_status, fields):
+    root, _ = make_dossier(tmp_path, body)
+    report = run(root)
+    assert_internal(report)
+    output = tmp_path / "export"
+    write_report(report, output, root)
+    exported = json.loads((output / "forms.json").read_text())
+    rows = exported["rows"]
+    assert exported["inventory_scope"] == "observed_forms_only_not_proof_of_absence"
+    if form_status is None:
+        assert not report.forms and not rows
+        assert not any(o.stage_id == "05" for o in report.observations)
+        assert any("Mismatched" in reason for reason in exported["limitations"])
+        return
+    form = report.forms[0]
+    coverage = form.static_coverage
+    assert coverage.status == form_status and coverage.page_status == page_status
+    assert [f.name for f in form.fields] == fields
+    assert coverage.form_start and coverage.trusted_page_end_exclusive
+    assert bool(coverage.form_end_exclusive) == (form_status == "complete")
+    assert rows[0]["static_coverage"] == coverage.model_dump(mode="json")
+    if page_status == "partial":
+        assert coverage.reasons
+    if form_status == "partial":
+        assert any("пустой список не доказывает" in r for r in form.unresolved_processing)
+
+
+def test_consent_link_after_stop_is_unknown_not_absent(tmp_path):
+    root, _ = make_dossier(
+        tmp_path,
+        '<form><input name="phone"><div></span>'
+        '<a href="/consent">Согласие</a><input type="checkbox"></form>',
+    )
+    report = run(root)
+    form = report.forms[0]
+    assert not form.consent_links and len(form.fields) == 1
+    assert form.static_coverage.status == "partial"
+    assert all(not o.legal_violation_established for o in report.observations)
+    assert form.lawfulness == "unestablished"
+    assert all(h.status == "unconfirmed" for h in report.hypotheses)
+    assert all(not w.violation_proof for w in report.commercial_opportunity)
+    assert_internal(report)
+
+
+def test_static_field_limit_marks_inventory_partial(tmp_path):
+    root, _ = make_dossier(tmp_path, "<form>" + '<input name="field">' * 101 + "</form>")
+    form = run(root).forms[0]
+    assert len(form.fields) == 100 and form.static_coverage.status == "partial"
+    assert any("field limit" in r for r in form.static_coverage.reasons)
+
+
+def test_static_boundaries_are_exact_decoded_token_positions():
+    prefix = "<html>\n<body>\n"
+    closed = "<form>\n<input>\n</form \n>"
+    parser = SavedMarkup("https://clinic.example/")
+    parser.feed(prefix + closed + "<div></span></body></html>")
+    parser.close()
+    coverage = parser.coverage(parser.forms[0])
+    assert coverage.form_start.model_dump() == {"line": 3, "column": 0}
+    assert coverage.form_end_exclusive.model_dump() == {"line": 6, "column": 1}
+    assert coverage.trusted_page_end_exclusive.model_dump() == {"line": 6, "column": 6}
+
+
+def test_legacy_form_row_defaults_to_unknown(tmp_path):
+    from lexradar.primary.models import FormRow
+
+    root, _ = make_dossier(tmp_path, "<form><input></form>")
+    raw = run(root).forms[0].model_dump()
+    del raw["static_coverage"]
+    legacy = FormRow.model_validate(raw)
+    assert legacy.static_coverage.status == legacy.static_coverage.page_status == "unknown"
+    assert legacy.static_coverage.reasons
+
+
+def test_decoding_uncertainty_cannot_claim_complete_static_form():
+    parser = SavedMarkup("https://clinic.example/")
+    parser.decoding_loss = True
+    parser.feed("<form><input></form>")
+    parser.close()
+    coverage = parser.coverage(parser.forms[0])
+    assert coverage.status == coverage.page_status == "unknown"
+    assert any("UTF-8" in reason for reason in coverage.reasons)
+
+
+def test_complete_static_status_requires_trusted_boundaries():
+    from lexradar.primary.models import StaticFormCoverage
+
+    with pytest.raises(ValidationError):
+        StaticFormCoverage(status="complete", page_status="complete", reasons=[])
+
+
+def test_partial_committed_example_retains_only_known_prefix():
+    base = EXAMPLES / "primary-audit/partial"
+    report = run(base / "dossier")
+    rows = json.loads((base / "forms.json").read_text())["rows"]
+    assert rows == [f.model_dump(mode="json") for f in report.forms]
+    assert rows[0]["static_coverage"]["status"] == "partial"
+    assert [f["name"] for f in rows[0]["fields"]] == ["phone"]
+    assert not rows[0]["consent_links"] and rows[0]["static_coverage"]["reasons"]
+    assert_internal(report)

@@ -217,6 +217,10 @@ class Builder:
                 if hashlib.sha256(raw).hexdigest() != artifact.sha256:
                     raise ValueError("Original changed during primary inspection")
                 parser = SavedMarkup(str(evidence.source))
+                try:
+                    raw.decode("utf-8")
+                except UnicodeError:
+                    parser.decoding_loss = True
                 parser.feed(raw.decode("utf-8", errors="replace"))
                 parser.close()
                 self.markup[evidence.id] = parser
@@ -314,6 +318,7 @@ class Builder:
                     interface_elements=saved.elements,
                     submission_context=compact(saved.parts),
                     action_reference=saved.action,
+                    static_coverage=parser.coverage(saved),
                     unresolved_processing=[
                         "Правовое основание, цели, сроки и фактический получатель",
                         "Поведение интерфейса, валидация и передача не тестировались",
@@ -323,6 +328,13 @@ class Builder:
                         page.evidence_id, "saved_html", element=f"form[occurrence={saved.index}]"
                     ),
                 )
+                if form.static_coverage.status != "complete":
+                    form.unresolved_processing.append(
+                        "Частичный/неизвестный статический разбор: списки полей, согласий и "
+                        "ссылок не полны; пустой список не доказывает отсутствие элементов"
+                    )
+                if form.static_coverage.page_status != "complete":
+                    form.unresolved_processing.extend(form.static_coverage.reasons)
                 if saved.index <= len(page.forms):
                     declared = page.forms[saved.index - 1]
                     if [(f.tag, f.type, f.name) for f in declared.fields] == [
