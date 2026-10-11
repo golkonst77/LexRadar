@@ -267,3 +267,9 @@ def test_popup_citation_stops_at_quarantine_boundary(tmp_path):
     assert span.status == "partial"
     assert span.end_exclusive.column == source.index("</div>")
     assert not report.popup_relations[0].display_confirmed
+
+
+def test_explicit_zero_port_is_not_silently_removed():
+    assert normalize_reference("https://clinic.example/", "https://booking.medflex.ru:0/A") == (
+        "https://booking.medflex.ru:0/A"
+    )

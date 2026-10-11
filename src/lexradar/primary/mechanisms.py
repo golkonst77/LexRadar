@@ -24,7 +24,7 @@ def normalize_reference(base, value):
         host = parsed.hostname.lower()
         host = "[" + host + "]" if ":" in host else host
         port = parsed.port
-        if port and (parsed.scheme.lower(), port) not in {("http", 80), ("https", 443)}:
+        if port is not None and (parsed.scheme.lower(), port) not in {("http", 80), ("https", 443)}:
             host += ":" + str(port)
         # Query, fragment, path case and percent escapes are deliberately retained.
         return urlunsplit(
