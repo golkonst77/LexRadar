@@ -70,6 +70,12 @@ Collector не подключён к Gateway, не формирует юриди
 нарушение или необходимость услуги.
 [Команда, контракты и ограничения](docs/independent-local-verification.md).
 
+`lexradar verify-norms` строит офлайн-матрицу нормативных требований и условий
+применимости из существующего реестра. Проверка локальной цитаты не удостоверяет
+источник или редакцию. Отсутствие первоисточника создаёт задачу на проверку;
+HOLD/not_confirmed и запрет клиентского выпуска сохраняются.
+[Схема, запуск и ручной workflow](docs/normative-applicability.md).
+
 ## Independent AI Auditors
 
 `lexradar analyze work/audit --output work/analysis` по умолчанию работает offline без LLM.

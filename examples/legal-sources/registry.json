@@ -94,5 +94,98 @@
       "source_availability": "saved_locally",
       "intended_use": "context"
     }
-  ]
+  ],
+  "requirements": [
+    {
+      "requirement_id": "synthetic-policy-v1",
+      "source_card_id": "synthetic-v1",
+      "categories": [
+        "B",
+        "C"
+      ],
+      "activity_scope": "personal_data",
+      "conditions": [
+        {
+          "condition_id": "static_form_declared",
+          "predicate": "static_form_declared",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        },
+        {
+          "condition_id": "operator_identity",
+          "predicate": "operator_identity",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        },
+        {
+          "condition_id": "actual_personal_data_processing",
+          "predicate": "actual_personal_data_processing",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        },
+        {
+          "condition_id": "whole_current_document_read",
+          "predicate": "whole_current_document_read",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        },
+        {
+          "condition_id": "exceptions_checked",
+          "predicate": "exceptions_checked",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        }
+      ],
+      "necessary_evidence": [
+        "SYNTHETIC: establish actual operator, activity and complete current document"
+      ],
+      "exceptions_and_alternatives": [
+        "SYNTHETIC: independently review exceptions and alternative bases"
+      ],
+      "limitations": [
+        "SYNTHETIC ONLY; no authentic normative force or interpreted Russian-law obligation"
+      ]
+    },
+    {
+      "requirement_id": "synthetic-policy-v2",
+      "source_card_id": "synthetic-v2",
+      "categories": [
+        "B",
+        "C"
+      ],
+      "activity_scope": "personal_data",
+      "conditions": [
+        {
+          "condition_id": "static_form_declared",
+          "predicate": "static_form_declared",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        },
+        {
+          "condition_id": "operator_identity",
+          "predicate": "operator_identity",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        },
+        {
+          "condition_id": "actual_personal_data_processing",
+          "predicate": "actual_personal_data_processing",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        },
+        {
+          "condition_id": "whole_current_document_read",
+          "predicate": "whole_current_document_read",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        },
+        {
+          "condition_id": "exceptions_checked",
+          "predicate": "exceptions_checked",
+          "rationale": "SYNTHETIC condition annotation, not a Russian legal requirement"
+        }
+      ],
+      "necessary_evidence": [
+        "SYNTHETIC: establish actual operator, activity and complete current document"
+      ],
+      "exceptions_and_alternatives": [
+        "SYNTHETIC: independently review exceptions and alternative bases"
+      ],
+      "limitations": [
+        "SYNTHETIC ONLY; no authentic normative force or interpreted Russian-law obligation"
+      ]
+    }
+  ],
+  "source_intakes": []
 }

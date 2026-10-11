@@ -11,6 +11,7 @@ from ..auditors.models import AIFinding, AnalysisConfig, ModelSettings, Topic, U
 from ..collector.reading import ReadingState
 from ..models import Model, Signal
 from .legal_cards import LegalSourceCard, SourceCardAssessment
+from .requirement_models import NormRequirementSpec, SourceIntake
 
 Status = Literal[
     "verified_issue", "potential_issue", "rejected", "insufficient_evidence", "no_issue_observed"
@@ -77,6 +78,8 @@ class SourceRegistry(Model):
     schema_version: Literal["0.4"] = "0.4"
     sources: list[LegalSource] = Field(default_factory=list, max_length=100)
     cards: list[LegalSourceCard] = Field(default_factory=list, max_length=100)
+    requirements: list[NormRequirementSpec] = Field(default_factory=list, max_length=200)
+    source_intakes: list[SourceIntake] = Field(default_factory=list, max_length=100)
     _source_root: Path | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
@@ -84,6 +87,15 @@ class SourceRegistry(Model):
         ids = [s.id for s in [*self.sources, *self.cards]]
         if len(ids) != len(set(ids)):
             raise ValueError("Duplicate legal source IDs")
+        requirement_ids = [r.requirement_id for r in self.requirements]
+        if len(requirement_ids) != len(set(requirement_ids)):
+            raise ValueError("Duplicate requirement IDs")
+        for requirement in self.requirements:
+            conditions = [c.condition_id for c in requirement.conditions]
+            if len(conditions) != len(set(conditions)):
+                raise ValueError("Duplicate condition IDs")
+        if len({i.source_card_id for i in self.source_intakes}) != len(self.source_intakes):
+            raise ValueError("Duplicate source intake")
         return self
 
 
