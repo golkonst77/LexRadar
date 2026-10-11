@@ -148,4 +148,3 @@ missing, changed or inconsistent. A consistent binding remains
 verification and claim authentication false. Editable research conclusions cannot
 change `revision_check`, establish a violation, produce GO or release client text.
 An omitted context remains compatible with earlier registries and outputs.
-

@@ -220,13 +220,11 @@ def check_condition(condition, finding, independent_row, research, policies=()):
         return ConditionCheck(
             condition_id=condition.condition_id,
             predicate=condition.predicate,
-            status="supported_static_fact" if policies else "unknown",
+            status="supported_static_fact",
             fact_ids=[p.id for p in policies],
             evidence_ids=sorted({p.evidence_id for p in policies}),
             reason="Saved policy text independently reproduced; reading scope is in observations; "
-            "live accessibility, completeness of the site and legal sufficiency unknown"
-            if policies
-            else "No bounded policy text reproduced; no inference of website-wide absence",
+            "live accessibility, completeness of the site and legal sufficiency unknown",
         )
     if (
         research
