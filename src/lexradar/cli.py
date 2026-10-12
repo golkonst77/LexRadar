@@ -194,6 +194,6 @@ def main() -> None:
     report = build_report(AuditInput.model_validate_json(args.input.read_text(encoding="utf-8")))
     payload = report.model_dump_json(indent=2)
     if args.output:
-        args.output.write_text(payload + "\n", encoding="utf-8")
+        args.output.write_text(payload + "\n", encoding="utf-8", newline="\n")
     else:
         print(payload)
