@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import AwareDatetime, Field, HttpUrl, model_validator
 
 from ..models import Model
+from .evidence_limits import MAX_PACKET_BYTES
 
 
 class Topic(StrEnum):
@@ -40,7 +41,7 @@ class AnalysisConfig(Model):
     timeout_seconds: float = Field(default=30, ge=0.1, le=120, allow_inf_nan=False)
     retries: int = Field(default=1, ge=0, le=3)
     max_backoff_seconds: float = Field(default=2, ge=0, le=10, allow_inf_nan=False)
-    max_input_bytes: int = Field(default=200_000, ge=1024, le=2_000_000)
+    max_input_bytes: int = Field(default=200_000, ge=1024, le=MAX_PACKET_BYTES, strict=True)
     max_response_bytes: int = Field(default=1_000_000, ge=1024, le=2_000_000)
 
 

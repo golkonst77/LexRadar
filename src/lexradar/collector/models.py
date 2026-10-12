@@ -18,6 +18,8 @@ class Limits(Model):
     max_redirects: int = Field(default=3, ge=0, le=10)
     max_links_per_page: int = Field(default=200, ge=1, le=1000)
     max_pdf_pages: int = Field(default=100, ge=1, le=500)
+    max_pdf_page_chars: int = Field(default=100_000, ge=1, le=100_000)
+    max_pdf_total_chars: int = Field(default=1_000_000, ge=1, le=1_000_000)
 
 
 SCREENSHOT_NOTICE = (

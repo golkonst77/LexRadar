@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..auditors.evidence import EvidencePacket, load_packet
+from ..auditors.evidence import EvidencePacket, load_packet, validate_packet_limit
 from ..auditors.models import AnalysisReport
 from .materials import inventory
 from .models import Material, SourceRegistry, VerifierConfig
@@ -24,6 +24,7 @@ def entity_refs(packet: EvidencePacket) -> dict[str, dict]:
 
 
 def wrap(base: EvidencePacket, value: dict, maximum: int) -> EvidencePacket:
+    validate_packet_limit(maximum)
     payload = canonical(value)
     if len(payload.encode()) > maximum:
         raise ValueError("Verifier packet exceeds input limit; no silent truncation")

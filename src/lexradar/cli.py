@@ -141,6 +141,9 @@ def main() -> None:
         parser.add_argument("--min-delay", type=float, default=2)
         parser.add_argument("--max-requests", type=int, default=64)
         parser.add_argument("--max-duration", type=float, default=300)
+        parser.add_argument("--max-pdf-pages", type=int, default=100)
+        parser.add_argument("--max-pdf-page-chars", type=int, default=100_000)
+        parser.add_argument("--max-pdf-total-chars", type=int, default=1_000_000)
         args = parser.parse_args(sys.argv[2:])
         result = collect(
             args.url,
@@ -149,6 +152,9 @@ def main() -> None:
                 max_pages=args.max_pages,
                 max_documents=args.max_documents,
                 timeout_seconds=args.timeout,
+                max_pdf_pages=args.max_pdf_pages,
+                max_pdf_page_chars=args.max_pdf_page_chars,
+                max_pdf_total_chars=args.max_pdf_total_chars,
             ),
             crawl_options=CrawlOptions(
                 min_delay_seconds=args.min_delay,

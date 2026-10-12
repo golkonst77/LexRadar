@@ -11,6 +11,7 @@ from playwright.sync_api import sync_playwright
 
 from .artifacts import ArtifactStore, verify_integrity
 from .crawl import CrawlOptions, CrawlSession
+from .document_priority import document_hints, document_sort_key
 from .extract import DOCUMENT_EXTENSIONS, DOM_SCRIPT, categories, entities
 from .models import (
     CollectedEvidence,
@@ -84,7 +85,7 @@ def _collect(url, limits, allowed, store, session):
     result = CollectionResult(target_url=url, started_at=now(), limits=limits, origin=acquisition)
     queue = deque([url])
     seen = {url}
-    document_urls = set()
+    document_urls: dict[str, list[str]] = {}
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             executable_path=os.environ.get("LEXRADAR_CHROMIUM_PATH"),
@@ -234,7 +235,11 @@ def _collect(url, limits, allowed, store, session):
                         page_record.forms.append(observation)
                     links = sorted(
                         dom["links"],
-                        key=lambda x: (not bool(categories(x["text"] + x["url"])), x["url"]),
+                        key=lambda x: (
+                            document_sort_key(x["url"], document_hints(x["url"], x["text"]))[0],
+                            not bool(categories(x["text"] + x["url"])),
+                            x["url"],
+                        ),
                     )
                     for link in links[: limits.max_links_per_page]:
                         try:
@@ -246,7 +251,12 @@ def _collect(url, limits, allowed, store, session):
                             )
                             if is_document:
                                 page_record.document_links.append(target)
-                                document_urls.add(target)
+                                hints = document_hints(
+                                    target, link["text"], page_record.title + " " + current
+                                )
+                                document_urls[target] = sorted(
+                                    set(document_urls.get(target, [])) | set(hints)
+                                )
                             elif target not in seen and len(seen) < limits.max_pages * 10:
                                 seen.add(target)
                                 queue.append(target)
@@ -273,7 +283,19 @@ def _collect(url, limits, allowed, store, session):
                     close()
                 except BrowserError as exc:
                     result.warnings.append(f"Browser cleanup failed: {str(exc)[:300]}")
-    pdf_urls = [u for u in sorted(document_urls) if urlsplit(u).path.lower().endswith(".pdf")]
+    pdf_urls = sorted(
+        (u for u in document_urls if urlsplit(u).path.lower().endswith(".pdf")),
+        key=lambda u: document_sort_key(u, document_urls[u]),
+    )
+    selected = set(pdf_urls[: limits.max_documents])
+    for candidate in pdf_urls:
+        session.event(
+            "pdf_priority",
+            url=candidate,
+            hints=document_urls[candidate],
+            selected=candidate in selected,
+            reason="selected_by_disclosure_hints" if candidate in selected else "document_limit",
+        )
     if len(pdf_urls) > limits.max_documents:
         result.warnings.append("PDF download limit reached")
     for current in pdf_urls[: limits.max_documents]:
@@ -317,6 +339,8 @@ def _collect(url, limits, allowed, store, session):
                 store.root / artifact.path,
                 limits.max_pdf_pages,
                 min(limits.timeout_seconds, session.remaining()),
+                limits.max_pdf_page_chars,
+                limits.max_pdf_total_chars,
             )
             document.reading = extracted.reading
             document.reading.original_saved = True
