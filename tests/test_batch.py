@@ -269,7 +269,11 @@ def test_whole_worker_timeout_kills_descendant(tmp_path, detached):
     pid = int(pidfile.read_text())
     for _ in range(30):
         path = Path(f"/proc/{pid}/stat")
-        if not path.exists() or path.read_text().split()[2] == "Z":
+        try:
+            status = path.read_text().rsplit(")", 1)[1].split()[0]
+        except FileNotFoundError:
+            break  # Process disappeared during inspection: successful termination.
+        if status == "Z":
             break
         time.sleep(0.01)
     else:
