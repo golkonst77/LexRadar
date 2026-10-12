@@ -205,7 +205,9 @@ def rank(primary, policies, collection=None, identities=()):
             reading = item.get("reading", {})
             if reading.get("extraction_state") == "unknown" and not item.get("extraction_status"):
                 continue
-            if not reading.get("text_coverage_complete", False):
+            if reading.get("extraction_state") in {"partial", "failed"} or item.get(
+                "extraction_status"
+            ) in {"visual_review_required", "failed"}:
                 reading_gaps.append(
                     {
                         "evidence_id": item.get("evidence_id"),
