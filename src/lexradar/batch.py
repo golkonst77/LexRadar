@@ -28,6 +28,8 @@ class BatchOptions(Model):
     site_timeout: float = Field(default=180, ge=1, le=900, allow_inf_nan=False)
     max_pages: int = Field(default=3, ge=1, le=10)
     max_documents: int = Field(default=2, ge=0, le=10)
+    max_file_bytes: int = Field(default=5_000_000, ge=1024, le=20_000_000)
+    max_total_bytes: int = Field(default=50_000_000, ge=1024, le=200_000_000)
     max_requests: int = Field(default=16, ge=1, le=64)
     crawl_duration: float = Field(default=60, ge=1, le=300, allow_inf_nan=False)
     min_delay: float = Field(default=2, ge=2, le=60, allow_inf_nan=False)
@@ -194,6 +196,22 @@ def rank(primary, policies, collection=None, identities=()):
     from .screening import signals
 
     found = signals(primary, policies, collection, identities)
+    reading_gaps = []
+    if collection:
+        for item in [*collection.get("pages", []), *collection.get("documents", [])]:
+            reading = item.get("reading", {})
+            if not reading.get("text_coverage_complete", False):
+                reading_gaps.append(
+                    {
+                        "evidence_id": item.get("evidence_id"),
+                        "url": item.get("requested_url"),
+                        "extraction_status": item.get(
+                            "extraction_status", reading.get("extraction_state")
+                        ),
+                        "reason": item.get("extraction_reason")
+                        or "Complete text reading not established",
+                    }
+                )
     reasons = [s["reason"] for s in found]
     citations = [c for s in found for c in s["citations"]]
     if found:
@@ -204,7 +222,14 @@ def rank(primary, policies, collection=None, identities=()):
     else:
         group, strength = "low_priority", 0
         reasons = ["No strong sign in examined scope; not a legally clean site"]
+    if reading_gaps:
+        if group == "low_priority":
+            group = "waiting"
+        reasons.append(
+            f"Incomplete/unread material: {len(reading_gaps)}; manual/OCR review required"
+        )
     return {
+        "reading_gaps": reading_gaps,
         "group": group,
         "evidence_strength": strength,
         "evidence_scale": "static support, not confirmed legal violation",
@@ -235,6 +260,10 @@ def _process_site(url, directory, options, registry, normative_date):
                     str(options.max_pages),
                     "--max-documents",
                     str(options.max_documents),
+                    "--max-file-bytes",
+                    str(options.max_file_bytes),
+                    "--max-total-bytes",
+                    str(options.max_total_bytes),
                     "--max-requests",
                     str(options.max_requests),
                     "--max-duration",
@@ -673,7 +702,16 @@ def batch_main(argv):
         parser.add_argument(
             "--" + name.replace("_", "-"),
             type=int
-            if name in {"workers", "max_sites", "max_pages", "max_documents", "max_requests"}
+            if name
+            in {
+                "workers",
+                "max_sites",
+                "max_pages",
+                "max_documents",
+                "max_requests",
+                "max_file_bytes",
+                "max_total_bytes",
+            }
             else float,
             default=field.default,
         )

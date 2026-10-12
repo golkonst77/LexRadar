@@ -4,7 +4,7 @@ import os
 from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from playwright.sync_api import Error as BrowserError
 from playwright.sync_api import sync_playwright
@@ -49,6 +49,22 @@ def finalize_evidence(evidence: CollectedEvidence) -> None:
         evidence.observed_fact = "No artifacts captured; reason recorded without assumptions"
 
 
+def document_priority(description):
+    """Stable preference for legal documents, not a legal/commercial ranking."""
+    value = unquote(description).casefold()
+    if any(
+        token in value
+        for token in ("privacy", "personal-data", "pdn", "пдн", "персональ", "personalnykh")
+    ):
+        return 0
+    if any(
+        token in value
+        for token in ("соглас", "consent", "сторонних оператор", "storonnikh", "reestr_pdn")
+    ):
+        return 1
+    return 2
+
+
 def collect(
     url: str,
     output: Path,
@@ -85,6 +101,7 @@ def _collect(url, limits, allowed, store, session):
     queue = deque([url])
     seen = {url}
     document_urls = set()
+    document_priorities = {}
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             executable_path=os.environ.get("LEXRADAR_CHROMIUM_PATH"),
@@ -247,6 +264,10 @@ def _collect(url, limits, allowed, store, session):
                             if is_document:
                                 page_record.document_links.append(target)
                                 document_urls.add(target)
+                                score = document_priority(link["text"] + " " + target)
+                                document_priorities[target] = min(
+                                    document_priorities.get(target, score), score
+                                )
                             elif target not in seen and len(seen) < limits.max_pages * 10:
                                 seen.add(target)
                                 queue.append(target)
@@ -273,7 +294,11 @@ def _collect(url, limits, allowed, store, session):
                     close()
                 except BrowserError as exc:
                     result.warnings.append(f"Browser cleanup failed: {str(exc)[:300]}")
-    pdf_urls = [u for u in sorted(document_urls) if urlsplit(u).path.lower().endswith(".pdf")]
+    pdf_urls = [
+        u
+        for u in sorted(document_urls, key=lambda u: (document_priorities[u], u))
+        if urlsplit(u).path.lower().endswith(".pdf")
+    ]
     if len(pdf_urls) > limits.max_documents:
         result.warnings.append("PDF download limit reached")
     for current in pdf_urls[: limits.max_documents]:
