@@ -594,6 +594,31 @@ def test_leading_wildcard_disallow_remains_enforced(path, allowed):
     assert rules.allows("https://fixture.example" + path) is allowed
 
 
-def test_leading_wildcard_allow_does_not_create_permission():
+@pytest.mark.parametrize(
+    "path,allowed",
+    [
+        ("/", True),
+        ("/bitrix/private", False),
+        ("/bitrix/style.css", False),
+        ("/bitrix/script.js", False),
+        ("/bitrix/style.css/private", False),
+        ("/style.css", True),
+        ("/script.js", True),
+    ],
+)
+def test_leading_wildcard_allow_preserves_scoped_permissions(path, allowed):
+    rules = parse_robots(b"User-agent: *\nDisallow: *bitrix*\nAllow: *.css\nAllow: *.js\n")
+    assert rules.allows("https://fixture.example" + path) is allowed
+
+
+def test_more_specific_disallow_overrides_wildcard_allow():
+    rules = parse_robots(
+        b"User-agent: *\nDisallow: /\nAllow: *.css\nDisallow: /bitrix/private.css\n"
+    )
+    assert not rules.allows("https://fixture.example/bitrix/private.css")
+    assert rules.allows("https://fixture.example/bitrix/public.css")
+
+
+def test_malformed_allow_without_path_or_wildcard_still_fails_closed():
     with pytest.raises(ValueError, match="Invalid robots path"):
-        parse_robots(b"User-agent: *\nDisallow: /\nAllow: *public*\n")
+        parse_robots(b"User-agent: *\nDisallow: /\nAllow: malformed\n")

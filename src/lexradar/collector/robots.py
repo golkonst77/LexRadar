@@ -132,10 +132,9 @@ def parse_robots(body: bytes) -> RobotsRules:
                 except InvalidOperation as exc:
                     raise ValueError("Invalid Crawl-delay") from exc
             elif value:
-                # Conservative compatibility for deployed wildcard Disallow records:
-                # every URL path starts with /, so /*bitrix* preserves the restriction.
-                # Never normalize malformed Allow into a new permission.
-                if name == "disallow" and value.startswith("*"):
+                # Every URL path starts with /; adding it before a leading wildcard
+                # preserves matching for deployed Allow/Disallow patterns.
+                if value.startswith("*"):
                     value = "/" + value
                 if not value.startswith("/"):
                     raise ValueError("Invalid robots path")
