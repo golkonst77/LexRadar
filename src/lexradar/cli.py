@@ -9,6 +9,11 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "batch-screen":
+        from .batch import batch_main
+
+        batch_main(sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "verify-norms":
         from .verifier.requirement_cli import normative_main
 
