@@ -203,6 +203,8 @@ def rank(primary, policies, collection=None, identities=()):
                 # Legacy/synthetic manifests lacking metadata do not establish a failure.
                 continue
             reading = item.get("reading", {})
+            if reading.get("extraction_state") == "unknown" and not item.get("extraction_status"):
+                continue
             if not reading.get("text_coverage_complete", False):
                 reading_gaps.append(
                     {
