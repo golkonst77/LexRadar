@@ -138,7 +138,7 @@ def test_groups_merged_specific_agent_and_largest_delay():
         b"\xff",
         b"User-agent: LexRadar\nDisallow: /\x00",
         b"Sitemap: https://fixture.example/map",
-        b"x" * 500001,
+        pytest.param(b"x" * 500001, id="oversized-robots"),
     ],
 )
 def test_ambiguous_robots_fails_closed(body):
