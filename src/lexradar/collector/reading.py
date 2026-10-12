@@ -65,6 +65,9 @@ class StaticText(HTMLParser):
     """
 
     EXCLUDED = {"script", "style", "head", "title", "noscript", "template"}
+    # Excluded title content needs no entity decoding. RAWTEXT delivers nested
+    # delimiters intact instead of version-dependent RCDATA callback fragments.
+    CDATA_CONTENT_ELEMENTS = (*HTMLParser.CDATA_CONTENT_ELEMENTS, "title")
     VOID = {
         "area",
         "base",
@@ -96,6 +99,11 @@ class StaticText(HTMLParser):
         self.quarantined = True
 
     def handle_starttag(self, tag, attrs):
+        # Python versions differ in whether title content is delivered as data
+        # or parsed tags. Quarantine nested raw-text delimiters in either case.
+        if self.excluded and self.excluded[-1] in {"script", "style", "title"}:
+            if tag == self.excluded[-1]:
+                self.uncertain("Nested raw-text opening delimiter; suffix withheld")
         if tag not in self.VOID:
             self.open_elements.append(tag)
         if tag in self.EXCLUDED:
