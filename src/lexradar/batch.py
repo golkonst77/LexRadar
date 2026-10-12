@@ -199,6 +199,9 @@ def rank(primary, policies, collection=None, identities=()):
     reading_gaps = []
     if collection:
         for item in [*collection.get("pages", []), *collection.get("documents", [])]:
+            if not item.get("reading") and not item.get("extraction_status"):
+                # Legacy/synthetic manifests lacking metadata do not establish a failure.
+                continue
             reading = item.get("reading", {})
             if not reading.get("text_coverage_complete", False):
                 reading_gaps.append(
