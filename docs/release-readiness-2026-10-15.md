@@ -136,9 +136,11 @@ acceptance or human normative/applicability review. No client export/send in thi
 
 ## Checks performed in development
 
-23 new synthetic regressions pass, including a descendant that starts a separate
+26 new synthetic regressions pass, including a descendant that starts a separate
 process group, CLI analysis of a saved synthetic dossier, same-host concurrency,
-exclusive lock and changed normative source fingerprints. A 1000-unique-URL
+exclusive lock, changed engine/source fingerprints and orphan-worker recovery.
+Resume identifies an unfinished worker using PID start time and exact worker command
+before stopping it; an editable PID alone cannot kill an unrelated process. A 1000-unique-URL
 scheduler/files test completed all jobs in 33.12 seconds; same-plan resume in
 0.31 seconds performed no additional jobs. No network/browser/LLM was used in
 that load test; it does not establish real crawl throughput or screening recall.

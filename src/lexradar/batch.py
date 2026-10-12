@@ -100,6 +100,30 @@ def kill_descendants(pid):
             pass
 
 
+def stop_previous_worker(directory):
+    record = directory / "worker.pid.json"
+    if not record.exists():
+        return
+    safe_path(record)
+    values = json.loads(record.read_text())
+    pid = values["pid"]
+    if not isinstance(pid, int) or pid <= 1:
+        raise ValueError("Invalid saved worker PID")
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+        command_line = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+    except FileNotFoundError:
+        return
+    expected = [os.fsencode(sys.executable), b"-m", b"lexradar.batch", os.fsencode(directory)]
+    if fields[19] != values["start_ticks"] or command_line[:4] != expected:
+        return  # PID reused or unrelated process: never kill from an editable PID alone.
+    kill_descendants(pid)
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
 def run_process(argv, log, timeout, *, new_session=True):
     # The module has no __main__; invoke the same installed CLI entrypoint explicitly.
     with log.open("wb") as file:
@@ -107,6 +131,11 @@ def run_process(argv, log, timeout, *, new_session=True):
             argv, stdout=file, stderr=subprocess.STDOUT, start_new_session=new_session
         )
         try:
+            if new_session and log.name == "worker.log":
+                fields = Path(f"/proc/{process.pid}/stat").read_text().rsplit(")", 1)[1].split()
+                write_json(
+                    log.parent / "worker.pid.json", {"pid": process.pid, "start_ticks": fields[19]}
+                )
             code = process.wait(timeout=timeout)
         except BaseException:
             kill_descendants(process.pid)
@@ -393,6 +422,24 @@ def export_queue(root, state):
     safe_path(root / "review-queue.html").write_text("\n".join(body) + "</table>")
 
 
+def engine_fingerprint():
+    from importlib.metadata import version
+
+    package = Path(__file__).parent
+    files = {
+        str(p.relative_to(package)): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in package.rglob("*")
+        if p.is_file() and p.suffix in {".py", ".txt"}
+    }
+    return digest(
+        {
+            "files": files,
+            "python": sys.version,
+            "dependencies": {name: version(name) for name in ("pydantic", "pypdf", "playwright")},
+        }
+    )
+
+
 def registry_inputs(path):
     if path is None:
         return None
@@ -441,6 +488,7 @@ def run_batch(urls, output, options, *, registry=None, normative_date=None, resu
         "registry_inputs": registry_inputs(registry),
         "normative_date": normative_date,
         "llm_budget_usd": 0,
+        "engine_sha256": engine_fingerprint(),
     }
     root = safe_path(output)
     root.mkdir(parents=True, exist_ok=resume)
@@ -465,6 +513,8 @@ def run_batch(urls, output, options, *, registry=None, normative_date=None, resu
                     rf"sites/{expected}/attempt-[0-9]{{4}}", site["attempt"]
                 ):
                     raise ValueError("Unsafe resume attempt path")
+                if site.get("attempt") and site["status"] != "done":
+                    stop_previous_worker(safe_path(root / site["attempt"]))
                 if (
                     site["status"] == "done"
                     and site.get("attempt")

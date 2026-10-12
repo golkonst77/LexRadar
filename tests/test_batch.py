@@ -299,3 +299,56 @@ def test_registry_material_fingerprint_changes(tmp_path):
     original = tmp_path / "sources/originals/v1.txt"
     original.write_text("changed")
     assert batch.registry_inputs(path) != before
+
+
+def test_resume_stops_identified_orphan_worker(tmp_path):
+    import os
+
+    package = tmp_path / "lexradar"
+    package.mkdir()
+    (package / "__init__.py").write_text("")
+    (package / "batch.py").write_text("import time; time.sleep(30)")
+    attempt = tmp_path / "attempt"
+    attempt.mkdir()
+    process = subprocess.Popen(
+        [sys.executable, "-m", "lexradar.batch", str(attempt)],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(tmp_path)},
+        start_new_session=True,
+    )
+    try:
+        fields = Path(f"/proc/{process.pid}/stat").read_text().rsplit(")", 1)[1].split()
+        batch.write_json(
+            attempt / "worker.pid.json", {"pid": process.pid, "start_ticks": fields[19]}
+        )
+        batch.stop_previous_worker(attempt)
+        assert process.wait(timeout=2) == -9
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+
+
+def test_saved_pid_alone_cannot_kill_unrelated_process(tmp_path):
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        fields = Path(f"/proc/{process.pid}/stat").read_text().rsplit(")", 1)[1].split()
+        batch.write_json(
+            tmp_path / "worker.pid.json", {"pid": process.pid, "start_ticks": fields[19]}
+        )
+        batch.stop_previous_worker(tmp_path)
+        assert process.poll() is None
+    finally:
+        process.kill()
+        process.wait()
+
+
+def test_engine_change_requires_new_batch(monkeypatch, tmp_path):
+    calls = []
+    fake_worker(monkeypatch, calls)
+    urls = ["https://a.org"]
+    root = tmp_path / "run"
+    batch.run_batch(urls, root, batch.BatchOptions())
+    monkeypatch.setattr(batch, "engine_fingerprint", lambda: "different-code")
+    with pytest.raises(ValueError, match="plan changed"):
+        batch.run_batch(urls, root, batch.BatchOptions(), resume=True)
