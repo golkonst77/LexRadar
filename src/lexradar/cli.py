@@ -9,6 +9,16 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "ocr-document":
+        from .collector.ocr import ocr_main
+
+        ocr_main(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "batch-screen":
+        from .batch import batch_main
+
+        batch_main(sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "verify-norms":
         from .verifier.requirement_cli import normative_main
 
@@ -137,6 +147,8 @@ def main() -> None:
         parser.add_argument("--output", type=Path, required=True)
         parser.add_argument("--max-pages", type=int, default=10)
         parser.add_argument("--max-documents", type=int, default=10)
+        parser.add_argument("--max-file-bytes", type=int, default=5_000_000)
+        parser.add_argument("--max-total-bytes", type=int, default=50_000_000)
         parser.add_argument("--timeout", type=float, default=10)
         parser.add_argument("--min-delay", type=float, default=2)
         parser.add_argument("--max-requests", type=int, default=64)
@@ -151,6 +163,8 @@ def main() -> None:
             Limits(
                 max_pages=args.max_pages,
                 max_documents=args.max_documents,
+                max_file_bytes=args.max_file_bytes,
+                max_total_bytes=args.max_total_bytes,
                 timeout_seconds=args.timeout,
                 max_pdf_pages=args.max_pdf_pages,
                 max_pdf_page_chars=args.max_pdf_page_chars,
@@ -180,6 +194,6 @@ def main() -> None:
     report = build_report(AuditInput.model_validate_json(args.input.read_text(encoding="utf-8")))
     payload = report.model_dump_json(indent=2)
     if args.output:
-        args.output.write_text(payload + "\n", encoding="utf-8")
+        args.output.write_text(payload + "\n", encoding="utf-8", newline="\n")
     else:
         print(payload)

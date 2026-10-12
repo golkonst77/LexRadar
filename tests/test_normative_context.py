@@ -149,7 +149,10 @@ def test_complete_local_block_does_not_upgrade_damaged_page(tmp_path, damage):
         '<div id="policy"><p>' + POLICY_TEXT + "</p>",
         '<div id="policy"><p>' + POLICY_TEXT + "</span></p></div>",
         '<div id="policy"><p>' + POLICY_TEXT + "</p><script/>hidden</div>",
-        '<div id="policy"><p>' + POLICY_TEXT + "x" * 60000 + "</p></div>",
+        pytest.param(
+            '<div id="policy"><p>' + POLICY_TEXT + "x" * 60000 + "</p></div>",
+            id="truncated-policy-block",
+        ),
     ],
 )
 def test_unclosed_damaged_and_truncated_blocks_are_partial(tmp_path, body):

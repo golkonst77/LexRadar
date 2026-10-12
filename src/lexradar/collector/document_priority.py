@@ -3,8 +3,25 @@
 from urllib.parse import unquote, urlsplit
 
 DISCLOSURES = {
-    "privacy_policy": ("политик", "персональн", "privacy", "policy", "politika"),
-    "consent": ("соглас", "consent", "soglas"),
+    "privacy_policy": (
+        "политик",
+        "персональ",
+        "privacy",
+        "policy",
+        "politika",
+        "personal-data",
+        "pdn",
+        "пдн",
+        "personalnykh",
+    ),
+    "consent": (
+        "соглас",
+        "consent",
+        "soglas",
+        "сторонних оператор",
+        "storonnikh",
+        "reestr_pdn",
+    ),
     "license": ("лиценз", "license", "licence", "licenz"),
     "service_rules": ("правила", "договор", "оферт", "rules", "contract", "oferta"),
     "organization_details": ("реквизит", "инн", "огрн", "requisites", "rekvizit"),
@@ -30,4 +47,13 @@ def document_hints(url: str, label: str, context: str = "") -> list[str]:
 
 
 def document_sort_key(url: str, hints: list[str]):
-    return (0 if any(not h.startswith("context:") for h in hints) else 1 if hints else 2, url)
+    tier = 0 if any(not h.startswith("context:") for h in hints) else 1 if hints else 2
+    # Preserve PR #19's policy/consent preference within PR #20's broader tiers.
+    direct = [h for h in hints if not h.startswith("context:")]
+    priority = 0 if "privacy_policy" in direct else 1 if "consent" in direct else 2
+    return (tier, priority, url)
+
+
+def document_priority(description: str) -> int:
+    """Compatibility helper from PR #19; use the same discovery vocabulary."""
+    return document_sort_key("", document_hints("", unquote(description)))[1]

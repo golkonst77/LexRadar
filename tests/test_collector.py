@@ -67,6 +67,39 @@ def test_pdf_download_priority_with_opaque_name(server, tmp_path, monkeypatch):
     assert "pdf_priority" in (tmp_path / "priority/crawl/requests.jsonl").read_text()
 
 
+def test_consolidated_svg_policy_selection_and_reading_gap(server, tmp_path, monkeypatch):
+    from lexradar.batch import rank
+
+    url, policy, requests = server
+    original = Path.read_bytes
+    html = (
+        '<html><body><svg><path d="M0 0"/><rect width="2"/></svg>'
+        "<p>Email subscription after SVG</p>"
+        '<a href="/a-license.pdf">Лицензия</a>'
+        '<a href="/b-consent.pdf">Согласие</a>'
+        '<a href="/z-pdn.pdf">Политика ПДн</a>'
+        "<script>SECRET</script></body></html>"
+    ).encode()
+
+    def fixture_bytes(path):
+        return html if path == Path("tests/fixtures/collector/index.html") else original(path)
+
+    monkeypatch.setattr(Path, "read_bytes", fixture_bytes)
+    limits = Limits(max_pages=1, max_documents=1)
+    output = tmp_path / "consolidated"
+    result = collect(url, output, limits, fetcher=Fetcher(limits, policy))
+    assert result.pages[0].reading.text_coverage_complete
+    assert "Email subscription after SVG" in result.pages[0].text
+    assert "SECRET" not in result.pages[0].text
+    assert str(result.documents[0].requested_url).endswith("/z-pdn.pdf")
+    assert "/a-license.pdf" not in requests and "/b-consent.pdf" not in requests
+    row = rank({}, [], result.model_dump(mode="json"))
+    assert row["group"] == "waiting" and row["reading_gaps"]
+    assert not row["paid_work_needed"] and row["legal_status"] == "not_confirmed"
+    journal = (output / "crawl/requests.jsonl").read_text(encoding="utf-8")
+    assert '"selected": false' in journal and '"document_limit"' in journal
+
+
 class FixturePolicy(AddressPolicy):
     """Test-only exact fixture host/port; unavailable through production CLI."""
 

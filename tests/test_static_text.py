@@ -107,3 +107,15 @@ def test_incremental_parser_preserves_excluded_stack():
     parser.close()
     assert parser.parts == ["before", "after"]
     assert not parser.limitations
+
+
+@pytest.mark.parametrize("split", range(1, 57))
+def test_incremental_nested_title_quarantines_suffix(split):
+    html = "before<title>SECRET<title>SECRET</title>SECRET</title>after"
+    parser = StaticText()
+    parser.feed(html[:split])
+    parser.feed(html[split:])
+    parser.close()
+    assert "".join(parser.parts) == "before"
+    assert parser.quarantined
+    assert parser.limitations
