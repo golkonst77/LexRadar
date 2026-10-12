@@ -1,4 +1,4 @@
-"""17 saved synthetic scenarios, independently parsed; not real-site quality estimates."""
+"""18 saved synthetic scenarios, independently parsed; not real-site quality estimates."""
 
 import hashlib
 import json
@@ -83,6 +83,7 @@ CASES = [
         "waiting",
     ),
     ("broken-policy-404", FORM, "priority_review"),
+    ("broken-policy-pdf-404", FORM.replace("/policy", "/policy.pdf"), "priority_review"),
     ("policy-timeout", FORM, "waiting"),
     ("no-form-no-doc", "<p>Информационная страница</p>", "low_priority"),
     ("checkbox-gtm", '<form><input name="email"></form><script src="gtm.js"></script>', "waiting"),
@@ -121,7 +122,7 @@ def evaluate(parent, name, body):
     )
     policies = [p.model_dump(mode="json") for p in policy_observations(research)]
     records = collection.model_dump(mode="json")
-    if name in {"broken-policy-404", "policy-timeout"}:
+    if name in {"broken-policy-404", "broken-policy-pdf-404", "policy-timeout"}:
         records["pages"].append(
             {
                 "requested_url": "https://clinic.example/policy",
@@ -130,8 +131,18 @@ def evaluate(parent, name, body):
                 "captured_at": NOW.isoformat(),
             }
         )
+        if name == "broken-policy-pdf-404":
+            records["pages"].pop()
+            records["documents"] = [
+                {
+                    "requested_url": "https://clinic.example/policy.pdf",
+                    "evidence_id": "failed-pdf",
+                    "http_status": 404,
+                }
+            ]
+            records["evidence"].append({"id": "failed-pdf", "captured_at": NOW.isoformat()})
         (root / "screening-synthetic-http-records.json").write_text(json.dumps(records, indent=2))
-    if name in {"broken-policy-404", "policy-timeout"}:
+    if name in {"broken-policy-404", "broken-policy-pdf-404", "policy-timeout"}:
         manifest = root / "screening-synthetic-http-records.json"
         records["manifest_path"] = manifest.name
         records["manifest_sha256"] = hashlib.sha256(manifest.read_bytes()).hexdigest()

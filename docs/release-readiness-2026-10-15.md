@@ -157,7 +157,7 @@ invalidate reuse rather than silently passing an empty snapshot comparison.
 
 Screening now also checks positive, bounded contradictions: explicit operator and
 executor INN difference (role clarification, not a violation), full policy denying
-phone collection versus a fully inspected telephone form, and a recorded HTTP
+phone collection versus a fully inspected telephone form, and a recorded HTML/PDF HTTP
 404/410 for a policy link in that complete form. HTTP metadata is bound to the saved
 manifest hash. Timeouts, partial docs/forms, biographies and multiple organization
 mentions cannot independently create these priorities. Known explicit multi-site
@@ -168,9 +168,9 @@ Required-information absence remains deferred: Collector does not establish the
 website denominator, actual obligated person or applicable obligation. No rule
 pretends that three collected pages establish sufficient absence coverage.
 
-17 saved synthetic cases are parsed by the existing primary/independent readers.
+18 saved synthetic cases are parsed by the existing primary/independent readers.
 The expected review labels and known limitations are retained in tests/test_screening.py.
-15 controlled cases match their labels. Two challenge cases expose a known miss
+16 controlled cases match their labels. Two challenge cases expose a known miss
 (paraphrased phone denial) and a false priority (related domains explained without
 recognized scope wording). These are not real-site precision/recall estimates.
 The source wording/role uncertainty goes to second pass; no violation/paid need

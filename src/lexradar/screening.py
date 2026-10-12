@@ -119,10 +119,24 @@ def signals(primary, policies, collection=None, identities=()):
             continue
         if collection and collection.get("manifest_sha256"):
             for link in form.get("policy_links", []):
-                attempts = [p for p in collection.get("pages", []) if p["requested_url"] == link]
+                attempts = [
+                    p
+                    for p in [*collection.get("pages", []), *collection.get("documents", [])]
+                    if p["requested_url"] == link
+                ]
                 if not attempts or any(p.get("http_status") not in {404, 410} for p in attempts):
                     continue
                 for page in attempts:
+                    captured = page.get("captured_at") or next(
+                        (
+                            e["captured_at"]
+                            for e in collection.get("evidence", [])
+                            if e["id"] == page["evidence_id"]
+                        ),
+                        None,
+                    )
+                    if not captured:
+                        continue
                     if page["requested_url"] == link and page.get("http_status") in {404, 410}:
                         add(
                             "linked_policy_http_error",
@@ -134,7 +148,7 @@ def signals(primary, policies, collection=None, identities=()):
                                     "evidence_id": page["evidence_id"],
                                     "source_url": page["requested_url"],
                                     "http_status": page["http_status"],
-                                    "captured_at": page["captured_at"],
+                                    "captured_at": captured,
                                     "artifact_path": collection.get(
                                         "manifest_path", "collection.json"
                                     ),
