@@ -397,3 +397,18 @@ def test_normative_failure_does_not_discard_completed_screening(monkeypatch, tmp
     assert result["group"] != "technical_retry"
     assert result["normative_status"] == "failed_with_gap"
     assert "primary" in result["completed_stages"]
+
+
+def test_missing_registry_is_gap_not_batch_startup_failure(monkeypatch, tmp_path):
+    calls = []
+    fake_worker(monkeypatch, calls)
+    state = batch.run_batch(
+        ["https://good.org"],
+        tmp_path / "run",
+        batch.BatchOptions(),
+        registry=tmp_path / "missing.json",
+        normative_date="2026-10-11",
+    )
+    assert calls == ["https://good.org/"]
+    assert state["sites"][0]["status"] == "done"
+    assert state["plan"]["registry_inputs"]["normative_gap"]

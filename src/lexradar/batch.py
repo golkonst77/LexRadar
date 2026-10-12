@@ -440,7 +440,15 @@ def registry_inputs(path):
     from .verifier.legal_cards import read_local
     from .verifier.registry import load_registry
 
-    registry, sha = load_registry(path)
+    try:
+        registry, sha = load_registry(path)
+    except (OSError, ValueError) as exc:
+        # Invalid/missing normative data must not block technical screening.
+        try:
+            raw_fingerprint = hashlib.sha256(read_local(path)).hexdigest()
+        except (OSError, ValueError):
+            raw_fingerprint = "unavailable_or_oversized"
+        return {"registry": raw_fingerprint, "normative_gap": type(exc).__name__}
     files = {card.original_path for card in registry.cards}
     files.update(m.path for c in registry.research_contexts for m in c.materials)
     result = {"registry": sha}

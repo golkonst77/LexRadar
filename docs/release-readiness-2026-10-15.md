@@ -149,7 +149,8 @@ Chromium cannot be installed/used for that suite in the current restricted worke
 
 ## PR #17 follow-up review — 12 October
 
-Fixed: normative-stage failure no longer discards successful collection/analysis;
+Fixed: missing/invalid normative registry no longer blocks batch startup;
+normative-stage failure no longer discards successful collection/analysis;
 it remains a recorded normative gap. An existing interrupted attempt directory
 is preserved and a fresh number allocated. Missing saved attempt directories
 invalidate reuse rather than silently passing an empty snapshot comparison.
