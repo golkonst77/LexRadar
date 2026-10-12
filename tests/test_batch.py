@@ -352,3 +352,48 @@ def test_engine_change_requires_new_batch(monkeypatch, tmp_path):
     monkeypatch.setattr(batch, "engine_fingerprint", lambda: "different-code")
     with pytest.raises(ValueError, match="plan changed"):
         batch.run_batch(urls, root, batch.BatchOptions(), resume=True)
+
+
+def test_resume_preserves_uncommitted_attempt_directory(monkeypatch, tmp_path):
+    calls = []
+    fake_worker(monkeypatch, calls)
+    root = tmp_path / "run"
+    state = batch.run_batch(["https://a.org"], root, batch.BatchOptions())
+    site = state["sites"][0]
+    site["status"] = "running"
+    orphan = root / "sites" / site["id"] / "attempt-0002"
+    orphan.mkdir()
+    (orphan / "retained.txt").write_text("Interrupted before state update")
+    batch.write_json(root / "batch.json", state)
+    state = batch.run_batch(["https://a.org"], root, batch.BatchOptions(), resume=True)
+    assert state["sites"][0]["attempts"] == 3
+    assert (orphan / "retained.txt").read_text() == "Interrupted before state update"
+
+
+def test_normative_failure_does_not_discard_completed_screening(monkeypatch, tmp_path):
+    import shutil
+
+    original = batch.command
+
+    def command(args, log, timeout):
+        if args[0] == "collect":
+            shutil.copytree(
+                "examples/primary-audit/dossier", Path(args[args.index("--output") + 1])
+            )
+            log.write_text("Synthetic fixture")
+        elif args[0] == "verify-norms":
+            raise RuntimeError("Synthetic unavailable norm stage")
+        else:
+            original(args, log, timeout)
+
+    monkeypatch.setattr(batch, "command", command)
+    result = batch._process_site(
+        "https://example.org/",
+        tmp_path,
+        batch.BatchOptions(),
+        Path("examples/legal-sources/registry.json"),
+        "2026-10-11",
+    )
+    assert result["group"] != "technical_retry"
+    assert result["normative_status"] == "failed_with_gap"
+    assert "primary" in result["completed_stages"]

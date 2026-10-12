@@ -69,7 +69,7 @@ an adversarial local writer. Batch JSON is untrusted and never a legal approval.
 No LLM calls. LLM budget/spend is $0. The pipeline reuses primary-audit,
 verify-primary and optional verify-norms. No confidence/model agreement yields GO.
 
-### Ranking version 1 — deliberately narrow
+### Initial ranking (superseded by follow-up below)
 
 - priority_review: a fully read saved policy title explicitly names a different
   domain from its source. Cited evidence/bounds retained; affiliation/multisite
@@ -146,3 +146,34 @@ scheduler/files test completed all jobs in 33.12 seconds; same-plan resume in
 that load test; it does not establish real crawl throughput or screening recall.
 Ruff and formatting pass. Full browser-dependent suite is checked in GitHub CI;
 Chromium cannot be installed/used for that suite in the current restricted worker.
+
+## PR #17 follow-up review — 12 October
+
+Fixed: normative-stage failure no longer discards successful collection/analysis;
+it remains a recorded normative gap. An existing interrupted attempt directory
+is preserved and a fresh number allocated. Missing saved attempt directories
+invalidate reuse rather than silently passing an empty snapshot comparison.
+
+Screening now also checks positive, bounded contradictions: explicit operator and
+executor INN difference (role clarification, not a violation), full policy denying
+phone collection versus a fully inspected telephone form, and a recorded HTTP
+404/410 for a policy link in that complete form. HTTP metadata is bound to the saved
+manifest hash. Timeouts, partial docs/forms, biographies and multiple organization
+mentions cannot independently create these priorities. Known explicit multi-site
+scope and processing-on-behalf explanations suppress the relevant mismatch.
+All normative statuses remain research_question pending applicability/currentness.
+
+Required-information absence remains deferred: Collector does not establish the
+website denominator, actual obligated person or applicable obligation. No rule
+pretends that three collected pages establish sufficient absence coverage.
+
+17 saved synthetic cases are parsed by the existing primary/independent readers.
+The expected review labels and known limitations are retained in tests/test_screening.py.
+15 controlled cases match their labels. Two challenge cases expose a known miss
+(paraphrased phone denial) and a false priority (related domains explained without
+recognized scope wording). These are not real-site precision/recall estimates.
+The source wording/role uncertainty goes to second pass; no violation/paid need
+is asserted. Automatic coverage of PDFs/scanned policies and semantic contradictions
+remains limited. Do not select a quota or relabel cases to hide these gaps.
+
+Use [today's installation/smoke checklist](authorized-run-environment.md).

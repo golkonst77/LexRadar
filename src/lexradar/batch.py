@@ -190,52 +190,30 @@ def process_site(url, directory, options, registry, normative_date):
         }
 
 
-def rank(primary, policies):
-    """Only explicit document/site mismatch gives automatic priority; no absence inference."""
-    reasons, citations = [], []
-    host = urlsplit(primary["target_url"]).hostname if "target_url" in primary else None
-    for policy in policies:
-        host = host or urlsplit(policy["source_url"]).hostname
-        match = re.search(
-            r"политик[а-я\s]*конфиденциальности\s+интернет-сайта\s+([a-z0-9.-]+\.[a-z]{2,})",
-            policy["text"].lower(),
-        )
-        if policy["reading_completeness"] == "complete" and match and host:
-            named = match.group(1).rstrip(".").removeprefix("www.")
-            if named != host.removeprefix("www."):
-                reasons.append(
-                    "Complete saved policy title names another domain; review scope/roles"
-                )
-                citations.append(
-                    {
-                        k: policy[k]
-                        for k in (
-                            "evidence_id",
-                            "source_url",
-                            "artifact_path",
-                            "artifact_sha256",
-                            "block",
-                        )
-                    }
-                )
-    if reasons:
-        group, strength = "priority_review", 60
+def rank(primary, policies, collection=None, identities=()):
+    from .screening import signals
+
+    found = signals(primary, policies, collection, identities)
+    reasons = [s["reason"] for s in found]
+    citations = [c for s in found for c in s["citations"]]
+    if found:
+        group, strength = "priority_review", max(s["evidence_strength"] for s in found)
     elif primary.get("forms") or policies:
         group, strength = "waiting", 20
-        reasons.append(
-            "Saved form/document exists; no strong mismatch established in bounded scope"
-        )
+        reasons = ["Form/document observed; no strong supported signal in bounded scope"]
     else:
         group, strength = "low_priority", 0
-        reasons.append("No strong supported sign found in examined scope; not a legally clean site")
+        reasons = ["No strong sign in examined scope; not a legally clean site"]
     return {
         "group": group,
         "evidence_strength": strength,
-        "evidence_scale": "static research support 0-100, not probability or confirmed violation",
-        "commercial_fit": 40 if citations else 10 if primary.get("forms") else 0,
+        "evidence_scale": "static support, not confirmed legal violation",
+        "commercial_fit": 40 if found else 10 if primary.get("forms") else 0,
         "commercial_scale": "conditional documents/specification fit, not willingness to pay",
         "reasons": reasons,
         "citations": citations,
+        "signals": found,
+        "deferred_signals": ["Required-information absence: coverage/person/norm not established"],
         "paid_work_needed": False,
         "legal_status": "not_confirmed",
     }
@@ -308,13 +286,22 @@ def _process_site(url, directory, options, registry, normative_date):
                     ],
                 )
             )
+        normative_errors = []
         for stage, args in stages_args:
             remaining = options.site_timeout - (time.monotonic() - started)
             if remaining <= 0:
                 raise subprocess.TimeoutExpired(stage, options.site_timeout)
-            command(args, directory / f"{stage}.log", remaining)
+            try:
+                command(args, directory / f"{stage}.log", remaining)
+            except Exception as exc:
+                if stage != "normative":
+                    raise
+                normative_errors.append(type(exc).__name__)
+                continue
             stages.append(stage)
-        collection = json.loads((directory / "dossier/collection.json").read_text())
+        collection_bytes = (directory / "dossier/collection.json").read_bytes()
+        collection = json.loads(collection_bytes)
+        collection["manifest_sha256"] = hashlib.sha256(collection_bytes).hexdigest()
         primary = json.loads((directory / "primary/audit.json").read_text())
         available = any(e["available"] for e in collection["evidence"])
         if not available:
@@ -336,12 +323,19 @@ def _process_site(url, directory, options, registry, normative_date):
             max_input_bytes=2_000_000,
         )
         policies = [p.model_dump(mode="json") for p in policy_observations(research)]
-        result = rank(primary, policies)
+        from .screening import identity_statements
+
+        result = rank(primary, policies, collection, identity_statements(research))
         result.update(
             completed_stages=stages,
             technical_status="partial",
             coverage="bounded saved material only; entire site not examined",
-            normative_status="unverified_research_only" if registry else "not_requested",
+            normative_status="failed_with_gap"
+            if normative_errors
+            else "unverified_research_only"
+            if registry
+            else "not_requested",
+            normative_errors=normative_errors,
         )
         write_json(directory / "screening.json", result)
         return result
@@ -518,7 +512,10 @@ def run_batch(urls, output, options, *, registry=None, normative_date=None, resu
                 if (
                     site["status"] == "done"
                     and site.get("attempt")
-                    and snapshot(root / site["attempt"]) != site["files"]
+                    and (
+                        not (root / site["attempt"]).is_dir()
+                        or snapshot(root / site["attempt"]) != site["files"]
+                    )
                 ):
                     site["status"] = "pending"
                     site["result"] = {
@@ -559,9 +556,12 @@ def run_batch(urls, output, options, *, registry=None, normative_date=None, resu
                     host = urlsplit(site["url"]).hostname
                     if len(active) >= options.workers or host in hosts:
                         continue
-                    site["attempts"] += 1
-                    site["attempt"] = f"sites/{site['id']}/attempt-{site['attempts']:04d}"
-                    directory = safe_path(root / site["attempt"])
+                    while True:
+                        site["attempts"] += 1
+                        site["attempt"] = f"sites/{site['id']}/attempt-{site['attempts']:04d}"
+                        directory = safe_path(root / site["attempt"])
+                        if not directory.exists():
+                            break
                     directory.mkdir(parents=True, exist_ok=False)
                     site["status"] = "running"
                     write_json(path, state)
