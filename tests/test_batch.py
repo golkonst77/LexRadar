@@ -412,3 +412,62 @@ def test_missing_registry_is_gap_not_batch_startup_failure(monkeypatch, tmp_path
     assert calls == ["https://good.org/"]
     assert state["sites"][0]["status"] == "done"
     assert state["plan"]["registry_inputs"]["normative_gap"]
+
+
+def test_host_pacing_across_jobs_and_www_alias(monkeypatch, tmp_path):
+    starts = []
+
+    def worker(url, directory, *args):
+        starts.append(time.monotonic())
+        journal = directory / "dossier/crawl"
+        journal.mkdir(parents=True)
+        (journal / "requests.jsonl").write_text(
+            json.dumps({"event": "delay", "interval_seconds": 2.2}) + "\n"
+        )
+        return {"group": "waiting", "reasons": ["synthetic"]}
+
+    monkeypatch.setattr(batch, "process_site", worker)
+    batch.run_batch(
+        ["https://a.org/1", "https://www.a.org/2"], tmp_path / "run", batch.BatchOptions(workers=2)
+    )
+    assert starts[1] - starts[0] >= 2.2
+
+
+def test_resume_keeps_host_crawl_delay(monkeypatch, tmp_path):
+    calls = []
+
+    def worker(url, directory, *args):
+        calls.append(time.monotonic())
+        journal = directory / "dossier/crawl"
+        journal.mkdir(parents=True)
+        (journal / "requests.jsonl").write_text(
+            json.dumps({"event": "delay", "interval_seconds": 2.2}) + "\n"
+        )
+        return {"group": "technical_retry", "reasons": ["synthetic"]}
+
+    monkeypatch.setattr(batch, "process_site", worker)
+    root = tmp_path / "run"
+    batch.run_batch(["https://a.org"], root, batch.BatchOptions())
+    batch.run_batch(["https://a.org"], root, batch.BatchOptions(), resume=True)
+    assert calls[1] - calls[0] >= 2.2
+
+
+def test_excessive_host_delay_deferred_without_request(monkeypatch, tmp_path):
+    calls = []
+
+    def worker(url, directory, *args):
+        calls.append(url)
+        journal = directory / "dossier/crawl"
+        journal.mkdir(parents=True)
+        (journal / "requests.jsonl").write_text(
+            json.dumps({"event": "delay", "interval_seconds": 3600}) + "\n"
+        )
+        return {"group": "waiting", "reasons": ["synthetic"]}
+
+    monkeypatch.setattr(batch, "process_site", worker)
+    state = batch.run_batch(
+        ["https://a.org/1", "https://a.org/2"], tmp_path / "run", batch.BatchOptions(workers=2)
+    )
+    assert len(calls) == 1
+    assert state["sites"][1]["result"]["group"] == "technical_retry"
+    assert state["sites"][1]["attempts"] == 0

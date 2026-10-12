@@ -463,6 +463,28 @@ def registry_inputs(path):
     return result
 
 
+def host_key(url):
+    return (urlsplit(url).hostname or "").removeprefix("www.")
+
+
+def host_interval(directory, options):
+    journal = safe_path(directory / "dossier/crawl/requests.jsonl")
+    delay = options.min_delay
+    if journal.is_file():
+        if journal.stat().st_size > 1_000_000:
+            raise ValueError("Crawl journal limit; inspect pacing before retry")
+        for line in journal.read_text().splitlines():
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue  # A terminated append can leave a final incomplete line.
+            if row.get("event") == "delay":
+                value = row.get("interval_seconds")
+                if isinstance(value, (float, int)) and 0 <= value < float("inf"):
+                    delay = max(delay, value)
+    return delay
+
+
 def run_batch(urls, output, options, *, registry=None, normative_date=None, resume=False):
     normalized, invalid = [], set()
     for url in urls:
@@ -558,11 +580,40 @@ def run_batch(urls, output, options, *, registry=None, normative_date=None, resu
         export_queue(root, state)
         pending = [s for s in state["sites"] if s["status"] != "done"]
         active, hosts = {}, set()
+        cooldowns = {}
+        for site in state["sites"]:
+            if site.get("attempt"):
+                interval = host_interval(safe_path(root / site["attempt"]), options)
+                finished = (
+                    datetime.fromisoformat(site["finished_at"])
+                    if site.get("finished_at")
+                    else datetime.now(UTC)
+                )
+                remaining = max(0, interval - (datetime.now(UTC) - finished).total_seconds())
+                key = host_key(site["url"])
+                cooldowns[key] = max(cooldowns.get(key, 0), time.monotonic() + remaining)
         with concurrent.futures.ThreadPoolExecutor(max_workers=options.workers) as pool:
             while pending or active:
                 for site in list(pending):
-                    host = urlsplit(site["url"]).hostname
-                    if len(active) >= options.workers or host in hosts:
+                    host = host_key(site["url"])
+                    remaining_pace = cooldowns.get(host, 0) - time.monotonic()
+                    if remaining_pace > options.site_timeout:
+                        site["status"] = "retry"
+                        site["result"] = {
+                            "group": "technical_retry",
+                            "reasons": [
+                                "Host pacing exceeds site budget; no request sent; retry later"
+                            ],
+                        }
+                        pending.remove(site)
+                        write_json(path, state)
+                        export_queue(root, state)
+                        continue
+                    if (
+                        len(active) >= options.workers
+                        or host in hosts
+                        or time.monotonic() < cooldowns.get(host, 0)
+                    ):
                         continue
                     while True:
                         site["attempts"] += 1
@@ -579,6 +630,9 @@ def run_batch(urls, output, options, *, registry=None, normative_date=None, resu
                     active[future] = (site, host)
                     hosts.add(host)
                     pending.remove(site)
+                if not active:
+                    time.sleep(0.1)
+                    continue
                 completed, _ = concurrent.futures.wait(
                     active, return_when=concurrent.futures.FIRST_COMPLETED
                 )
@@ -599,6 +653,9 @@ def run_batch(urls, output, options, *, registry=None, normative_date=None, resu
                         "retry" if site["result"]["group"] == "technical_retry" else "done"
                     )
                     site["finished_at"] = datetime.now(UTC).isoformat()
+                    cooldowns[host] = time.monotonic() + host_interval(
+                        safe_path(root / site["attempt"]), options
+                    )
                     hosts.remove(host)
                     write_json(path, state)
                     export_queue(root, state)

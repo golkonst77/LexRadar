@@ -178,3 +178,8 @@ is asserted. Automatic coverage of PDFs/scanned policies and semantic contradict
 remains limited. Do not select a quota or relabel cases to hide these gaps.
 
 Use [today's installation/smoke checklist](authorized-run-environment.md).
+
+Cross-job pacing is also enforced: consecutive jobs/retries use the recorded maximum
+Crawl-delay (at least min-delay), including resume; www/non-www share a load slot.
+Other aliases remain an input-review limitation. A pacing wait longer than the site
+budget is deferred as technical_retry without sending a request, not silently ignored.
