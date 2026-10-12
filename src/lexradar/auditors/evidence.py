@@ -10,10 +10,20 @@ from pydantic import ValidationError
 from ..collector.artifacts import verify_integrity
 from ..collector.models import CollectionResult
 from ..collector.text_integrity import recheck_text
+from .evidence_limits import MAX_PACKET_BYTES
 
 
 class DossierError(ValueError):
     pass
+
+
+def validate_packet_limit(max_bytes: int) -> None:
+    if (
+        isinstance(max_bytes, bool)
+        or not isinstance(max_bytes, int)
+        or not 1 <= max_bytes <= MAX_PACKET_BYTES
+    ):
+        raise DossierError(f"Packet limit must be an integer in 1..{MAX_PACKET_BYTES} bytes")
 
 
 @dataclass(frozen=True)
@@ -26,6 +36,7 @@ class EvidencePacket:
 
 
 def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
+    validate_packet_limit(max_bytes)
     root = root.resolve()
     manifest = root / "collection.json"
     if manifest.is_symlink() or not manifest.is_file() or manifest.stat().st_size > 20_000_000:
@@ -118,8 +129,12 @@ def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
         ensure_ascii=False,
         sort_keys=True,
     )
-    if len(payload.encode()) > max_bytes:
-        raise DossierError("Evidence packet exceeds input limit; no silent truncation")
+    actual_bytes = len(payload.encode("utf-8"))
+    if actual_bytes > max_bytes:
+        raise DossierError(
+            f"Evidence packet exceeds input limit: {actual_bytes} > {max_bytes} bytes; "
+            "no silent truncation"
+        )
     return EvidencePacket(
         data,
         payload,

@@ -2,6 +2,7 @@
 
 import hashlib
 import io
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -70,12 +71,19 @@ def extract_pdf(path: Path, max_pages: int, timeout: float) -> tuple[str | None,
 
 
 def worker() -> None:
-    import resource
-
     from pypdf import PdfReader
 
-    resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
-    resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
+    if os.name == "posix":
+        import resource
+
+        resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
+        resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
+    elif os.name == "nt":
+        from .worker_limits import limit_windows_worker
+
+        limit_windows_worker()
+    else:
+        raise ValueError("Unsupported PDF worker resource controls")
     path = Path(sys.argv[1])
     limit, per_page, total = (int(v) for v in sys.argv[2:5])
     with path.open("rb") as original:
@@ -95,6 +103,15 @@ def worker() -> None:
             records.append(
                 PageReading(
                     page=index, extraction_state="unread", limitations=["Page extraction limit"]
+                )
+            )
+            continue
+        if not remaining or (chunks and remaining == 1):
+            records.append(
+                PageReading(
+                    page=index,
+                    extraction_state="unread",
+                    limitations=["Total text budget exhausted; page not extracted"],
                 )
             )
             continue
@@ -159,6 +176,8 @@ def worker() -> None:
             supplied_chars=len(text),
             page_count=count,
             pages=records,
+            unread_page_ranges=[(p.page, p.page) for p in records if p.extraction_state == "unread"]
+            + ([(501, count)] if count > 500 else []),
             max_page_chars=per_page,
             max_total_chars=total,
             page_limit=limit,

@@ -388,6 +388,7 @@
             "limitations": []
           }
         ],
+        "unread_page_ranges": [],
         "max_page_chars": 100000,
         "max_total_chars": 100000,
         "page_limit": 100,

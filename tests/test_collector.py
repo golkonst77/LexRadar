@@ -44,6 +44,29 @@ def pdf_bytes(text=False):
     return output.getvalue()
 
 
+def test_pdf_download_priority_with_opaque_name(server, tmp_path, monkeypatch):
+    url, policy, requests = server
+    original = Path.read_bytes
+    html = (
+        '<html><body><a href="/a-brochure.pdf">Буклет</a>'
+        '<a href="/z999.pdf">Согласие на обработку персональных данных</a>'
+        "</body></html>"
+    ).encode()
+
+    def fixture_bytes(path):
+        if path == Path("tests/fixtures/collector/index.html"):
+            return html
+        return original(path)
+
+    monkeypatch.setattr(Path, "read_bytes", fixture_bytes)
+    limits = Limits(max_pages=1, max_documents=1, max_links_per_page=1)
+    result = collect(url, tmp_path / "priority", limits, fetcher=Fetcher(limits, policy))
+    assert len(result.documents) == 1
+    assert str(result.documents[0].requested_url).endswith("/z999.pdf")
+    assert "/z999.pdf" in requests and "/a-brochure.pdf" not in requests
+    assert "pdf_priority" in (tmp_path / "priority/crawl/requests.jsonl").read_text()
+
+
 class FixturePolicy(AddressPolicy):
     """Test-only exact fixture host/port; unavailable through production CLI."""
 

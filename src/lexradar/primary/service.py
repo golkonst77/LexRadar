@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from ..auditors.evidence import load_packet
+from ..auditors.evidence import load_packet, validate_packet_limit
 from ..collector.artifacts import verify_integrity
 from ..collector.models import SCREENSHOT_NOTICE
 from ..verifier.legal_cards import read_local
@@ -35,6 +35,7 @@ from .models import (
     StaticDeclaration,
 )
 from .stages import STAGES
+from .text_budget import allocate_blocks
 
 ENTITY_NAMES = re.compile(
     r'(?:ООО|АО|ПАО|ЗАО|ГБУЗ|ГАУЗ|ИП)\s+[«"][^»"\n]{1,150}[»"]'
@@ -101,6 +102,7 @@ class Builder:
         self.work: list[CommercialOpportunity] = []
         self.texts: list[tuple[str, Citation]] = []
         self.semantic_texts: list[tuple[str, Citation, bool]] = []
+        self.text_budget_limits: dict[str, str] = {}
         self.markup: dict[str, SavedMarkup] = {}
         self.forms: list[FormRow] = []
         self.flows: list[FlowRow] = []
@@ -248,44 +250,73 @@ class Builder:
                 parser.close()
                 self.markup[evidence.id] = parser
                 self.notes.extend(f"{evidence.id}: {reason}" for reason in parser.limitations)
-            if page.text and page.reading.provenance == "reproduced":
+            if page.reading.provenance == "reproduced":
                 parser = self.markup.get(evidence.id)
-                start = len(self.texts)
-                if parser and len(parser.regions) > 1:
+                if parser and parser.semantic_blocks:
                     # New bounded local inspection of the unchanged original, NOT a
                     # rewrite/claim of reproduction of the old strict derivative.
-                    budget = page.reading.max_total_chars
-                    for index, region in enumerate(parser.regions):
-                        text = compact(region.parts)[:budget]
-                        if text and region.end and region.end > region.start:
+                    blocks = [
+                        b
+                        for b in parser.semantic_blocks
+                        if parser.regions[b[2]].end
+                        and parser.regions[b[2]].end > parser.regions[b[2]].start
+                    ]
+                    inspected = allocate_blocks(blocks, page.reading.max_total_chars)
+                    region_texts = [
+                        (compact(region.parts), index)
+                        for index, region in enumerate(parser.regions)
+                        if region.end and region.end > region.start and compact(region.parts)
+                    ]
+                    whole_regions_fit = (
+                        sum(len(text) for text, _ in region_texts) <= page.reading.max_total_chars
+                    )
+                    if whole_regions_fit:
+                        inspected = blocks
+                        # Keep adjacent names/requisites together when nothing is omitted.
+                        full_texts = (
+                            [(page.text, None)]
+                            if len(parser.regions) == 1 and page.text
+                            else region_texts
+                        )
+                        for text, index in full_texts:
                             self.texts.append(
                                 (
                                     text,
                                     self.cite(
                                         evidence.id,
-                                        "saved_html",
+                                        "reproduced_text" if index is None else "saved_html",
                                         page=1,
-                                        span=parser.region_span(index),
+                                        span=parser.region_span(index)
+                                        if index is not None
+                                        else None,
                                     ),
                                 )
                             )
-                            budget -= len(text)
-                    self.notes.append(
-                        f"{evidence.id}: Additional partial static text inspected from original "
-                        "HTML; saved strict derivative and its reading state remain unchanged"
-                    )
-                else:
+                    for text, navigation, index in inspected:
+                        citation = self.cite(
+                            evidence.id, "saved_html", page=1, span=parser.region_span(index)
+                        )
+                        if not whole_regions_fit:
+                            self.texts.append((text, citation))
+                        self.semantic_texts.append((text, citation, navigation))
+                    if sum(len(b[0]) for b in inspected) < sum(len(b[0]) for b in blocks):
+                        reason = (
+                            "Static text budget: some semantic blocks omitted or excerpted; "
+                            f"inspected {sum(len(b[0]) for b in inspected)} of "
+                            f"{sum(len(b[0]) for b in blocks)} characters"
+                        )
+                        self.text_budget_limits[evidence.id] = reason
+                        self.notes.append(f"{evidence.id}: {reason}")
+                    if len(parser.regions) > 1:
+                        self.notes.append(
+                            f"{evidence.id}: Additional partial static text inspected "
+                            "from original "
+                            "HTML; saved strict derivative and its reading state remain unchanged"
+                        )
+                elif page.text:
                     self.texts.append(
                         (page.text, self.cite(evidence.id, "reproduced_text", page=1))
                     )
-                inspected = self.texts[start:]
-                if parser:
-                    for text, navigation, index in parser.semantic_blocks:
-                        if any(text in available for available, _ in inspected):
-                            citation = self.cite(
-                                evidence.id, "saved_html", page=1, span=parser.region_span(index)
-                            )
-                            self.semantic_texts.append((text, citation, navigation))
         for document in self.packet.data.documents:
             if document.reading.provenance == "reproduced":
                 for number, text in sorted(document.page_texts.items()):
@@ -1031,12 +1062,16 @@ class Builder:
                     reasons.append("Полнота текстового извлечения не подтверждена")
                 if eid in self.markup:
                     reasons.extend(self.markup[eid].limitations)
+                if eid in self.text_budget_limits:
+                    reasons.append(self.text_budget_limits[eid])
                 for reason in reasons:
                     note = f"{eid}: {reason}"
                     if note not in stage.limitations:
                         stage.limitations.append(note)
-                incomplete = not material.reading.text_coverage_complete or (
-                    eid in self.markup and bool(self.markup[eid].limitations)
+                incomplete = (
+                    not material.reading.text_coverage_complete
+                    or (eid in self.markup and bool(self.markup[eid].limitations))
+                    or eid in self.text_budget_limits
                 )
                 if incomplete and stage.status in {"observed", "no_issue_observed"}:
                     stage.status = "insufficient_evidence"
@@ -1051,7 +1086,8 @@ def audit_saved_dossier(
     max_input_bytes: int = 2_000_000,
 ) -> PrimaryAudit:
     """No A/B input, provider, browser, form action or client release API is accepted."""
-    if sector not in {"medical", "unknown"} or not 1000 <= max_input_bytes <= 20_000_000:
+    validate_packet_limit(max_input_bytes)
+    if sector not in {"medical", "unknown"}:
         raise ValueError("Unsupported primary configuration")
     now = as_of or datetime.now(UTC)
     if now.utcoffset() is None:

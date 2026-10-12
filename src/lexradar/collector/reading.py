@@ -4,7 +4,7 @@ import re
 from html.parser import HTMLParser
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, PositiveInt
 
 from ..models import Model
 
@@ -35,6 +35,8 @@ class ReadingState(Model):
     supplied_chars: int = Field(default=0, ge=0)
     page_count: int | None = Field(default=None, ge=1)
     pages: list[PageReading] = Field(default_factory=list, max_length=500)
+    # Inclusive ranges preserve the unread tail of documents over 500 pages.
+    unread_page_ranges: list[tuple[PositiveInt, PositiveInt]] = Field(default_factory=list)
     max_page_chars: int = Field(default=100_000, ge=1, le=100_000)
     max_total_chars: int = Field(default=1_000_000, ge=1, le=1_000_000)
     page_limit: int = Field(default=100, ge=1, le=500)

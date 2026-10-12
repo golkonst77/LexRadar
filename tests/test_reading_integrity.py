@@ -171,7 +171,10 @@ def test_page_and_total_text_caps_are_explicit(tmp_path, per_page, total):
     assert not material.reading.text_coverage_complete
     assert material.reading.supplied_chars <= total
     assert all(p.supplied_chars <= per_page for p in material.reading.pages)
-    assert all(p.original_chars > p.supplied_chars for p in material.reading.pages)
+    assert all(
+        p.extraction_state == "unread" or p.original_chars > p.supplied_chars
+        for p in material.reading.pages
+    )
 
 
 def test_mixed_text_and_scan_not_whole_text_review(tmp_path):
