@@ -3,7 +3,7 @@
   "audience": "internal_only",
   "draft_only": true,
   "dispatch_permitted": false,
-  "source_assessment_sha256": "83ad95a737c0493972e7aa8851bc86edbbb5246abd9999ea122432401e84b912",
+  "source_assessment_sha256": "664f0092b06f5b930b3a1ace5e07f709cca1834cb0adc985a9b315943e83eccf",
   "directions": [
     {
       "category": "A",

@@ -66,6 +66,22 @@ def test_balanced_html_late_disclosure_not_lost(tmp_path):
     assert any(o.stage_id == "04" and o.kind == "text_quote" for o in report.observations)
 
 
+def test_empty_strict_prefix_does_not_hide_recovered_disclosure(tmp_path):
+    root, _ = make_dossier(
+        tmp_path, "</span><p>Политика обработки персональных данных: синтетический документ.</p>"
+    )
+    report = run(root)
+    assert any(o.stage_id == "04" and o.kind == "text_quote" for o in report.observations)
+    assert not report.materials[0].reading.text_coverage_complete
+
+
+def test_complete_text_keeps_adjacent_requisites_and_reproduced_citation(tmp_path):
+    root, _ = make_dossier(tmp_path, "<p>ООО «Синтетический оператор»</p><p>ИНН 0000000000</p>")
+    report = run(root)
+    assert report.organizations[0].inn == "0000000000"
+    assert report.organizations[0].identification_sources[0].basis == "reproduced_text"
+
+
 @pytest.mark.parametrize(
     "label",
     [

@@ -271,16 +271,24 @@ class Builder:
                         sum(len(text) for text, _ in region_texts) <= page.reading.max_total_chars
                     )
                     if whole_regions_fit:
+                        inspected = blocks
                         # Keep adjacent names/requisites together when nothing is omitted.
-                        for text, index in region_texts:
+                        full_texts = (
+                            [(page.text, None)]
+                            if len(parser.regions) == 1 and page.text
+                            else region_texts
+                        )
+                        for text, index in full_texts:
                             self.texts.append(
                                 (
                                     text,
                                     self.cite(
                                         evidence.id,
-                                        "saved_html",
+                                        "reproduced_text" if index is None else "saved_html",
                                         page=1,
-                                        span=parser.region_span(index),
+                                        span=parser.region_span(index)
+                                        if index is not None
+                                        else None,
                                     ),
                                 )
                             )
@@ -299,10 +307,12 @@ class Builder:
                         )
                         self.text_budget_limits[evidence.id] = reason
                         self.notes.append(f"{evidence.id}: {reason}")
-                    self.notes.append(
-                        f"{evidence.id}: Additional partial static text inspected from original "
-                        "HTML; saved strict derivative and its reading state remain unchanged"
-                    )
+                    if len(parser.regions) > 1:
+                        self.notes.append(
+                            f"{evidence.id}: Additional partial static text inspected "
+                            "from original "
+                            "HTML; saved strict derivative and its reading state remain unchanged"
+                        )
                 elif page.text:
                     self.texts.append(
                         (page.text, self.cite(evidence.id, "reproduced_text", page=1))

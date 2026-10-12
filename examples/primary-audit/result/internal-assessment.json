@@ -2,7 +2,7 @@
   "schema_version": "internal-assessment-0.1",
   "audience": "internal_only",
   "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
-  "source_primary_sha256": "47ed0f92d5d831b8725871d5983a4685cdfe10fead26760ee8d8c9e5cf1e52dd",
+  "source_primary_sha256": "7d9958a107122bb398aa0f9ab6728fed6b9769ee2b8f715743b6730efeca4822",
   "source_primary_report": "audit.json",
   "source_primary_hash_scope": "canonical_validated_json_utf8_sorted_compact",
   "review_trust": "untrusted_no_authenticated_legal_review",
@@ -88,6 +88,7 @@
             "limitations": []
           }
         ],
+        "unread_page_ranges": [],
         "max_page_chars": 100000,
         "max_total_chars": 100000,
         "page_limit": 100,
