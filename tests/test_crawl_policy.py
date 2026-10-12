@@ -187,14 +187,12 @@ def test_real_pacing_clock_on_local_server(web, tmp_path):
 @pytest.mark.parametrize(
     "status,mime,body",
     [
-        (404, "text/plain", b"Not found"),
         (403, "text/plain", b"Forbidden"),
         (429, "text/plain", b"Slow down"),
         (500, "text/plain", b"Error"),
         (200, "text/html", b"<html>Wrong response</html>"),
         (200, "text/plain", b"Not valid robots"),
         (200, "text/plain", b"\xff"),
-        (302, "text/plain", b"/private"),
     ],
 )
 def test_robots_unavailable_blocks_all_content_no_retry(web, tmp_path, status, mime, body):
@@ -516,3 +514,111 @@ def test_total_byte_budget_includes_robots_and_stops_further_requests(web, tmp_p
         s.get(url + "next", origin(url))
     assert s.requests == count and s.finish()["stop_reason"] == "download_byte_limit"
     assert [r[0] for r in requests] == ["/robots.txt", "/"]
+
+
+@pytest.mark.parametrize("status", [404, 410])
+def test_missing_robots_allows_bounded_content_and_retains_response(web, tmp_path, status):
+    url, _, routes, requests, _ = web
+    routes["/robots.txt"] = (status, "text/html", b"Not found")
+    s = session(web, tmp_path)
+    assert s.get(url, origin(url)).status == 200
+    assert [r[0] for r in requests] == ["/robots.txt", "/"]
+    assert s.finish()["robots_status"] == "absent"
+    assert (tmp_path / "crawl/robots-response.txt").read_bytes() == b"Not found"
+    assert any(e["event"] == "robots_absent" for e in events(s))
+
+
+@pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+def test_same_origin_robots_redirect_keeps_rules_budget_and_pacing(web, tmp_path, status):
+    url, _, routes, requests, _ = web
+    routes["/robots.txt"] = (status, "text/plain", b"/robot-policy.txt")
+    routes["/robot-policy.txt"] = (
+        200,
+        "text/plain",
+        b"User-agent: *\nDisallow: /private\nCrawl-delay: 3\n",
+    )
+    s = session(web, tmp_path)
+    assert s.get(url, origin(url)).status == 200
+    with pytest.raises(CollectionError, match="robots_disallow"):
+        s.get(url + "private", origin(url))
+    assert [r[0] for r in requests] == ["/robots.txt", "/robot-policy.txt", "/"]
+    assert s.clock.sleeps == [2, 3]
+    assert s.finish()["requests_sent"] == 3
+
+
+@pytest.mark.parametrize(
+    "target", [b"http://localhost/robots.txt", b"https://other.example/robots.txt"]
+)
+def test_robots_cross_origin_redirect_stays_blocked(web, tmp_path, target):
+    url, _, routes, requests, _ = web
+    routes["/robots.txt"] = (301, "text/plain", target)
+    s = session(web, tmp_path)
+    with pytest.raises(CollectionError, match="robots_unavailable"):
+        s.get(url, origin(url))
+    assert [r[0] for r in requests] == ["/robots.txt"]
+
+
+def test_robots_redirect_loop_is_bounded(web, tmp_path):
+    url, _, routes, requests, _ = web
+    routes["/robots.txt"] = (301, "text/plain", b"/robots.txt")
+    s = session(web, tmp_path, limits=Limits(max_redirects=2))
+    with pytest.raises(CollectionError, match="robots_unavailable"):
+        s.get(url, origin(url))
+    assert len(requests) == 3
+
+
+def test_foreign_invalid_paths_do_not_remove_applicable_prohibitions():
+    rules = parse_robots(
+        b"User-agent: *\nDisallow: /private\n\n"
+        b"User-agent: GPTBot\nDisallow: *bitrix*\nCrawl-delay: oops\n\n"
+        b"User-agent: ClaudeBot\nDisallow: *bitrix*\n"
+    )
+    assert not rules.allows("https://fixture.example/private")
+    assert rules.allows("https://fixture.example/")
+
+
+def test_selected_invalid_path_still_blocks_with_foreign_groups_present():
+    with pytest.raises(ValueError, match="Invalid robots path"):
+        parse_robots(b"User-agent: *\nDisallow: malformed\nUser-agent: GPTBot\nAllow: /\n")
+
+
+def test_blank_and_comment_lines_preserve_disallow_and_delay():
+    rules = parse_robots(b"User-agent: *\n\n# comment\nDisallow: /private\n\nCrawl-delay: 4\n")
+    assert not rules.allows("https://fixture.example/private")
+    assert rules.crawl_delay == 4
+
+
+@pytest.mark.parametrize("path,allowed", [("/", True), ("/local/bitrix/file", False)])
+def test_leading_wildcard_disallow_remains_enforced(path, allowed):
+    rules = parse_robots(b"User-agent: *\nDisallow: *bitrix*\n")
+    assert rules.allows("https://fixture.example" + path) is allowed
+
+
+@pytest.mark.parametrize(
+    "path,allowed",
+    [
+        ("/", True),
+        ("/bitrix/private", False),
+        ("/bitrix/style.css", False),
+        ("/bitrix/script.js", False),
+        ("/bitrix/style.css/private", False),
+        ("/style.css", True),
+        ("/script.js", True),
+    ],
+)
+def test_leading_wildcard_allow_preserves_scoped_permissions(path, allowed):
+    rules = parse_robots(b"User-agent: *\nDisallow: *bitrix*\nAllow: *.css\nAllow: *.js\n")
+    assert rules.allows("https://fixture.example" + path) is allowed
+
+
+def test_more_specific_disallow_overrides_wildcard_allow():
+    rules = parse_robots(
+        b"User-agent: *\nDisallow: /\nAllow: *.css\nDisallow: /bitrix/private.css\n"
+    )
+    assert not rules.allows("https://fixture.example/bitrix/private.css")
+    assert rules.allows("https://fixture.example/bitrix/public.css")
+
+
+def test_malformed_allow_without_path_or_wildcard_still_fails_closed():
+    with pytest.raises(ValueError, match="Invalid robots path"):
+        parse_robots(b"User-agent: *\nDisallow: /\nAllow: malformed\n")

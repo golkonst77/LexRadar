@@ -124,7 +124,9 @@ lexradar quality-report work/benchmark --format html
 
 Collector проверяет robots.txt для LexRadar, соблюдает запреты и Crawl-delay, выполняет
 последовательные запросы с задержкой по умолчанию 2 с, общим лимитом попыток и срока обхода.
-Недоступный или неоднозначный robots.txt блокирует обход; журнал находится в `crawl/` досье.
+Robots 404/410 фиксируется как absent/no_rules; same-origin redirects ограничены прежними
+бюджетами. Прочая недоступность и неоднозначные применимые правила блокируют обход;
+журнал находится в `crawl/` досье.
 
 ```bash
 lexradar collect https://example.org/ --output work/public-pilot \
@@ -143,3 +145,19 @@ lexradar collect https://example.org/ --output work/public-pilot \
 Статические AJAX/popup/booking/ресурсные декларации: [модели, экспорт и ограничения](docs/static-data-mechanisms.md).
 
 Внутренние юридические вопросы и условные документные работы: [правила квалификации и четыре новых экспорта](docs/legal-commercial-qualification.md).
+
+### Bounded batch screening (internal only)
+
+See [release readiness and two-pass runbook](docs/release-readiness-2026-10-15.md).
+In an **authorized direct-egress Linux environment with Playwright Chromium**:
+
+```bash
+lexradar batch-screen urls.txt --output work/screening --workers 2
+lexradar batch-screen urls.txt --output work/screening --workers 2 --resume
+```
+
+Default: 3 pages, 2 PDFs, 16 requests, 60 crawl seconds, 180 seconds total/site;
+zero LLM spend. Optional `--registry` requires an explicit `--normative-date`.
+Open `review-queue.html` locally. `priority_review` is a research priority, not GO;
+`low_priority` is not a clean-site certification. Every row remains HOLD/internal.
+The initial narrow ranking needs real first-pass recall validation before launch.

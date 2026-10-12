@@ -102,7 +102,26 @@ class StaticText(HTMLParser):
             self.excluded.append(tag)
 
     def handle_startendtag(self, tag, attrs):
-        if tag in self.VOID:
+        if (
+            tag in self.VOID
+            or tag == "svg"
+            or (
+                "svg" in self.open_elements
+                and tag
+                in {
+                    "path",
+                    "rect",
+                    "circle",
+                    "ellipse",
+                    "line",
+                    "polyline",
+                    "polygon",
+                    "stop",
+                    "use",
+                }
+            )
+        ):
+            # SVG foreign content supports self-closing path/rect/etc.
             return
         # In HTML a slash does not close non-void elements (notably script).
         self.handle_starttag(tag, attrs)

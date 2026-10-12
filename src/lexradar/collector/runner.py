@@ -12,6 +12,7 @@ from playwright.sync_api import sync_playwright
 from .artifacts import ArtifactStore, verify_integrity
 from .crawl import CrawlOptions, CrawlSession
 from .document_priority import document_hints, document_sort_key
+from .document_priority import document_priority as document_priority
 from .extract import DOCUMENT_EXTENSIONS, DOM_SCRIPT, categories, entities
 from .models import (
     CollectedEvidence,
@@ -236,7 +237,7 @@ def _collect(url, limits, allowed, store, session):
                     links = sorted(
                         dom["links"],
                         key=lambda x: (
-                            document_sort_key(x["url"], document_hints(x["url"], x["text"]))[0],
+                            document_sort_key(x["url"], document_hints(x["url"], x["text"]))[:2],
                             not bool(categories(x["text"] + x["url"])),
                             x["url"],
                         ),

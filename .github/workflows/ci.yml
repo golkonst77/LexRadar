@@ -7,13 +7,24 @@ permissions:
 jobs:
   windows-pdf:
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
     steps:
+      - run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python -m pip install -e '.[dev]'
-      - run: python -m pytest -q tests/test_sprint1_coverage.py tests/test_reading_integrity.py
+      - run: python -m playwright install chromium
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: python -m pytest -q
+      - run: lexradar collect --help
+      - run: lexradar batch-screen --help
+      - run: lexradar ocr-document --help
+      - run: lexradar primary-audit examples/primary-audit/dossier --sector medical --as-of 2026-10-10T00:00:00Z --output work/windows-primary
+      - run: lexradar preflight examples/analysis-dossier --output work/windows-preflight
   check:
     runs-on: ubuntu-latest
     steps:
@@ -23,9 +34,15 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e '.[dev]'
       - run: python -m playwright install --with-deps chromium
+      - run: sudo apt-get install -y poppler-utils tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest -q
+      - name: Check consolidated CLI options without external requests
+        run: |
+          lexradar collect --help
+          lexradar batch-screen --help
+          lexradar ocr-document --help
       - run: lexradar primary-audit examples/primary-audit/dossier --sector medical --as-of 2026-10-10T00:00:00Z --output /tmp/lexradar-primary
       - run: lexradar primary-audit examples/primary-audit/incomplete/dossier --as-of 2026-10-10T00:00:00Z --output /tmp/lexradar-primary-empty
       - run: python -c "import json; a=json.load(open('/tmp/lexradar-primary/audit.json')); b=json.load(open('/tmp/lexradar-primary-empty/audit.json')); assert len(a['stages'])==len(b['stages'])==13; assert len(a['organizations'])==len(a['forms'])==2; assert not b['observations'] and not b['commercial_opportunity']; assert all(r['production_outcome']=='HOLD' and not r['audit_complete'] and not r['client_release_allowed'] and not r['automatic_send_allowed'] for r in (a,b)); assert all(not o['operator_confirmed'] for o in a['organizations'])"
