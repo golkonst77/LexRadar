@@ -67,19 +67,19 @@ def parse_robots(body: bytes) -> RobotsRules:
     text = body.decode("utf-8-sig", errors="strict")
     if any(ord(c) < 32 and c not in "\n\r\t" for c in text):
         raise ValueError("Invalid robots control character")
-    groups, agents, rules, delays, has_directive = [], [], [], [], False
+    groups, agents, directives, has_directive = [], [], [], False
     meaningful = False
 
     def finish():
-        nonlocal agents, rules, delays, has_directive
+        nonlocal agents, directives, has_directive
         if agents:
-            groups.append((agents, rules, delays))
-        agents, rules, delays, has_directive = [], [], [], False
+            groups.append((agents, directives))
+        agents, directives, has_directive = [], [], False
 
     for raw in text.splitlines():
         line = raw.split("#", 1)[0].strip()
         if not line:
-            finish()
+            # Blank/comment lines do not terminate a group (RFC 9309 section 2.2).
             continue
         meaningful = True
         if len(line) > 4000 or ":" not in line:
@@ -96,20 +96,9 @@ def parse_robots(body: bytes) -> RobotsRules:
             if not agents:
                 raise ValueError("Robots directive without user-agent")
             has_directive = True
-            if name == "crawl-delay":
-                try:
-                    delay = Decimal(value)
-                    if not delay.is_finite() or delay < 0 or delay > 86400:
-                        raise ValueError("Invalid Crawl-delay")
-                    delays.append(float(delay))
-                except InvalidOperation as exc:
-                    raise ValueError("Invalid Crawl-delay") from exc
-            elif value:
-                if not value.startswith("/"):
-                    raise ValueError("Invalid robots path")
-                rules.append((name == "allow", octets(value)))
-                if len(rules) > 10000:
-                    raise ValueError("Robots rule limit")
+            directives.append((name, value))
+            if len(directives) > 10000:
+                raise ValueError("Robots rule limit")
         # Extension directives (e.g. Sitemap) never cause another network request.
     finish()
     if meaningful and not groups:
@@ -129,8 +118,26 @@ def parse_robots(body: bytes) -> RobotsRules:
         [g for score, g in scores if score == best] if best else [g for g in groups if "*" in g[0]]
     )
     agent = PRODUCT_TOKEN if best else "*" if selected else "none"
-    return RobotsRules(
-        tuple(rule for _, rs, _ in selected for rule in rs),
-        max((d for _, _, ds in selected for d in ds), default=0),
-        agent,
-    )
+    rules, delays = [], []
+    # Validate paths/delays only in applicable groups. A malformed rule for another
+    # product cannot invalidate LexRadar's valid policy; selected ambiguity stays closed.
+    for _, directives in selected:
+        for name, value in directives:
+            if name == "crawl-delay":
+                try:
+                    delay = Decimal(value)
+                    if not delay.is_finite() or delay < 0 or delay > 86400:
+                        raise ValueError("Invalid Crawl-delay")
+                    delays.append(float(delay))
+                except InvalidOperation as exc:
+                    raise ValueError("Invalid Crawl-delay") from exc
+            elif value:
+                # Conservative compatibility for deployed wildcard Disallow records:
+                # every URL path starts with /, so /*bitrix* preserves the restriction.
+                # Never normalize malformed Allow into a new permission.
+                if name == "disallow" and value.startswith("*"):
+                    value = "/" + value
+                if not value.startswith("/"):
+                    raise ValueError("Invalid robots path")
+                rules.append((name == "allow", octets(value)))
+    return RobotsRules(tuple(rules), max(delays, default=0), agent)

@@ -12,7 +12,7 @@ alone does not work with its DNS-pinned transport.
   mandatory proxy is available, stop; do not unset it. No VPS/service deployment needed.
 - How the user can execute commands there, or an explicitly authorized access method.
   Do not paste passwords/API keys into chat or the repository.
-- 3–5 allowed public smoke URLs (not doktstom.ru); input file path and a private
+- 3–5 allowed public smoke URLs; input file path and a private
   writable output directory. Confirm permission for limited automated GET collection.
 - Start with 1 worker, approximately 4 GB RAM and disk free for bounded attempts;
   measure usage before raising to 2–4 workers. For 1000 jobs provision the documented
@@ -90,3 +90,23 @@ A successful offline browser check does not confirm network availability.
 
 P0 still open: actual authorized machine/access, Chromium+direct egress acceptance,
 small real smoke and resource observation. Current development cannot certify these.
+
+## Updating after the robots compatibility fix
+
+The four initial operator runs on 12 October stopped before content: doktstom.ru
+returned robots 404, vita-centr40.ru returned 403, scz.ru redirected, and www.scz.ru
+returned a policy containing leading-wildcard records. These are crawl diagnostics,
+not legal findings. Chromium was separately verified offline on the operator server.
+
+After checking out the reviewed fix commit, reinstall with
+`.venv/bin/python -m pip install -e .`. Preserve old run directories. Use a new output
+directory after code changes; `--resume` rejects a different engine fingerprint.
+Start with the canonical `https://www.scz.ru/` (cross-origin redirects, including
+www changes, remain blocked). A 403 remains blocked; do not retry it under a disguised
+user agent. 404/410 now record absent robots, while 200 policies retain applicable
+Disallow and Crawl-delay. Same-origin redirects use the existing network budgets.
+The operator must still inspect collection.json and original page artifacts before
+calling the real collection successful.
+
+Protocol reference: https://www.rfc-editor.org/rfc/rfc9309.html (sections 2.2, 2.3.1).
+The 403/429 and ambiguous selected-group policy is intentionally stricter.

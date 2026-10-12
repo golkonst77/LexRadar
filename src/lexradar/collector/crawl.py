@@ -10,7 +10,7 @@ from pydantic import Field
 
 from ..models import Model
 from .network import CollectionError, canonical_url, origin
-from .robots import MAX_ROBOTS_BYTES, USER_AGENT, octets, parse_robots
+from .robots import MAX_ROBOTS_BYTES, USER_AGENT, RobotsRules, octets, parse_robots
 
 
 class CrawlOptions(Model):
@@ -142,10 +142,23 @@ class CrawlSession:
                 self.origin,
                 before_request=lambda u: self._before(u, robots=True),
                 on_event=self._network_event,
-                allow_redirects=False,
+                allow_redirects=True,
                 max_file_bytes=MAX_ROBOTS_BYTES,
             )
-            if response.status != 200 or response.url != url:
+            if response.status in {404, 410}:
+                (self.output / "robots-response.txt").write_bytes(response.body)
+                self.rules = RobotsRules((), 0, "none")
+                self.robots_status = "absent"
+                self.event(
+                    "robots_absent",
+                    url=response.url,
+                    http_status=response.status,
+                    policy="no_rules",
+                    artifact="crawl/robots-response.txt",
+                    sha256=hashlib.sha256(response.body).hexdigest(),
+                )
+                return
+            if response.status != 200:
                 raise CollectionError(f"Robots HTTP {response.status}; no permission established")
             # Retain real received bytes; this is a crawl-policy artifact, not legal evidence.
             (self.output / "robots-response.txt").write_bytes(response.body)
@@ -155,7 +168,7 @@ class CrawlSession:
             self.robots_status = "received"
             self.event(
                 "robots_received",
-                url=url,
+                url=response.url,
                 http_status=response.status,
                 sha256=hashlib.sha256(response.body).hexdigest(),
                 selected_agent=self.rules.selected_agent,
