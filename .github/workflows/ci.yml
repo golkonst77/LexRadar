@@ -7,6 +7,7 @@ permissions:
 jobs:
   windows-pdf:
     runs-on: windows-latest
+    timeout-minutes: 30
     env:
       PYTHONUTF8: '1'
     steps:
@@ -19,7 +20,7 @@ jobs:
       - run: python -m playwright install chromium
       - run: ruff check .
       - run: ruff format --check .
-      - run: python -m pytest -q
+      - run: python -m pytest -vv --durations=20
       - run: lexradar collect --help
       - run: lexradar batch-screen --help
       - run: lexradar ocr-document --help

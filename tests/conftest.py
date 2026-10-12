@@ -1,6 +1,22 @@
+import faulthandler
+import sys
+
 import pytest
 
 from lexradar.models import AuditInput
+
+
+@pytest.fixture(autouse=True)
+def bounded_windows_test():
+    """Fail with thread stacks instead of hiding a hung Windows CI test for hours."""
+    if sys.platform != "win32":
+        yield
+        return
+    faulthandler.dump_traceback_later(180, file=sys.__stderr__, exit=True)
+    try:
+        yield
+    finally:
+        faulthandler.cancel_dump_traceback_later()
 
 
 @pytest.fixture
