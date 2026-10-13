@@ -34,10 +34,10 @@ def render(root: Path, output: Path) -> int:
                 "<li>Подтверждённые нарушения по собранным материалам "
                 "не установлены.</li>"
             )
+        status = esc(row.get("technical_status", "не определён"))
         cards.append(f"""<article>
 <h2>{esc(hostname)}</h2><p><a href="{esc(url)}">{esc(url)}</a></p>
-<p><strong>Статус предварительной проверки:</strong> {esc(row.get("technical_status", "не определён"))}
-.
+<p><strong>Статус предварительной проверки:</strong> {status}.
 Проверена только ограниченная выборка общедоступных материалов.</p>
 <h3>На что обратить внимание</h3><ul>{signals_html}</ul>
 <details><summary>Технические замечания сборщика</summary><ul>{reasons_html}</ul></details>
