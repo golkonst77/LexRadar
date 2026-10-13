@@ -260,7 +260,12 @@ def _collect(url, limits, allowed, store, session):
                                 )
                             elif target not in seen and len(seen) < limits.max_pages * 10:
                                 seen.add(target)
-                                queue.append(target)
+                                # Put legally relevant links ahead of ordinary navigation
+                                # across the entire crawl, not just within this page.
+                                if categories(link["text"] + " " + target):
+                                    queue.appendleft(target)
+                                else:
+                                    queue.append(target)
                         except CollectionError:
                             continue
                     page_record.document_links = sorted(set(page_record.document_links))
