@@ -216,7 +216,10 @@
       "examination": "saved_static_markup",
       "functional_test_performed": false,
       "submitted": false,
-      "lawfulness": "unestablished"
+      "lawfulness": "unestablished",
+      "declared_id": null,
+      "visibility_hint": "unknown",
+      "popup_opened": false
     }
   ],
   "inventory_scope": "observed_forms_only_not_proof_of_absence",
