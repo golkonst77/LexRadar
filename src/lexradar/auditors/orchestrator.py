@@ -123,9 +123,11 @@ def analyze(
             "Prompt safeguards cannot guarantee absence of model-level injection effects",
             "Single auditor: no independent second-model review"
             if config.single_auditor
-            else ("Same model reduces independence"
-                  if config.auditor_a.model == config.auditor_b.model
-                  else "Different models do not guarantee independent training or legal accuracy"),
+            else (
+                "Same model reduces independence"
+                if config.auditor_a.model == config.auditor_b.model
+                else "Different models do not guarantee independent training or legal accuracy"
+            ),
             "Offline outputs are placeholders only"
             if mode == "offline"
             else "Budget depends on price/token caps; unexpected charges stop further calls",
