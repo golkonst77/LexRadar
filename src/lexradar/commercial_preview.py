@@ -31,7 +31,7 @@ def render(root: Path, output: Path) -> int:
             reason = signal.get("reason", "Потенциальный вопрос для проверки")
             signals_html += "<li>" + esc(reason) + "</li>"
         if not signals_html:
-            signals_html = "<li>Подтверждённые нарушения по собранным материалам не установлены.</li>"
+            signals_html = "<li>Подтверждённые нарушения не установлены.</li>"
         status = esc(row.get("technical_status", "не определён"))
         cards.append(
             f"""<article>
