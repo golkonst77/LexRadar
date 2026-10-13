@@ -43,7 +43,11 @@ def analyze(
     started = datetime.now(UTC)
     logs = []
     runs = []
-    auditors = (("A", config.auditor_a),) if config.single_auditor else (("A", config.auditor_a), ("B", config.auditor_b))
+    auditors = (
+        (("A", config.auditor_a),)
+        if config.single_auditor
+        else (("A", config.auditor_a), ("B", config.auditor_b))
+    )
     for auditor, settings in auditors:
         messages, version, prompt_hash = messages_for(auditor, packet)
         run = AuditorRun(
@@ -109,7 +113,9 @@ def analyze(
         logs=logs,
         budget_charged_usd=budget.charged,
         budget_limit_usd=budget.limit,
-        same_model_independence_limited=(not config.single_auditor and config.auditor_a.model == config.auditor_b.model),
+        same_model_independence_limited=(
+            not config.single_auditor and config.auditor_a.model == config.auditor_b.model
+        ),
         limitations=[
             *packet.limitations,
             LIMITATION,
