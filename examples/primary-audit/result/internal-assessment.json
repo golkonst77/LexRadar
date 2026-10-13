@@ -2,7 +2,7 @@
   "schema_version": "internal-assessment-0.1",
   "audience": "internal_only",
   "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
-  "source_primary_sha256": "7d9958a107122bb398aa0f9ab6728fed6b9769ee2b8f715743b6730efeca4822",
+  "source_primary_sha256": "ea2e8f2cd79dc10240328df127c3f1b0fcdbc9f32f14dfadf2c74d86dca82d55",
   "source_primary_report": "audit.json",
   "source_primary_hash_scope": "canonical_validated_json_utf8_sorted_compact",
   "review_trust": "untrusted_no_authenticated_legal_review",

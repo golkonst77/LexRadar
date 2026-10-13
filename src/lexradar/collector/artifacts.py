@@ -37,6 +37,7 @@ class ArtifactStore:
                 "html": "original_html",
                 "text": "extracted_text",
                 "pdf": "original_pdf",
+                "image": "original_image",
                 "screenshot": "isolated_screenshot",
                 "form_screenshot": "isolated_screenshot",
             }[kind],
@@ -72,6 +73,13 @@ def verify_integrity(result: CollectionResult, root: Path) -> list[str]:
         ):
             issues.append(f"{evidence.id}: primary artifact mismatch")
     for page in result.pages:
+        for image in page.document_images:
+            if image.artifact is not None and not any(
+                image.artifact in evidence.artifacts
+                for evidence in result.evidence
+                if evidence.id == page.evidence_id
+            ):
+                issues.append(f"{page.evidence_id}: unregistered document image")
         for form in page.forms:
             if form.screenshot is not None and not any(
                 form.screenshot in evidence.artifacts

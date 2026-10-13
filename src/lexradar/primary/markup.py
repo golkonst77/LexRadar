@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field
 from urllib.parse import urljoin
 
+from ..collector.extract import image_references
 from ..collector.models import InputField
 from ..collector.reading import StaticText
 from .models import HTMLPosition, ParseDiagnostic, StaticFormCoverage, StaticInspection, StaticSpan
@@ -56,6 +57,8 @@ class SavedForm:
     end_exclusive: tuple[int, int] | None = None
     recovered: bool = False
     field_spans: list[StaticSpan] = field(default_factory=list)
+    declared_id: str | None = None
+    visibility_hint: str = "unknown"
 
 
 @dataclass
@@ -76,6 +79,12 @@ class SavedMarkup(StaticText):
         self.links: list[Link] = []
         self.resources: list[tuple[str, str]] = []
         self.images: list[tuple[str, str]] = []
+        self.image_declarations: list[tuple[str, str, str, StaticSpan]] = []
+        self.price_rows: list[tuple[list[str], StaticSpan]] = []
+        self.row_cells: list[str] | None = None
+        self.cell_parts: list[str] | None = None
+        self.row_start = None
+        self.hidden_depths: list[int] = []
         self.resource_spans: list[StaticSpan] = []
         self.image_spans: list[StaticSpan] = []
         self.form: SavedForm | None = None
@@ -278,6 +287,34 @@ class SavedMarkup(StaticText):
             if not self.quarantined:
                 self.record_declarations(tag, values, previous_excluded)
             return
+        if tag not in self.VOID and (
+            "hidden" in values
+            or re.search(
+                r"(?:display\s*:\s*none|visibility\s*:\s*hidden)", values.get("style") or "", re.I
+            )
+        ):
+            self.hidden_depths.append(len(self.open_elements))
+        if tag == "tr":
+            self.row_cells = []
+            self.row_start = self.getpos()
+        if tag in {"td", "th"} and self.row_cells is not None:
+            self.cell_parts = []
+        for method, reference in image_references(tag, values):
+            if len(self.image_declarations) >= 200:
+                self.uncertain("Static document image limit; suffix withheld")
+                return
+            self.image_declarations.append(
+                (
+                    static_reference(self.url, reference),
+                    method,
+                    reference,
+                    self.span(
+                        self.getpos(),
+                        self.token_end(self.getpos(), self.get_starttag_text()),
+                        recovered=len(self.regions) > 1,
+                    ),
+                )
+            )
         if tag == "form":
             if self.form is not None or len(self.forms) >= 30:
                 self.uncertain("Nested form or static form limit; suffix withheld")
@@ -290,6 +327,8 @@ class SavedMarkup(StaticText):
             self.forms.append(self.form)
             self.form.start = self.getpos()
             self.form.recovered = len(self.regions) > 1
+            self.form.declared_id = values.get("id")
+            self.form.visibility_hint = "declared_hidden" if self.hidden_depths else "unknown"
         elif tag in {"input", "select", "textarea"} and self.form is not None:
             if len(self.form.fields) >= 100:
                 self.uncertain("Static field limit; suffix withheld")
@@ -368,6 +407,8 @@ class SavedMarkup(StaticText):
         super().handle_data(data)
         if len(self.parts) == before:
             return
+        if self.cell_parts is not None:
+            self.cell_parts.append(data)
         self.regions[-1].parts.append(data)
         navigation = any(t in {"a", "nav"} for t in self.open_elements)
         if self.block_parts and navigation != self.block_navigation:
@@ -388,6 +429,26 @@ class SavedMarkup(StaticText):
             self.form.parts.append(data)
 
     def handle_endtag(self, tag):
+        if not self.quarantined and not self.excluded and self.open_elements[-1:] == [tag]:
+            if tag in {"td", "th"} and self.cell_parts is not None:
+                self.row_cells.append(compact(self.cell_parts))
+                self.cell_parts = None
+            if tag == "tr" and self.row_cells is not None:
+                if len(self.price_rows) < 200 and self.closing_token:
+                    self.price_rows.append(
+                        (
+                            self.row_cells,
+                            self.span(
+                                self.row_start,
+                                self.token_end(self.getpos(), self.closing_token),
+                                recovered=len(self.regions) > 1,
+                            ),
+                        )
+                    )
+                self.row_cells = None
+            self.hidden_depths = [
+                depth for depth in self.hidden_depths if depth < len(self.open_elements)
+            ]
         was_excluded = bool(self.excluded)
         # Recovery is deliberately narrow. A syntactically valid close of an ordinary
         # element that was never opened changes no stack/attributes. Inside a form,

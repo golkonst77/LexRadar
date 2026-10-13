@@ -7,12 +7,28 @@ from .models import EntityObservation
 CATEGORIES = {
     "privacy_policy": ("политик", "персональн", "privacy"),
     "consent": ("соглас", "consent"),
-    "documents": ("документ", "реквизит", "document"),
+    "documents": ("документ", "реквизит", "document", "dokum"),
     "contacts": ("контакт", "contact"),
     "appointment": ("запис", "приём", "appointment"),
     "feedback": ("обратн", "feedback"),
 }
 DOCUMENT_EXTENSIONS = (".pdf", ".doc", ".docx", ".rtf", ".odt", ".xls", ".xlsx")
+
+
+def image_references(tag: str, values: dict) -> list[tuple[str, str]]:
+    """Literal image declarations only; neither document content nor execution."""
+    refs = []
+    for name in ("src", "data-src", "data-original", "data-img-zoom-url"):
+        if values.get(name) and (tag == "img" or name != "src"):
+            refs.append((name, values[name]))
+    style = values.get("style") or ""
+    for match in re.finditer(
+        r"background(?:-image)?\s*:[^;]*?url\(\s*(['\"]?)([^'\"()]+)\1\s*\)",
+        style,
+        re.I,
+    ):
+        refs.append(("style.background-image", match[2].strip()))
+    return [(method, url) for method, url in refs if len(url) <= 4096]
 
 
 def categories(text: str) -> list[str]:
@@ -53,6 +69,9 @@ DOM_SCRIPT = r"""() => {
     url: a.href, text: a.innerText.slice(0, 300)
   }));
   const forms = [...document.querySelectorAll('form')].slice(0, 30).map(form => ({
+    element: form.id ? 'form#' + form.id : null,
+    visibility: form.getClientRects().length && getComputedStyle(form).visibility !== 'hidden'
+      ? 'visible_in_isolated_render' : 'hidden_in_isolated_render',
     purpose: form.getAttribute('aria-label') ||
       form.querySelector('legend,h1,h2,h3')?.innerText || null,
     fields: [...form.querySelectorAll('input,select,textarea')].slice(0,100).map(el => ({
@@ -65,5 +84,10 @@ DOM_SCRIPT = r"""() => {
     submission_context: form.innerText.slice(0,3000),
     links: [...form.querySelectorAll('a[href]')].map(a => ({url:a.href,text:a.innerText}))
   }));
-  return {text, title: document.title, links, forms};
+  const images = [...document.querySelectorAll('img,[data-original],[data-img-zoom-url],[style]')]
+    .slice(0,200).map(el => ({tag: el.tagName.toLowerCase(),
+      values: Object.fromEntries([...el.attributes].map(a => [a.name,a.value])),
+      element: el.id ? el.tagName.toLowerCase() + '#' + el.id : el.tagName.toLowerCase()
+    }));
+  return {text, title: document.title, links, forms, images};
 }"""

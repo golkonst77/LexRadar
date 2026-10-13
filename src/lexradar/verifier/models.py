@@ -68,6 +68,8 @@ class LegalSource(Model):
             "323-ФЗ": "medical",
             "2300-1": "consumer",
             "736": "paid_medical",
+            "659": "paid_medical",
+            "118н": "medical",
         }
         if self.act_number in expected and self.domain != expected[self.act_number]:
             raise ValueError("Medical and personal-data obligations must remain separate")

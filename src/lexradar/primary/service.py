@@ -401,6 +401,8 @@ class Builder:
                     evidence_id=page.evidence_id,
                     url=self.evidence[page.evidence_id].source,
                     element=f"form[occurrence={saved.index}]",
+                    declared_id=saved.declared_id,
+                    visibility_hint=saved.visibility_hint,
                     purpose_hint=saved.purpose,
                     fields=saved.fields,
                     field_spans=saved.field_spans,
@@ -1100,6 +1102,9 @@ def audit_saved_dossier(
     builder.form_matrix()
     builder.static_mechanisms()
     builder.policy_and_consents()
+    from .content_checks import inspect_content
+
+    inspect_content(builder)
     builder.resources_and_publications()
     builder.registry_tasks()
     sector = builder.medical(sector)

@@ -54,6 +54,12 @@ def provider(value):
         return "yandex_metrika"
     if host == "api-maps.yandex.ru":
         return "yandex_maps"
+    if host == "cdn.callibri.ru":
+        return "callibri"
+    if host.endswith(".tildacdn.com") and "stat" in parsed.path.lower():
+        return "tilda_stats"
+    if host in {"prodoctorov.ru", "www.prodoctorov.ru"}:
+        return "prodoctorov"
     if re.search(r"(?:jquery[.-]form|jquery[.-]validate|parsley)(?:[.-]|$)", parsed.path):
         return "form_library_candidate"
     return None
