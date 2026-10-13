@@ -191,6 +191,7 @@ class AnalysisReport(Model):
                 raise ValueError("Successful run requires a validated result")
             if run.result and any(f.status == "confirmed" for f in run.result.findings):
                 raise ValueError("AI analysis cannot confirm legal violations")
-        if self.same_model_independence_limited != (len(self.runs) == 2 and self.runs[0].model == self.runs[1].model):
+        same_model = len(self.runs) == 2 and self.runs[0].model == self.runs[1].model
+        if self.same_model_independence_limited != same_model:
             raise ValueError("Model independence limitation must match actual configuration")
         return self
