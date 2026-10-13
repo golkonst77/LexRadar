@@ -2,6 +2,7 @@
 
 This does not alter the production decision or authorize automatic client release.
 """
+
 import argparse
 import html
 import json
@@ -30,12 +31,10 @@ def render(root: Path, output: Path) -> int:
             reason = signal.get("reason", "Потенциальный вопрос для проверки")
             signals_html += "<li>" + esc(reason) + "</li>"
         if not signals_html:
-            signals_html = (
-                "<li>Подтверждённые нарушения по собранным материалам "
-                "не установлены.</li>"
-            )
+            signals_html = "<li>Подтверждённые нарушения по собранным материалам не установлены.</li>"
         status = esc(row.get("technical_status", "не определён"))
-        cards.append(f"""<article>
+        cards.append(
+            f"""<article>
 <h2>{esc(hostname)}</h2><p><a href="{esc(url)}">{esc(url)}</a></p>
 <p><strong>Статус предварительной проверки:</strong> {status}.
 Проверена только ограниченная выборка общедоступных материалов.</p>
@@ -43,7 +42,8 @@ def render(root: Path, output: Path) -> int:
 <details><summary>Технические замечания сборщика</summary><ul>{reasons_html}</ul></details>
 <p>Для окончательного вывода необходимо проверить фактические формы, документы,
 оператора персональных данных и применимые требования законодательства.</p>
-</article>""")
+</article>"""
+        )
     document = f"""<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LexRadar — предварительный обзор сайтов</title>
