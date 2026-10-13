@@ -43,7 +43,12 @@ def analyze(
     started = datetime.now(UTC)
     logs = []
     runs = []
-    for auditor, settings in (("A", config.auditor_a), ("B", config.auditor_b)):
+    auditors = (
+        (("A", config.auditor_a),)
+        if config.single_auditor
+        else (("A", config.auditor_a), ("B", config.auditor_b))
+    )
+    for auditor, settings in auditors:
         messages, version, prompt_hash = messages_for(auditor, packet)
         run = AuditorRun(
             auditor=auditor, model=settings.model, prompt_version=version, status="provider_error"
@@ -104,19 +109,25 @@ def analyze(
         started_at=started,
         completed=all(run.status == "success" for run in runs),
         runs=runs,
-        disagreements=compare(runs[0].result, runs[1].result),
+        disagreements=compare(runs[0].result, runs[1].result) if len(runs) == 2 else [],
         logs=logs,
         budget_charged_usd=budget.charged,
         budget_limit_usd=budget.limit,
-        same_model_independence_limited=config.auditor_a.model == config.auditor_b.model,
+        same_model_independence_limited=(
+            not config.single_auditor and config.auditor_a.model == config.auditor_b.model
+        ),
         limitations=[
             *packet.limitations,
             LIMITATION,
             "Agreement is not independent verification of legal correctness",
             "Prompt safeguards cannot guarantee absence of model-level injection effects",
-            "Same model reduces independence"
-            if config.auditor_a.model == config.auditor_b.model
-            else "Different models do not guarantee independent training or legal accuracy",
+            "Single auditor: no independent second-model review"
+            if config.single_auditor
+            else (
+                "Same model reduces independence"
+                if config.auditor_a.model == config.auditor_b.model
+                else "Different models do not guarantee independent training or legal accuracy"
+            ),
             "Offline outputs are placeholders only"
             if mode == "offline"
             else "Budget depends on price/token caps; unexpected charges stop further calls",

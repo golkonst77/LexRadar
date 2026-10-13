@@ -35,6 +35,7 @@ class ModelSettings(Model):
 
 
 class AnalysisConfig(Model):
+    single_auditor: bool = False
     auditor_a: ModelSettings
     auditor_b: ModelSettings
     max_budget_usd: Decimal = Field(gt=0, le=100, allow_inf_nan=False)
@@ -181,8 +182,8 @@ class AnalysisReport(Model):
 
     @model_validator(mode="after")
     def no_ai_confirmation_or_false_completion(self):
-        if {run.auditor for run in self.runs} != {"A", "B"} or len(self.runs) != 2:
-            raise ValueError("Analysis requires separate A and B run records")
+        if [run.auditor for run in self.runs] not in (["A"], ["A", "B"]):
+            raise ValueError("Analysis requires A alone or separate A and B run records")
         if self.completed != all(run.status == "success" for run in self.runs):
             raise ValueError("Completion must match both run statuses")
         for run in self.runs:
@@ -190,6 +191,7 @@ class AnalysisReport(Model):
                 raise ValueError("Successful run requires a validated result")
             if run.result and any(f.status == "confirmed" for f in run.result.findings):
                 raise ValueError("AI analysis cannot confirm legal violations")
-        if self.same_model_independence_limited != (self.runs[0].model == self.runs[1].model):
+        same_model = len(self.runs) == 2 and self.runs[0].model == self.runs[1].model
+        if self.same_model_independence_limited != same_model:
             raise ValueError("Model independence limitation must match actual configuration")
         return self
