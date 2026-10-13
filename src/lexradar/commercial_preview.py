@@ -30,10 +30,14 @@ def render(root: Path, output: Path) -> int:
             reason = signal.get("reason", "Потенциальный вопрос для проверки")
             signals_html += "<li>" + esc(reason) + "</li>"
         if not signals_html:
-            signals_html = "<li>Подтверждённые нарушения по собранным материалам не установлены.</li>"
+            signals_html = (
+                "<li>Подтверждённые нарушения по собранным материалам "
+                "не установлены.</li>"
+            )
         cards.append(f"""<article>
 <h2>{esc(hostname)}</h2><p><a href="{esc(url)}">{esc(url)}</a></p>
-<p><strong>Статус предварительной проверки:</strong> {esc(row.get("technical_status", "не определён"))}.
+<p><strong>Статус предварительной проверки:</strong> {esc(row.get("technical_status", "не определён"))}
+.
 Проверена только ограниченная выборка общедоступных материалов.</p>
 <h3>На что обратить внимание</h3><ul>{signals_html}</ul>
 <details><summary>Технические замечания сборщика</summary><ul>{reasons_html}</ul></details>
