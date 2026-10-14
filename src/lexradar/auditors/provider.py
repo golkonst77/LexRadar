@@ -91,6 +91,7 @@ class OpenRouterProvider:
         transport: Transport | None = None,
         *,
         offline: bool = False,
+        compact_paid: bool = False,
     ):
         if offline and not isinstance(transport, CompactFakeTransport):
             raise PermissionError("Offline provider requires built-in fake transport")
@@ -105,8 +106,13 @@ class OpenRouterProvider:
         self._key = key
         self.config = config
         self.transport = transport or OpenRouterTransport()
+        self.compact_paid = compact_paid
 
     def complete(self, settings: ModelSettings, messages: list[dict[str, str]]) -> ProviderReply:
+        if self.compact_paid:
+            from .compact_profile import validate_profile
+
+            validate_profile(self.config)
         payload = json.dumps(
             {
                 "model": settings.model,
@@ -115,8 +121,10 @@ class OpenRouterProvider:
                 "temperature": 0,
                 "stream": False,
                 "n": 1,
+                **({"reasoning": {"enabled": False}} if self.compact_paid else {}),
                 "response_format": {"type": "json_object"},
                 "provider": {
+                    **({"only": ["deepinfra/fp4"]} if self.compact_paid else {}),
                     "allow_fallbacks": False,
                     "require_parameters": True,
                     "max_price": {

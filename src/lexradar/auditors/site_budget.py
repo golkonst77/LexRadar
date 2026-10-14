@@ -18,28 +18,43 @@ class SiteBudget:
         if not self.limit.is_finite() or not 0 < self.limit <= Decimal("0.50"):
             raise ValueError("Site limit must be positive and at most 0.50 USD")
 
+    def validate(self, data):
+        # Corruption must never create a refund or erase an unresolved reservation.
+        for record in data.values():
+            stored_limit = Decimal(record["limit"])
+            if not stored_limit.is_finite() or not 0 < stored_limit <= Decimal("0.50"):
+                raise ValueError("Invalid stored budget limit")
+            ids = set()
+            for entry in record["entries"]:
+                charge = Decimal(entry["charge"])
+                if (
+                    not charge.is_finite()
+                    or charge < 0
+                    or entry["state"] not in {"pending", "known", "unknown", "overrun"}
+                    or entry["id"] in ids
+                ):
+                    raise ValueError("Invalid stored reservation")
+                ids.add(entry["id"])
+        return data
+
+    def preview(self, settings, messages):
+        estimate = Budget(self.limit).reserve(settings, messages)
+        data = self.validate(json.loads(self.path.read_text()) if self.path.exists() else {})
+        site = data.get(self.site, {"limit": str(self.limit), "entries": []})
+        entries = site["entries"]
+        spent = sum((Decimal(e["charge"]) for e in entries), Decimal(0))
+        if any(e["state"] != "known" for e in entries) or spent + estimate > min(
+            self.limit, Decimal(site["limit"])
+        ):
+            raise BudgetExceeded("Site budget exhausted or unresolved expense")
+        return estimate
+
     @contextmanager
     def locked(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.with_suffix(self.path.suffix + ".lock").open("a") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
-            data = json.loads(self.path.read_text()) if self.path.exists() else {}
-            # Corruption must never create a refund or erase an unresolved reservation.
-            for record in data.values():
-                stored_limit = Decimal(record["limit"])
-                if not stored_limit.is_finite() or not 0 < stored_limit <= Decimal("0.50"):
-                    raise ValueError("Invalid stored budget limit")
-                ids = set()
-                for entry in record["entries"]:
-                    charge = Decimal(entry["charge"])
-                    if (
-                        not charge.is_finite()
-                        or charge < 0
-                        or entry["state"] not in {"pending", "known", "unknown", "overrun"}
-                        or entry["id"] in ids
-                    ):
-                        raise ValueError("Invalid stored reservation")
-                    ids.add(entry["id"])
+            data = self.validate(json.loads(self.path.read_text()) if self.path.exists() else {})
             yield data
 
     def write(self, data):

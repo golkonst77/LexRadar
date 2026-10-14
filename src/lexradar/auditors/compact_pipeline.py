@@ -7,10 +7,12 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from ..primary.compact import approve, digest, preflight, prepare
-from .budget import BudgetExceeded
+from .budget import Budget, BudgetExceeded
+from .compact_profile import validate_profile
 from .compact_validator import CompactResult, validate_compact
 from .evidence import load_packet
 from .models import AnalysisConfig, Usage
+from .preflight import LIMITATION, screen
 from .provider import CompactFakeTransport, OpenRouterProvider, ProviderError
 from .site_budget import SiteBudget
 from .validator import ResultError
@@ -40,17 +42,61 @@ def analyze_compact(
     allow_external_transfer=False,
     packet_approval=None,
     ledger=None,
+    dry_run=False,
 ):
     if mode not in {"offline", "openrouter"}:
         raise ValueError("Unsupported mode")
     packet = prepare(root, as_of=as_of, sector=sector)
     preflight(root, packet, output, sector=sector)
+    messages = messages_for_compact(packet)
+    primary = json.loads(packet.primary_json)
+    blockers = []
+    estimate = None
+    try:
+        estimate = str(Budget(config.max_budget_usd).reserve(config.auditor_a, messages))
+    except BudgetExceeded:
+        blockers.append("budget_exceeded")
+    preview = {
+        "packet_bytes": len(packet.payload.encode()),
+        "packet_sha256": packet.sha256,
+        "forms": len(primary["forms"]),
+        "organizations": len(primary["organizations"]),
+        "coverage": primary["coverage"],
+        "reading_limitations": primary["limitations"],
+        "sensitive_categories": sorted({v["category"] for v in screen(packet)}),
+        "screening_limitation": LIMITATION,
+        "reserve_usd": estimate,
+    }
+    (output / "compact-preview.json").write_text(json.dumps(preview, indent=2) + "\n")
     approval = None
     if mode == "openrouter":
-        if not allow_external_transfer or ledger is None:
-            raise PermissionError("Explicit transfer permission and durable ledger required")
-        approval = approve(root, packet, packet_approval, sector=sector)
-    messages = messages_for_compact(packet)
+        try:
+            if not allow_external_transfer or ledger is None:
+                raise PermissionError("Explicit transfer permission and durable ledger required")
+            if (
+                ledger.resolve().is_relative_to(root.resolve())
+                or ledger.resolve().is_relative_to(output.resolve())
+                or (packet_approval and ledger.resolve() == packet_approval.resolve())
+                or any(p.is_symlink() for p in (ledger, *ledger.parents))
+            ):
+                raise PermissionError("Ledger must be isolated from dossier, output and approval")
+            approval = approve(root, packet, packet_approval, sector=sector)
+            validate_profile(config)
+            source = load_packet(root, 2_000_000)
+            hosts = {urlsplit(str(e.source)).hostname for e in source.data.evidence}
+            if len(hosts) != 1 or None in hosts:
+                raise ValueError("Single-site dossier required")
+            SiteBudget(ledger, next(iter(hosts)), config.max_budget_usd).preview(
+                config.auditor_a, messages
+            )
+        except (PermissionError, ValueError, OSError, BudgetExceeded) as exc:
+            if not dry_run:
+                raise
+            blockers.append(
+                str(exc)
+                if isinstance(exc, (PermissionError, BudgetExceeded))
+                else "invalid_preflight"
+            )
     report = dict(
         mode=mode,
         packet_sha256=packet.sha256,
@@ -67,7 +113,14 @@ def analyze_compact(
         approval=approval.model_dump(mode="json") if approval else None,
         budget_charge_usd="0",
         simulated=mode == "offline",
+        dry_run=dry_run,
+        preview=preview,
+        blockers=blockers,
     )
+    if dry_run:
+        report["status"] = "dry_run_blocked" if blockers else "dry_run_ready"
+        (output / "compact-analysis.json").write_text(json.dumps(report, indent=2) + "\n")
+        return report
     token = None
     budget = None
     try:
@@ -75,6 +128,7 @@ def analyze_compact(
             config,
             CompactFakeTransport() if mode == "offline" else None,
             offline=mode == "offline",
+            compact_paid=mode == "openrouter",
         )
         if mode == "openrouter":
             # Regenerate and reauthorize immediately before reservation and transfer.
@@ -114,12 +168,38 @@ def main(argv=None):
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--as-of", required=True, type=datetime.fromisoformat)
+    parser.add_argument("--sector", choices=("medical", "unknown"), default="unknown")
+    parser.add_argument("--mode", choices=("offline", "openrouter"), default="offline")
+    parser.add_argument("--ledger", type=Path)
+    parser.add_argument("--approval", type=Path)
+    parser.add_argument("--allow-external-transfer", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     try:
         config = AnalysisConfig.model_validate_json(args.config.read_text())
-        report = analyze_compact(args.dossier, args.output, config, as_of=args.as_of)
-    except (ValueError, OSError):
+        report = analyze_compact(
+            args.dossier,
+            args.output,
+            config,
+            as_of=args.as_of,
+            sector=args.sector,
+            mode=args.mode,
+            ledger=args.ledger,
+            packet_approval=args.approval,
+            allow_external_transfer=args.allow_external_transfer,
+            dry_run=args.dry_run,
+        )
+    except (ValueError, OSError, BudgetExceeded):
         parser.error("Compact analysis preflight failed; review locally")
-    print(f"{report['status']}; HOLD; offline simulated completion")
-    if report["status"] != "success":
+    print(
+        f"{report['status']}; HOLD; {report['mode']}; reserve USD "
+        f"{report['preview']['reserve_usd']}; SHA-256 {report['packet_sha256']}"
+    )
+    preview = report["preview"]
+    print(
+        f"{preview['packet_bytes']} bytes; forms {preview['forms']}; "
+        f"organizations {preview['organizations']}; "
+        f"screening categories: {', '.join(preview['sensitive_categories']) or 'none'}"
+    )
+    if report["status"] not in {"success", "dry_run_ready"}:
         parser.exit(1)

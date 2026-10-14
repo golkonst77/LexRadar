@@ -29,12 +29,12 @@ class PacketApproval(Model):
 
 PATTERNS = {
     "email": r"[\w.+-]+@[\w.-]+\.[a-zа-я]{2,}",
-    "phone_or_identifier": r"(?<!\d)(?:\+?\d[\s().-]*){10,}(?!\d)",
+    "phone_or_identifier": r"(?<!\w)(?:\+?\d[\s().-]*){10,}(?!\w)",
     "identity_or_health_context": (
         r"паспорт|снилс|дата\s+рождения|фио|фамилия|patient|diagnos|passport|"
         r"date.of.birth|medical.record|health|disease|pregnan|biometric|"
         r"диагноз|пациент|анамнез|результат.{0,20}анализ|медицинск.{0,20}карт|"
-        r"hiv|вич|беремен|инвалид|биометр|полис\s+омс"
+        r"\bhiv\b|\bвич\b|беремен|инвалид|биометр|полис\s+омс"
     ),
     "person_name": r"\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\b",
     "birth_date": r"\b\d{1,2}[./]\d{1,2}[./](?:19|20)\d{2}\b",
@@ -60,7 +60,12 @@ def screen(packet: EvidencePacket) -> list[dict[str, str]]:
                 if re.search(pattern, normalized, flags):
                     issues.append({"path": path, "category": category})
 
-    visit(json.loads(packet.payload), "$")
+    wire = json.loads(packet.payload)
+    if wire.get("schema") == "compact-primary-v1":
+        # The generated field-name table is structural, not evidence. Screen every
+        # dictionary value too, including any unused entry in the outgoing wire.
+        wire = {key: value for key, value in wire.items() if key != "keys"}
+    visit(wire, "$")
     return issues
 
 

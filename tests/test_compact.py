@@ -164,17 +164,20 @@ def test_approval_exact_hash_and_sensitive_blocking(tmp_path, capsys):
         approve(root, packet, approval)
     record["packet_sha256"] = packet.sha256
     approval.write_text(json.dumps(record))
-    # Primary includes conservative legal/health vocabulary: exact approval alone
-    # must never bypass screening, even for synthetic fixtures.
-    assert screen(packet)
-    with pytest.raises(PermissionError, match="sensitive"):
-        approve(root, packet, approval)
+    # Generated schema names/hashes are not personal data; public text may pass.
+    assert not screen(packet)
+    assert approve(root, packet, approval).approved
     sensitive = tmp_path / "sensitive"
     sensitive.mkdir()
-    root, _ = make_dossier(sensitive, "<p>Contact private@example.org</p>")
+    root, _ = make_dossier(
+        sensitive,
+        '<form><label>Contact private@example.org<input name="email" type="email"></label></form>',
+    )
     packet = prepare(root, as_of=NOW)
     assert screen(packet)
-    with pytest.raises(PermissionError):
+    record["packet_sha256"] = packet.sha256
+    approval.write_text(json.dumps(record))
+    with pytest.raises(PermissionError, match="sensitive"):
         approve(root, packet, approval)
     assert "private@example.org" not in capsys.readouterr().out
 
