@@ -7,7 +7,9 @@ MODEL = "deepseek/deepseek-v3.2"
 PROVIDER = "deepinfra/fp4"
 INPUT_PRICE = Decimal("0.26")
 OUTPUT_PRICE = Decimal("0.38")
-VERIFIED_UNTIL = datetime(2026, 10, 15, tzinfo=UTC)
+# Public endpoint metadata rechecked 2026-10-14; short pilot window (~24 hours).
+# This verifies price/parameters, not endpoint availability or human approval.
+VERIFIED_UNTIL = datetime(2026, 10, 15, 12, tzinfo=UTC)
 
 
 def validate_profile(config):
