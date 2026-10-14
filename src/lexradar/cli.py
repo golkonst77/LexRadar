@@ -9,6 +9,11 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "compact-preflight":
+        from .primary.compact import main as compact_main
+
+        compact_main(sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "ocr-document":
         from .collector.ocr import ocr_main
 
