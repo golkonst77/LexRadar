@@ -85,8 +85,16 @@ class Provider(Protocol):
 
 
 class OpenRouterProvider:
-    def __init__(self, config: AnalysisConfig, transport: Transport | None = None):
-        key = os.environ.get("OPENROUTER_API_KEY")
+    def __init__(
+        self,
+        config: AnalysisConfig,
+        transport: Transport | None = None,
+        *,
+        offline: bool = False,
+    ):
+        if offline and not isinstance(transport, CompactFakeTransport):
+            raise PermissionError("Offline provider requires built-in fake transport")
+        key = "offline-fixture-key" if offline else os.environ.get("OPENROUTER_API_KEY")
         if not key or any(c.isspace() for c in key):
             raise ProviderError("missing_or_invalid_api_key")
         configured = [config.auditor_a, config.auditor_b]
@@ -196,3 +204,49 @@ class OfflineProvider:
             "limitations": ["Offline mode: placeholders only; not an actual AI audit"],
         }
         return ProviderReply(json.dumps(result), Usage(cost_usd=Decimal(0)))
+
+
+class CompactFakeTransport:
+    """Synthetic completion envelope through the real provider parser; no I/O."""
+
+    def post(self, payload: bytes, key: str, timeout: float, max_bytes: int) -> HTTPReply:
+        from ..primary.compact import CompactPacket, unpack
+
+        request = json.loads(payload)
+        wire = request["messages"][1]["content"]
+        packet = CompactPacket(wire, "", "", "", None)
+        excerpts = unpack(packet)["excerpts"]
+        item = next(((k, v) for k, v in excerpts.items() if v["quote"]), None)
+        result = {
+            "auditor": "A",
+            "observations": (
+                [
+                    {
+                        "excerpt": item[0],
+                        "quote": item[1]["quote"],
+                        "hypothesis": "Synthetic quote occurrence; human review required",
+                        "status": "potential",
+                    }
+                ]
+                if item
+                else []
+            ),
+            "checks": ["Independently verify facts and applicable current law"],
+        }
+        return HTTPReply(
+            200,
+            json.dumps(
+                {
+                    "model": request["model"],
+                    "choices": [
+                        {
+                            "finish_reason": "stop",
+                            "message": {
+                                "content": json.dumps(result),
+                            },
+                        }
+                    ],
+                    "usage": {"cost": 0},
+                }
+            ).encode(),
+        )
