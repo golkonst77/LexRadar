@@ -6,7 +6,7 @@
 
 Отдельный worktree `/home/golkonst/src/LexRadar-compact`, ветка `feat/compact-ai-audit-mvp` от свежего `origin/main` (`8104f17`). Исходная рабочая копия осталась на `main`. SHA-256 семи незакоммиченных файлов и семи копий в `backups/codex-027` совпадают с существующим manifest задания №27: 7/7 и 7/7. Копии не удалялись и не включались в коммиты. Прочитаны описание Draft PR №27 и отчёт из `origin/docs/codex-027-report`.
 
-Draft PR: ссылка будет внесена после создания PR, до завершения задания.
+Draft PR **№28**: https://github.com/golkonst77/LexRadar/pull/28 (base main, Draft; merge не выполнялся).
 
 Merge, deploy, реальные обращения к OpenRouter и клиентские отправки не выполнялись. Тесты используют синтетические материалы; локальные результаты подготовки находятся вне репозитория.
 
@@ -56,7 +56,15 @@ lexradar compact-preflight examples/primary-audit/dossier \
 
 Сеть в новых тестах блокируется на socket.connect, OpenRouterTransport и Fetcher. `tests/test_compact.py tests/test_auditors.py`: **90 passed**. Существующие тесты аудиторов используют fake transport и проверяют OpenRouterProvider, бюджет, неизвестную usage, retries и отказ preflight. Это регрессия полного пути, **не проверка готового compact AI orchestration**.
 
-`ruff check .` и `ruff format --check .` прошли. Общий pytest: результат будет дополнен после окончания.
+`ruff check .`, `ruff format --check .`, `git diff --check` прошли.
+
+Полный набор: **1056 passed in 194.87s**. Команда:
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH=/tmp/lexradar-029-browsers python -m pytest -q
+```
+
+Первый общий прогон дал 44 failures/6 errors при 1005 passed из-за отсутствующего Chromium build 1248 и зависимых browser fixtures. Причина подтверждена отдельным `pytest -x` (119 passed до ошибки запуска браузера). Совместимый Chromium установлен через Playwright в отдельный `/tmp/lexradar-029-browsers`; после этого весь набор прошёл. Исходный browser cache и рабочая копия не изменялись. Тестовое окружение Python 3.13 создано отдельно в `/tmp/lexradar-029-venv`.
 
 ## Расходы и ограничения
 
