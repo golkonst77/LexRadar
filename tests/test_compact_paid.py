@@ -16,8 +16,8 @@ from lexradar.primary.compact import prepare
 
 SETTINGS = ModelSettings(
     model="deepseek/deepseek-v3.2",
-    prompt_price_cap="0.26",
-    completion_price_cap="0.38",
+    prompt_price_cap="0.259",
+    completion_price_cap="0.80",
     max_output_tokens=2000,
 )
 CONFIG = AnalysisConfig(
@@ -124,8 +124,12 @@ def test_fake_paid_transport(pilot, tmp_path, monkeypatch, variant):
         request = json.loads(payload)
         calls.append(request)
         assert request["reasoning"] == {"enabled": False}
-        assert request["provider"]["only"] == ["deepinfra/fp4"]
+        assert request["provider"]["only"] == ["siliconflow/fp8"]
         assert request["provider"]["allow_fallbacks"] is False
+        assert request["provider"]["require_parameters"] is True
+        assert request["provider"]["max_price"] == {"prompt": 0.259, "completion": 0.80}
+        assert request["response_format"] == {"type": "json_object"}
+        assert request["max_tokens"] == 2000
         if variant == "timeout":
             raise ProviderError("transport_timeout", retryable=True)
         reply = CompactFakeTransport().post(payload, key, timeout, max_bytes)
@@ -191,6 +195,20 @@ def test_cli_dry_run(pilot, tmp_path, capsys):
 
 
 def test_unverified_profile_and_expiry(pilot, tmp_path, monkeypatch):
+    from lexradar.auditors.compact_profile import validate_profile
+
+    for update in ({"retries": 1}, {"single_auditor": False}, {"max_budget_usd": 0.06}):
+        with pytest.raises(PermissionError, match="Unverified"):
+            validate_profile(CONFIG.model_copy(update=update))
+    for update in (
+        {"prompt_price_cap": "0.26"},
+        {"completion_price_cap": "0.38"},
+        {"max_output_tokens": 147457},
+    ):
+        with pytest.raises(PermissionError, match="Unverified"):
+            validate_profile(
+                CONFIG.model_copy(update={"auditor_a": SETTINGS.model_copy(update=update)})
+            )
     monkeypatch.setattr(
         "lexradar.auditors.compact_profile.VERIFIED_UNTIL", datetime(2000, 1, 1, tzinfo=UTC)
     )
@@ -222,7 +240,7 @@ def test_reserve_system_user_output():
 
     messages = [{"content": "system"}, {"content": "user"}]
     estimate = Budget(Decimal("0.05")).reserve(SETTINGS, messages)
-    assert estimate == (Decimal(1034) * Decimal("0.26") + 2000 * Decimal("0.38")) / 1000000
+    assert estimate == (Decimal(1034) * Decimal("0.259") + 2000 * Decimal("0.80")) / 1000000
 
 
 def test_unverified_model(pilot, tmp_path):

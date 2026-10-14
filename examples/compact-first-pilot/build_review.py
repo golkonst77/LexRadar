@@ -67,7 +67,8 @@ summary{{cursor:pointer;padding:.6rem;background:#eaf0f4}} p{{line-height:1.5}}
 </style>
 <h1>Пакет №32: личный просмотр</h1>
 <p>Синтетический сайт clinic.example, пустая форма и учебные PDF.
-BLOCKED: человеческое подтверждение отсутствует; доступность deepinfra/fp4 не подтверждена.
+BLOCKED: человеческое подтверждение отсутствует.
+siliconflow/fp8 заявляет status=0; реальный запрос не проверен.
 HOLD / not_confirmed / client_release_allowed=false.</p>
 <p>Этот файл статический: без JavaScript, сервера, внешних ресурсов и отправки данных.
 Ссылки на доказательства открывают файлы из соседнего dossier; адреса сайта показаны текстом.</p>
@@ -79,9 +80,9 @@ SHA относится к packet.json, а не к HTML или полному HTT
 включая primary, excerpts, dictionary, keys, ограничения и статусы.
 Ниже развёрнутый body для удобства чтения; исходящий user payload остаётся сжатым.
 Исходные HTML/PDF/PNG, локальные primary и trace-map не отправляются.</p>
-<p>Модель deepseek/deepseek-v3.2; only=[deepinfra/fp4]; max_tokens=2000;
+<p>Модель deepseek/deepseek-v3.2; only=[siliconflow/fp8]; max_tokens=2000;
 reasoning.enabled=false; response_format=json_object; temperature=0; stream=false; n=1;
-allow_fallbacks=false; require_parameters=true; retries=0; max_price=0.26/0.38.</p>
+allow_fallbacks=false; require_parameters=true; retries=0; max_price=0.259/0.80.</p>
 {details("Точный system prompt", messages[0]["content"])}
 {details("Точный user payload", packet.payload)}
 {details("Развёрнутый body", json.dumps(unpack(packet), ensure_ascii=False, indent=2))}
@@ -89,8 +90,8 @@ allow_fallbacks=false; require_parameters=true; retries=0; max_price=0.26/0.38.<
 <p>Совпадений нет. Проверка эвристическая и не гарантирует отсутствие чувствительных
 данных; требуется личный просмотр. Категории и паттерны не отключены.</p>
 <h2>Расчётная стоимость</h2>
-<p>Вход $0.26 / миллион, выход $0.38 / миллион.
-Резерв: ({input_bound} × 0.26 + 2000 × 0.38) / 1000000 = ${reserve}.
+<p>Вход $0.259 / миллион, выход $0.80 / миллион.
+Резерв: ({input_bound} × 0.259 + 2000 × 0.80) / 1000000 = ${reserve}.
 Вход — консервативный предел UTF-8 байтов system/user + 1024 overhead;
 фактические токены неизвестны. Лимит $0.05. Расход $0; запрос не выполнен.</p>
 <h2>Цитаты и локальные доказательства</h2>

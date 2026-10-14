@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 MODEL = "deepseek/deepseek-v3.2"
-PROVIDER = "deepinfra/fp4"
-INPUT_PRICE = Decimal("0.26")
-OUTPUT_PRICE = Decimal("0.38")
+PROVIDER = "siliconflow/fp8"
+INPUT_PRICE = Decimal("0.259")
+OUTPUT_PRICE = Decimal("0.80")
 # Public endpoint metadata rechecked 2026-10-14; short pilot window (~24 hours).
 # This verifies price/parameters, not endpoint availability or human approval.
 VERIFIED_UNTIL = datetime(2026, 10, 15, 12, tzinfo=UTC)
@@ -20,7 +20,8 @@ def validate_profile(config):
         settings.model != MODEL
         or settings.prompt_price_cap != INPUT_PRICE
         or settings.completion_price_cap != OUTPUT_PRICE
-        or settings.max_output_tokens > 16384
+        or settings.max_output_tokens > 147456
+        or config.max_budget_usd > Decimal("0.05")
         or config.retries != 0
         or not config.single_auditor
     ):

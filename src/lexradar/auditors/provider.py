@@ -110,7 +110,7 @@ class OpenRouterProvider:
 
     def complete(self, settings: ModelSettings, messages: list[dict[str, str]]) -> ProviderReply:
         if self.compact_paid:
-            from .compact_profile import validate_profile
+            from .compact_profile import PROVIDER, validate_profile
 
             validate_profile(self.config)
         payload = json.dumps(
@@ -124,7 +124,7 @@ class OpenRouterProvider:
                 **({"reasoning": {"enabled": False}} if self.compact_paid else {}),
                 "response_format": {"type": "json_object"},
                 "provider": {
-                    **({"only": ["deepinfra/fp4"]} if self.compact_paid else {}),
+                    **({"only": [PROVIDER]} if self.compact_paid else {}),
                     "allow_fallbacks": False,
                     "require_parameters": True,
                     "max_price": {

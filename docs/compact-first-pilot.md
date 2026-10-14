@@ -1,8 +1,9 @@
 # Первый пилот compact-primary-v1
 
 Платный пилот пока BLOCKED: требуется человеческий approval пакета; публичный
-endpoint DeepInfra FP4 при проверке сообщил status=-2, доступность не подтверждена.
-Описанные ниже команды платного запуска в задании №32 НЕ выполнялись.
+endpoint SiliconFlow FP8 при публичной проверке №34 сообщил status=0.
+Реальный запрос и выполнение параметров не проверены.
+Описанные ниже команды платного запуска в заданиях №32–34 НЕ выполнялись.
 `dry_run_ready` подтверждает локальные проверки, а не доступность провайдера.
 
 Досье `examples/compact-first-pilot/dossier` основано на `make_dossier` и `pdf_bytes`
@@ -72,9 +73,9 @@ python -c 'from lexradar.auditors.compact_pipeline import main; main()' \
 
 Те же аргументы доступны через CLI `lexradar compact-analyze`.
 
-Ожидается dry_run_ready, SHA выше, sensitive_categories=[], резерв $0.00891178,
+Ожидается dry_run_ready, SHA выше, sensitive_categories=[], резерв $0.009720427,
 request_sent=false, budget_charge_usd=0. Ledger и lock при dry-run не создаются.
-Резерв: (31353 × 0.26 + 2000 × 0.38) / 1000000; input bound включает
+Резерв: (31353 × 0.259 + 2000 × 0.80) / 1000000; input bound включает
 UTF-8 system/user и 1024 единицы запаса. Это верхняя оценка, не списанная сумма.
 При BLOCKED смотрите blockers в compact-analysis.json; защиту не отключать.
 
@@ -82,13 +83,12 @@ UTF-8 system/user и 1024 единицы запаса. Это верхняя о�
 
 Перед запуском заново проверьте публичные
 [endpoint metadata](https://openrouter.ai/api/v1/models/deepseek/deepseek-v3.2/endpoints).
-Нужны модель deepseek/deepseek-v3.2, DeepInfra, tag deepinfra/fp4,
-цены $0.26/$0.38 за миллион, response_format/reasoning/max_tokens и подтверждённая
-доступность маршрута. Текущая проверка не подтверждает смысл status=-2.
+Нужны модель deepseek/deepseek-v3.2, SiliconFlow, tag siliconflow/fp8,
+цены $0.259/$0.80 за миллион, response_format/reasoning/max_tokens и подтверждённая
+доступность маршрута. Observed status=0 не доказывает доступность реального запроса.
 Профиль цен действует до 2026-10-15 12:00 UTC (около суток), затем fail-closed.
 `reasoning.enabled=false` соответствует [официальной документации](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens).
-[Каталог моделей](https://openrouter.ai/api/v1/models) подтверждает reasoning
-mandatory=false и default_enabled=false. Лимит конфигурации 2000, лимит endpoint 16384. Fallback выключен, retries=0,
+Metadata endpoint заявляют reasoning; реальное отключение без запроса не проверено. Лимит конфигурации 2000, лимит endpoint 147456. Fallback выключен, retries=0,
 require_parameters=true, response_format=json_object. Не менять маршрут наугад.
 
 Получите отдельное разрешение на отправку; ключ OPENROUTER_API_KEY передайте
