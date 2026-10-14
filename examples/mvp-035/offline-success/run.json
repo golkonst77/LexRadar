@@ -1,0 +1,14 @@
+{
+  "url": "https://demo.lexradar.example/",
+  "fixture": true,
+  "static_only": true,
+  "ai_mode": "offline",
+  "request_sent": false,
+  "cost_usd": "0",
+  "client_release_allowed": false,
+  "status": "success",
+  "pages": 2,
+  "documents": 1,
+  "available": 3,
+  "analysis_status": "success"
+}

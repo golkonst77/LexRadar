@@ -58,6 +58,7 @@ def collect(
     *,
     fetcher: Fetcher | None = None,
     crawl_options: CrawlOptions | None = None,
+    static_only: bool = False,
 ) -> CollectionResult:
     limits = limits or Limits()
     url = canonical_url(url)
@@ -65,13 +66,13 @@ def collect(
     store = ArtifactStore(output, limits)
     session = CrawlSession(fetcher or Fetcher(limits), url, store.root, crawl_options)
     try:
-        return _collect(url, limits, allowed, store, session)
+        return _collect(url, limits, allowed, store, session, static_only)
     except BaseException:
         session.finish("collector_error")
         raise
 
 
-def _collect(url, limits, allowed, store, session):
+def _collect(url, limits, allowed, store, session, static_only=False):
     acquisition = MaterialOrigin(
         kind="collector",
         acquisition_method="bounded_static_http_collector",
@@ -83,11 +84,20 @@ def _collect(url, limits, allowed, store, session):
             "Local acquisition metadata does not authenticate publisher identity",
         ],
     )
+    if getattr(session.fetcher, "synthetic", False):
+        acquisition.acquisition_method = "synthetic_local_fixture_no_http"
+        acquisition.limitations.append(
+            "Synthetic fixture: no public website or HTTP response observed"
+        )
     result = CollectionResult(target_url=url, started_at=now(), limits=limits, origin=acquisition)
     queue = deque([url])
     seen = {url}
     document_urls: dict[str, list[str]] = {}
-    with sync_playwright() as playwright:
+    from .static_renderer import static_playwright
+
+    if static_only:
+        result.warnings.append("Static mode: no screenshots, scripts or dynamic behavior checked")
+    with static_playwright() if static_only else sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             executable_path=os.environ.get("LEXRADAR_CHROMIUM_PATH"),
             timeout=min(30, session.remaining()) * 1000,

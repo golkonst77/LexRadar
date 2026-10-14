@@ -92,7 +92,7 @@ def authorize(packet: EvidencePacket, approval_path: Path | None) -> PacketAppro
     return approval
 
 
-def write_preflight(packet: EvidencePacket, output: Path) -> None:
+def write_preflight(packet: EvidencePacket, output: Path, *, approval_template=True) -> None:
     output.mkdir(parents=True, exist_ok=False)
     (output / "packet.json").write_text(packet.payload, encoding="utf-8")
     (output / "preflight.json").write_text(
@@ -107,6 +107,8 @@ def write_preflight(packet: EvidencePacket, output: Path) -> None:
         ),
         encoding="utf-8",
     )
+    if not approval_template:
+        return
     (output / "approval.json").write_text(
         json.dumps(
             {

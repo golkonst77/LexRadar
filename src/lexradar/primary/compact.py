@@ -221,7 +221,7 @@ def verify_quote(packet, excerpt_id, quote):
         raise ValueError("Quote absent from sent excerpt")
 
 
-def preflight(root, packet, output, *, sector="unknown"):
+def preflight(root, packet, output, *, sector="unknown", approval_template=True):
     fresh = prepare(root, as_of=packet.as_of, sector=sector)
     if fresh != packet:
         raise ValueError("Source or compact snapshot changed")
@@ -230,7 +230,7 @@ def preflight(root, packet, output, *, sector="unknown"):
         p.is_symlink() for p in (output, *output.parents)
     ):
         raise ValueError("Output must be outside source and not use symlinks")
-    write_preflight(packet, output)
+    write_preflight(packet, output, approval_template=approval_template)
     (output / "primary.local.json").write_text(packet.primary_json, encoding="utf-8")
     (output / "trace-map.local.json").write_text(packet.trace_json, encoding="utf-8")
     # All strings remain literal in the final wire JSON and are screened there.

@@ -1,0 +1,12 @@
+{
+  "url": "https://demo.lexradar.example/",
+  "fixture": true,
+  "static_only": false,
+  "ai_mode": "offline",
+  "request_sent": false,
+  "cost_usd": "0",
+  "client_release_allowed": false,
+  "status": "failed",
+  "error_type": "Error",
+  "error": "BrowserType.launch: Executable doesn't exist at /home/golkonst/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     playwright install                                     ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝"
+}

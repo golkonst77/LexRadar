@@ -9,6 +9,11 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "mvp":
+        from .mvp import main as mvp_main
+
+        mvp_main(sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "compact-analyze":
         from .auditors.compact_pipeline import main as compact_analyze_main
 

@@ -43,11 +43,12 @@ def analyze_compact(
     packet_approval=None,
     ledger=None,
     dry_run=False,
+    approval_template=True,
 ):
     if mode not in {"offline", "openrouter"}:
         raise ValueError("Unsupported mode")
     packet = prepare(root, as_of=as_of, sector=sector)
-    preflight(root, packet, output, sector=sector)
+    preflight(root, packet, output, sector=sector, approval_template=approval_template)
     messages = messages_for_compact(packet)
     primary = json.loads(packet.primary_json)
     blockers = []
