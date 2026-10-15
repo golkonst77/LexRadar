@@ -7,9 +7,9 @@ MODEL = "deepseek/deepseek-v3.2"
 PROVIDER = "siliconflow/fp8"
 INPUT_PRICE = Decimal("0.259")
 OUTPUT_PRICE = Decimal("0.80")
-# Public endpoint metadata rechecked 2026-10-14; short pilot window (~24 hours).
+# Public endpoint metadata rechecked 2026-10-15; short pilot window (~24 hours).
 # This verifies price/parameters, not endpoint availability or human approval.
-VERIFIED_UNTIL = datetime(2026, 10, 15, 12, tzinfo=UTC)
+VERIFIED_UNTIL = datetime(2026, 10, 16, 12, tzinfo=UTC)
 
 
 def validate_profile(config):

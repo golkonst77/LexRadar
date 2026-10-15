@@ -3,7 +3,7 @@
 Платный пилот пока BLOCKED: требуется человеческий approval пакета; публичный
 endpoint SiliconFlow FP8 при публичной проверке №34 сообщил status=0.
 Реальный запрос и выполнение параметров не проверены.
-Описанные ниже команды платного запуска в заданиях №32–34 НЕ выполнялись.
+Описанные ниже команды платного запуска в заданиях №32–37 НЕ выполнялись.
 `dry_run_ready` подтверждает локальные проверки, а не доступность провайдера.
 
 Досье `examples/compact-first-pilot/dossier` основано на `make_dossier` и `pdf_bytes`
@@ -16,6 +16,13 @@ endpoint SiliconFlow FP8 при публичной проверке №34 соо
 Все команды выполнять из корня репозитория в окружении с установленным LexRadar.
 В этой сессии Python: `/tmp/lexradar-029-venv/bin/python`.
 Выходные каталоги должны быть новыми; сохраняйте старые результаты и ledger.
+
+Актуальная проверка №37: `scripts/dry_run_037.py` готовит новый локальный пакет
+в `/tmp/lexradar-037-final/dry-run`, включая точные сообщения `messages.local.json`,
+без создания approval. Сохранённый packet №32 совпадает побайтно; system prompt
+после №36 изменён, поэтому старый HTML не заменяет просмотр новых сообщений.
+Результат без approval — `dry_run_blocked`. Подробности и команда будущего
+платного шага: [отчёт №37](codex-reports/codex-037-report.md).
 
 ## Просмотр и подтверждение
 
@@ -73,9 +80,9 @@ python -c 'from lexradar.auditors.compact_pipeline import main; main()' \
 
 Те же аргументы доступны через CLI `lexradar compact-analyze`.
 
-Ожидается dry_run_ready, SHA выше, sensitive_categories=[], резерв $0.009720427,
+Ожидается dry_run_ready, SHA выше, sensitive_categories=[], резерв $0.009756687,
 request_sent=false, budget_charge_usd=0. Ledger и lock при dry-run не создаются.
-Резерв: (31353 × 0.259 + 2000 × 0.80) / 1000000; input bound включает
+Резерв: (31493 × 0.259 + 2000 × 0.80) / 1000000; input bound включает
 UTF-8 system/user и 1024 единицы запаса. Это верхняя оценка, не списанная сумма.
 При BLOCKED смотрите blockers в compact-analysis.json; защиту не отключать.
 
@@ -86,7 +93,7 @@ UTF-8 system/user и 1024 единицы запаса. Это верхняя о�
 Нужны модель deepseek/deepseek-v3.2, SiliconFlow, tag siliconflow/fp8,
 цены $0.259/$0.80 за миллион, response_format/reasoning/max_tokens и подтверждённая
 доступность маршрута. Observed status=0 не доказывает доступность реального запроса.
-Профиль цен действует до 2026-10-15 12:00 UTC (около суток), затем fail-closed.
+Профиль цен действует до 2026-10-16 12:00 UTC (около суток), затем fail-closed.
 `reasoning.enabled=false` соответствует [официальной документации](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens).
 Metadata endpoint заявляют reasoning; реальное отключение без запроса не проверено. Лимит конфигурации 2000, лимит endpoint 147456. Fallback выключен, retries=0,
 require_parameters=true, response_format=json_object. Не менять маршрут наугад.

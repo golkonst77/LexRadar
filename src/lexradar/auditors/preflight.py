@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 import unicodedata
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -41,6 +41,15 @@ PATTERNS = {
 }
 
 
+def _calendar_date(value: str) -> bool:
+    day, month, year = re.split(r"[./]", value)
+    try:
+        date(int(year), int(month), int(day))
+    except ValueError:
+        return False
+    return True
+
+
 def screen(packet: EvidencePacket) -> list[dict[str, str]]:
     """Return locations/categories only, never the sensitive matched contents."""
     issues = []
@@ -57,7 +66,12 @@ def screen(packet: EvidencePacket) -> list[dict[str, str]]:
             normalized = "".join(c for c in normalized if unicodedata.category(c) != "Cf")
             for category, pattern in PATTERNS.items():
                 flags = 0 if category == "person_name" else re.IGNORECASE
-                if re.search(pattern, normalized, flags):
+                matches = re.finditer(pattern, normalized, flags)
+                if category == "birth_date":
+                    # Impossible calendar dates are not birth dates. Keep every
+                    # valid date blocked, regardless of its surrounding wording.
+                    matches = (m for m in matches if _calendar_date(m[0]))
+                if next(matches, None) is not None:
                     issues.append({"path": path, "category": category})
 
     wire = json.loads(packet.payload)
