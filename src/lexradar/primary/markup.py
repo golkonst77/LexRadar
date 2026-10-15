@@ -239,7 +239,7 @@ class SavedMarkup(StaticText):
             if len(names) != len(set(names)) or not re.fullmatch(start_syntax, token):
                 if (
                     not self.form
-                    and not self.excluded
+                    and (not self.excluded or (self.excluded == ["head"] and tag == "link"))
                     and tag not in self.EXCLUDED
                     and tag not in {"form", "input", "select", "textarea", "button"}
                     and "<" not in token[1:]

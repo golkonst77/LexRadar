@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 from playwright.sync_api import Error as BrowserError
 
-from ..primary.markup import SavedMarkup
+from ..primary.markup import SavedMarkup, compact
 
 
 class StaticPage:
@@ -22,7 +22,7 @@ class StaticPage:
         self.callback(route, request)
 
     def fulfill(self, *, body, **kwargs):
-        self.parser = SavedMarkup(self.url)
+        self.parser = SavedMarkup(self.url, recover=True)
         self.parser.feed(body.decode("utf-8", errors="replace"))
         self.parser.close()
 
@@ -31,9 +31,24 @@ class StaticPage:
 
     def evaluate(self, script):
         return {
-            "forms": [],
+            "forms": [
+                {
+                    "purpose": form.purpose,
+                    "fields": [f.model_dump() for f in form.fields],
+                    "submission_context": compact(form.parts)[:3000],
+                    "links": [
+                        {"url": link.url, "text": link.text}
+                        for link in self.parser.links
+                        if link.form_index == form.index
+                    ],
+                }
+                for form in self.parser.forms
+            ],
             "links": [{"url": link.url, "text": link.text} for link in self.parser.links],
         }
+
+    def locator(self, selector):
+        raise BrowserError("Static mode: form visual evidence unavailable")
 
     def screenshot(self):
         raise BrowserError("Static mode: visual evidence and dynamic behavior unavailable")

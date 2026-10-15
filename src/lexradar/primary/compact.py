@@ -1,4 +1,4 @@
-"""Offline compact primary snapshot with lossless evidence and local metadata."""
+"""Bounded primary snapshot; full evidence and explicit selection counts stay local."""
 
 import argparse
 import hashlib
@@ -10,6 +10,7 @@ from pathlib import Path
 
 from ..auditors.evidence import load_packet
 from ..auditors.preflight import authorize, write_preflight
+from .markup import SavedMarkup, compact
 from .service import audit_saved_dossier
 
 MAX_BYTES = 40_000
@@ -37,7 +38,7 @@ class CompactPacket:
 
 
 def prepare(root: Path, *, as_of: datetime, sector="unknown") -> CompactPacket:
-    """Explicit assessment time makes replay deterministic; retain all primary facts."""
+    """Explicit assessment time makes replay deterministic; preserve full local facts."""
     report = audit_saved_dossier(root, as_of=as_of, sector=sector)
     original = report.model_dump(mode="json")
     traces = {}
@@ -73,6 +74,22 @@ def prepare(root: Path, *, as_of: datetime, sector="unknown") -> CompactPacket:
     for stage in projected["stages"]:
         stage.pop("possible_paid_legal_work")
         stage.pop("paid_work_rationale")
+    primary_hash = digest(canonical(original))
+    body = {"primary": projected, "excerpts": excerpts}
+    payload = encode_body(body, primary_hash)
+    if len(payload.encode()) > MAX_BYTES:
+        body = select_evidence(projected, excerpts, primary_hash)
+        payload = encode_body(body, primary_hash)
+    if len(payload.encode()) > MAX_BYTES:
+        raise PacketOverflow(
+            f"packet_overflow/review_required: {len(payload.encode())} > 40000 bytes"
+        )
+    packet = CompactPacket(payload, digest(payload), canonical(original), canonical(traces), as_of)
+    verify_quotes(root, packet)
+    return packet
+
+
+def encode_body(body, primary_hash):
     # Content-addressed object pooling removes repeated metadata without dropping facts.
     counts = Counter()
 
@@ -87,7 +104,6 @@ def prepare(root: Path, *, as_of: datetime, sector="unknown") -> CompactPacket:
             for child in value:
                 count(child)
 
-    body = {"primary": projected, "excerpts": excerpts}
     count(body)
     field_names = set()
 
@@ -115,34 +131,154 @@ def prepare(root: Path, *, as_of: datetime, sector="unknown") -> CompactPacket:
             return [pack(v) for v in value]
         return value
 
-    payload = canonical(
-        {
-            "schema": "compact-primary-v1",
-            "encoding": "recursive_dictionary_refs_v1",
-            "dictionary": {ids[k]: pack(json.loads(k), top=True) for k in shared},
-            "keys": {v: k for k, v in keys.items()},
-            "body": pack(body),
-            "primary_sha256": digest(canonical(original)),
-            "omissions": [
-                "commercial_opportunity",
-                "materials.*.artifacts",
-                "forms.*.screenshot",
-                "forms.*.screenshot_scope",
-                "stages.*.possible_paid_legal_work",
-                "stages.*.paid_work_rationale",
-            ],
-            "production_outcome": "HOLD",
-            "legal_status": "not_confirmed",
-            "client_release_allowed": False,
+    wire = {
+        "schema": "compact-primary-v1",
+        "encoding": "recursive_dictionary_refs_v1",
+        "dictionary": {ids[k]: pack(json.loads(k), top=True) for k in shared},
+        "keys": {v: k for k, v in keys.items()},
+        "body": pack(body),
+        "primary_sha256": primary_hash,
+        "omissions": [
+            "commercial_opportunity",
+            "materials.*.artifacts",
+            "forms.*.screenshot",
+            "forms.*.screenshot_scope",
+            "stages.*.possible_paid_legal_work",
+            "stages.*.paid_work_rationale",
+        ],
+        "production_outcome": "HOLD",
+        "legal_status": "not_confirmed",
+        "client_release_allowed": False,
+    }
+    # A pooled parent can make child dictionary entries unreachable. Do not send
+    # unused copies of evidence: retain only the transitive closure from body.
+    reachable = set()
+
+    def mark(value):
+        if isinstance(value, dict):
+            if set(value) == {"$"}:
+                key = value["$"]
+                if key not in reachable:
+                    reachable.add(key)
+                    mark(wire["dictionary"][key])
+            else:
+                for child in value.values():
+                    mark(child)
+        elif isinstance(value, list):
+            for child in value:
+                mark(child)
+
+    mark(wire["body"])
+    wire["dictionary"] = {k: v for k, v in wire["dictionary"].items() if k in reachable}
+    return canonical(wire)
+
+
+def select_evidence(projected, excerpts, primary_hash):
+    """Keep full local facts; select complete wire records with exact original quotes.
+
+    Round-robin categories prevent repeated services from starving forms/documents.
+    Every accepted record is measured after UTF-8 serialization and dictionary encoding.
+    """
+    list_keys = [k for k, v in projected.items() if isinstance(v, list)]
+    retained = {"limitations", "normative_references"}
+    selected = {
+        k: ([] if k in list_keys and k not in retained else v) for k, v in projected.items()
+    }
+    selected["limitations"] = [
+        *projected["limitations"],
+        "Incomplete compact analysis: priority-selected evidence only; omitted records "
+        "remain in primary.local.json. Absence in this packet is not evidence of absence.",
+    ]
+    order = [
+        "materials",
+        "forms",
+        "organizations",
+        "observations",
+        "medical_checks",
+        "stages",
+        "declarations",
+        "popup_relations",
+        "integration_groups",
+        "flows",
+        "hypotheses",
+        "missing_checks",
+        "services",
+    ]
+    order += sorted(set(list_keys) - set(order) - retained)
+    order = [k for k in order if k in list_keys and k not in retained]
+    totals = {k: len(projected[k]) for k in order}
+
+    def snapshot():
+        refs = set()
+
+        def visit(value):
+            if isinstance(value, dict):
+                if set(value) == {"excerpt"}:
+                    refs.add(value["excerpt"])
+                else:
+                    for child in value.values():
+                        visit(child)
+            elif isinstance(value, list):
+                for child in value:
+                    visit(child)
+
+        visit(selected)
+        return {
+            "primary": selected,
+            "excerpts": {k: v for k, v in excerpts.items() if k in refs},
+            "selection": {
+                "complete": False,
+                "policy": "essential_round_robin_then_secondary_16_v1",
+                "total": totals,
+                "included": {k: len(selected[k]) for k in order},
+            },
         }
+
+    # Prioritize documents and evidence-bearing observations, so page navigation
+    # inventories cannot crowd out PDF/policy content. Quotes remain whole.
+    ranked = {k: list(projected[k]) for k in order}
+    ranked["materials"].sort(
+        key=lambda v: (not v["evidence_id"].startswith("document-"), v["evidence_id"])
     )
-    if len(payload.encode()) > MAX_BYTES:
-        raise PacketOverflow(
-            f"packet_overflow/review_required: {len(payload.encode())} > 40000 bytes"
+
+    def observation_priority(item):
+        refs = []
+
+        def collect(value):
+            if isinstance(value, dict):
+                if set(value) == {"excerpt"}:
+                    refs.append(excerpts[value["excerpt"]])
+                else:
+                    for child in value.values():
+                        collect(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect(child)
+
+        collect(item)
+        return (
+            not any(v["quote"] and v["evidence_id"].startswith("document-") for v in refs),
+            not any(v["quote"] for v in refs),
         )
-    packet = CompactPacket(payload, digest(payload), canonical(original), canonical(traces), as_of)
-    verify_quotes(root, packet)
-    return packet
+
+    ranked["observations"].sort(key=observation_priority)
+    # Bound CPU: at most 16 observations and 16 records per secondary category.
+    essential = order[:6]
+    pools = {k: ranked[k][:16] if k == "observations" else ranked[k] for k in essential}
+    candidates = [
+        (key, pools[key][index])
+        for index in range(max((len(v) for v in pools.values()), default=0))
+        for key in essential
+        if index < len(pools[key])
+    ]
+    candidates += [
+        (key, ranked[key][index]) for index in range(16) for key in order[6:] if index < totals[key]
+    ]
+    for key, item in candidates:
+        selected[key].append(item)
+        if len(encode_body(snapshot(), primary_hash).encode("utf-8")) > MAX_BYTES:
+            selected[key].pop()
+    return snapshot()
 
 
 def unpack(packet):
@@ -173,6 +309,7 @@ def verify_quotes(root, packet):
     body = unpack(packet)
     traces = json.loads(packet.trace_json)
     materials = {v.evidence_id: v for v in [*source.data.pages, *source.data.documents]}
+    semantic_regions = {}
     for key, excerpt in body["excerpts"].items():
         trace = traces[key]
         if any(excerpt[k] != trace[k] for k in excerpt):
@@ -209,6 +346,26 @@ def verify_quotes(root, packet):
             )
         else:
             raise ValueError("Manifest metadata cannot ground a quote")
+        if quote not in text and trace["basis"] == "saved_html" and trace["static_span"]:
+            # Semantic text quotes contain decoded entities/whitespace and can span tags.
+            # Reproduce the same bounded region from the authenticated full original.
+            if trace["evidence_id"] not in semantic_regions:
+                parser = SavedMarkup(trace["url"], recover=True)
+                parser.feed(raw.decode("utf-8"))
+                parser.close()
+                semantic_regions[trace["evidence_id"]] = [
+                    (parser.region_span(i).model_dump(mode="json"), compact(region.parts))
+                    for i, region in enumerate(parser.regions)
+                ]
+            span = trace["static_span"]
+            for reproduced, region_text in semantic_regions[trace["evidence_id"]]:
+                if (
+                    reproduced["start"] == span["start"]
+                    and reproduced["end_exclusive"] == span["end_exclusive"]
+                ):
+                    if quote in region_text:
+                        text = region_text
+                        break
         if quote not in text:
             raise ValueError("Quote not reproduced from original scope")
 

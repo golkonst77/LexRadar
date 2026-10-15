@@ -143,7 +143,20 @@ def render_mvp(root: Path, output: Path, *, fixture=False):
             "пометил её для ручной проверки; это не правовой вывод.</li>"
         )
     limitations = esc(
-        json.dumps(primary["limitations"] + collection["warnings"], ensure_ascii=False)
+        json.dumps(
+            primary["limitations"]
+            + collection["warnings"]
+            + (
+                [
+                    "Компактный AI-анализ неполон: включена приоритетная выборка доказательств; "
+                    "полные факты сохранены локально. "
+                    + json.dumps(analysis["preview"]["selection"], ensure_ascii=False)
+                ]
+                if not analysis.get("preview", {}).get("selection", {"complete": True})["complete"]
+                else []
+            ),
+            ensure_ascii=False,
+        )
     )
     badge = (
         "СИНТЕТИЧЕСКОЕ ДЕМО: страницы и PDF созданы для проверки сценария."

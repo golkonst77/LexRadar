@@ -11,7 +11,6 @@ from test_reading_integrity import pdf_dossier
 from lexradar.auditors.preflight import screen
 from lexradar.primary.compact import (
     MAX_BYTES,
-    PacketOverflow,
     approve,
     canonical,
     digest,
@@ -138,12 +137,20 @@ def test_tamper_blocks_preflight(tmp_path):
     assert not (tmp_path / "out").exists()
 
 
-def test_oversize_no_truncation(tmp_path):
-    # Many unique declared forms cannot be discarded to make a package fit.
+def test_oversize_explicit_selection(tmp_path):
+    # Full local facts survive; wire omissions are counted and cannot prove absence.
     body = "".join(f'<form action="/route{i}"><input name="field{i}"></form>' for i in range(60))
     root, _ = make_dossier(tmp_path, body)
-    with pytest.raises(PacketOverflow, match="review_required"):
-        prepare(root, as_of=NOW)
+    packet = prepare(root, as_of=NOW)
+    assert len(packet.payload.encode()) <= MAX_BYTES
+    body = unpack(packet)
+    assert not body["selection"]["complete"]
+    assert body["selection"]["total"]["forms"] == 30
+    assert len(json.loads(packet.primary_json)["forms"]) == 30
+    assert body["selection"]["included"]["forms"] == len(body["primary"]["forms"])
+    assert packet == prepare(root, as_of=NOW)
+    verify_quotes(root, packet)
+    assert any("Incomplete compact" in v for v in body["primary"]["limitations"])
 
 
 def test_approval_exact_hash_and_sensitive_blocking(tmp_path, capsys):
@@ -206,3 +213,10 @@ def test_compact_cli_and_output_boundaries(tmp_path, monkeypatch):
         preflight(root, packet, root / "must-not-write")
     with pytest.raises(FileExistsError):
         preflight(root, packet, output)
+
+
+def test_semantic_quote_across_html_tags(tmp_path):
+    root, _ = make_dossier(tmp_path, "<p>ООО <strong>«Клиника»</strong> ИНН 1234567890</p>")
+    packet = prepare(root, as_of=NOW)
+    verify_quotes(root, packet)
+    assert unpack(packet)["excerpts"]

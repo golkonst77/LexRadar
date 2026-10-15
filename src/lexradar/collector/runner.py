@@ -272,12 +272,30 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                                 seen.add(target)
                                 # Put legally relevant links ahead of ordinary navigation
                                 # across the entire crawl, not just within this page.
-                                if categories(link["text"] + " " + target):
-                                    queue.appendleft(target)
-                                else:
-                                    queue.append(target)
+                                queue.append(target)
                         except CollectionError:
                             continue
+                    # Re-sort globally without appendleft reversing the policy-first order.
+                    priorities = {
+                        link["url"]: (
+                            *document_sort_key(
+                                link["url"], document_hints(link["url"], link["text"])
+                            )[:2],
+                            not bool(categories(link["text"] + " " + link["url"])),
+                            link["url"],
+                        )
+                        for link in links
+                    }
+                    for queued in queue:
+                        priorities.setdefault(
+                            queued,
+                            (
+                                *document_sort_key(queued, document_hints(queued, ""))[:2],
+                                not bool(categories(queued)),
+                                queued,
+                            ),
+                        )
+                    queue = deque(sorted(queue, key=lambda target: priorities[target]))
                     page_record.document_links = sorted(set(page_record.document_links))
                 except (CollectionError, BrowserError, OSError) as exc:
                     evidence.collection_errors.append(str(exc)[:500])

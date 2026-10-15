@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from ..primary.compact import approve, digest, preflight, prepare
+from ..primary.compact import approve, digest, preflight, prepare, unpack
 from .budget import Budget, BudgetExceeded
 from .compact_profile import validate_profile
 from .compact_validator import CompactResult, validate_compact
@@ -22,6 +22,8 @@ PROMPT_A = (
     "Decode recursive_dictionary_refs_v1 using keys and dictionary ($ references). "
     "Review primary facts; cite only exact substrings of sent excerpts by excerpt ID. "
     "No absence proof, legal confirmation or verified law. Hypotheses need human review. "
+    "If selection.complete is false, analysis is incomplete: do not infer omitted facts "
+    "or resolve references to records absent from the packet. "
     "Return only JSON matching this schema: "
 )
 
@@ -63,7 +65,8 @@ def analyze_compact(
         "forms": len(primary["forms"]),
         "organizations": len(primary["organizations"]),
         "coverage": primary["coverage"],
-        "reading_limitations": primary["limitations"],
+        "selection": unpack(packet).get("selection", {"complete": True}),
+        "reading_limitations": unpack(packet)["primary"]["limitations"],
         "sensitive_categories": sorted({v["category"] for v in screen(packet)}),
         "screening_limitation": LIMITATION,
         "reserve_usd": estimate,
