@@ -67,3 +67,43 @@ def test_collection_failure_retains_artifacts(tmp_path, monkeypatch):
     report = json.loads((tmp_path / "run/run.json").read_text())
     assert report["status"] == "failed" and report["cost_usd"] == "0"
     assert not (tmp_path / "run/proposal.html").exists()
+
+
+def test_replay_and_unicode_pdf_are_offline(tmp_path, monkeypatch):
+    from pypdf import PdfReader
+
+    original = tmp_path / "original"
+    run(DEMO_URL, original, fixture=FIXTURE, static_only=True)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Replay attempted collection or external transport")
+
+    monkeypatch.setattr("lexradar.mvp.collect", forbidden)
+    monkeypatch.setattr("socket.getaddrinfo", forbidden)
+    monkeypatch.setattr("socket.socket.connect", forbidden)
+    monkeypatch.setattr("lexradar.auditors.provider.OpenRouterTransport.post", forbidden)
+    result = run(DEMO_URL, tmp_path / "replay", dossier=original / "dossier", pdf=True)
+    assert result["status"] == "success" and result["pdf_generated"]
+    root = tmp_path / "replay"
+    text = "\n".join(page.extract_text() for page in PdfReader(root / "audit.pdf").pages)
+    assert "Юридические нарушения не установлены" in text
+    assert "Повторный анализ сохранённого досье" in text
+    assert "HOLD / not_confirmed" in text
+    assert "ПОВТОРНЫЙ АНАЛИЗ" in (root / "proposal.html").read_text()
+    assert not list(root.rglob("*approval*"))
+    assert not list(root.rglob("*ledger*"))
+    hashes = json.loads((root / "sha256.json").read_text())
+    assert "audit.pdf" in hashes and "audit.html" in hashes
+    # Corrupted evidence is rejected before creating a result or invoking collector.
+    (original / "dossier/artifacts/page-0001.html").write_text("changed")
+    with pytest.raises(ValueError, match="integrity"):
+        run(DEMO_URL, tmp_path / "rejected", dossier=original / "dossier")
+    assert not (tmp_path / "rejected").exists()
+
+
+def test_replay_rejects_wrong_site(tmp_path):
+    original = tmp_path / "original"
+    run(DEMO_URL, original, fixture=FIXTURE, static_only=True)
+    with pytest.raises(ValueError, match="URL mismatch"):
+        run("https://example.org/", tmp_path / "rejected", dossier=original / "dossier")
+    assert not (tmp_path / "rejected").exists()

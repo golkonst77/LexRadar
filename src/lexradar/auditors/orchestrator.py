@@ -9,7 +9,14 @@ from pathlib import Path
 from .budget import Budget, BudgetExceeded
 from .disagreements import compare
 from .evidence import load_packet
-from .models import AnalysisConfig, AnalysisReport, AuditorRun, RequestLog, Usage
+from .models import (
+    AnalysisConfig,
+    AnalysisReport,
+    AuditorRun,
+    ProviderDiagnostics,
+    RequestLog,
+    Usage,
+)
 from .preflight import LIMITATION, MVP_NO_SCREENING_NOTICE, authorize
 from .prompts import messages_for
 from .provider import OfflineProvider, OpenRouterProvider, Provider, ProviderError
@@ -33,11 +40,34 @@ def analyze(
     if type(mvp_no_screening) is not bool:
         raise ValueError("MVP_NO_SCREENING must be an explicit boolean")
     if mvp_no_screening:
+        from ..experiment_069 import experiment_profile
+        from ..experiment_069 import messages_for as experiment_messages
         from ..single_auditor import messages_for as single_messages
         from ..single_auditor import profile
 
-        if config != profile() or message_builder is not single_messages:
-            raise ValueError("MVP_NO_SCREENING requires the Single DeepSeek A profile and prompt")
+        legacy = (
+            config == profile(timeout_seconds=config.timeout_seconds)
+            and message_builder is single_messages
+        )
+        # The same Single A route may tighten cost and retry limits for an MVP.
+        base = profile(timeout_seconds=config.timeout_seconds, model=config.auditor_a.model)
+        tightened = (
+            message_builder is single_messages
+            and config.auditor_a == config.auditor_b
+            and config.auditor_a.model == base.auditor_a.model
+            and config.auditor_a.max_output_tokens == base.auditor_a.max_output_tokens
+            and config.auditor_a.prompt_price_cap <= base.auditor_a.prompt_price_cap
+            and config.auditor_a.completion_price_cap <= base.auditor_a.completion_price_cap
+            and config.max_budget_usd <= base.max_budget_usd
+            and config.retries <= base.retries
+            and config == base.model_copy(update={
+                "auditor_a": config.auditor_a, "auditor_b": config.auditor_b,
+                "max_budget_usd": config.max_budget_usd, "retries": config.retries,
+            })
+        )
+        experiment = config == experiment_profile() and message_builder is experiment_messages
+        if not (legacy or tightened or experiment):
+            raise ValueError("MVP_NO_SCREENING requires the Single A profile and prompt")
     if mode not in {"offline", "openrouter"}:
         raise ValueError("Unsupported analysis mode")
     if mode == "openrouter" and not allow_external_transfer:
@@ -59,6 +89,9 @@ def analyze(
         raise ValueError("Analysis output must be a new directory")
     # Instantiating real provider requires a key, but no network call occurs here.
     provider = provider or (OfflineProvider() if mode == "offline" else OpenRouterProvider(config))
+    from ..audit_capture import Capture
+
+    output.mkdir(mode=0o700, parents=True, exist_ok=False)
     budget = Budget(config.max_budget_usd)
     started = datetime.now(UTC)
     logs = []
@@ -76,13 +109,20 @@ def analyze(
         run = AuditorRun(
             auditor=auditor, model=settings.model, prompt_version=version, status="provider_error"
         )
-        for attempt in range(config.retries + 1):
+        for attempt in range(1 if config.single_auditor else config.retries + 1):
             stamp, timer = datetime.now(UTC), time.monotonic()
             usage = Usage()
             reserved = charge = 0
             status = "provider_error"
             retry = False
             sent = False
+            diagnostics = None
+            capture = Capture(output / f"capture-{auditor}-{attempt + 1}")
+            capture.write("system.txt", messages[0]["content"])
+            capture.write("packet.txt", packet.payload)
+            capture.write("source.json", json.dumps({"dossier": str(root.resolve())}))
+            if isinstance(provider, OpenRouterProvider):
+                provider.audit_capture = capture
             try:
                 if mode == "openrouter":
                     approve()
@@ -90,17 +130,23 @@ def analyze(
                 # Reconstruct fresh messages even if an injected test provider mutates its input.
                 sent = mode == "openrouter"
                 reply = provider.complete(settings, [dict(m) for m in messages])
+                if not (capture.root / "original.txt").exists():
+                    capture.response(reply.content)
                 usage = reply.usage
                 if mode == "openrouter":
                     charge = budget.settle(reserved, usage)
                     if budget.overrun:
                         raise BudgetExceeded("Unexpected provider cost; no further calls permitted")
-                run.result, run.validation_notes = validate_result(reply.content, auditor, packet)
+                run.result, run.validation_notes = validate_result(
+                    reply.content, auditor, packet,
+                    require_cookie_review=version == "single-a-v3-cookie",
+                )
                 run.status, status = "success", "success"
             except BudgetExceeded:
                 run.status, status = "budget_exceeded", "budget_exceeded"
             except ProviderError as exc:
                 run.status, status = "provider_error", exc.code
+                diagnostics = ProviderDiagnostics.sanitized(exc.diagnostics)
                 retry = exc.retryable and attempt < config.retries
             except ResultError as exc:
                 run.status, status = "invalid_response", str(exc)
@@ -109,6 +155,7 @@ def analyze(
                 if mode != "offline":
                     raise
                 run.status, status = "provider_error", "offline_provider_error"
+            capture.write("status.json", json.dumps({"status": status}))
             local_logs.append(
                 RequestLog(
                     auditor=auditor,
@@ -123,6 +170,7 @@ def analyze(
                     status=status,
                     usage=usage,
                     budget_charge_usd=charge,
+                    provider_diagnostics=diagnostics,
                 )
             )
             if not retry:
@@ -170,7 +218,6 @@ def analyze(
             else "Budget depends on price/token caps; unexpected charges stop further calls",
         ],
     )
-    output.mkdir(parents=True, exist_ok=False)
     (output / "analysis.json").write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     (output / "requests.jsonl").write_text(
         "\n".join(log.model_dump_json() for log in logs) + "\n", encoding="utf-8"
@@ -180,6 +227,7 @@ def analyze(
             {
                 "mode": mode,
                 "schema_version": "0.3",
+                "timeout_seconds": config.timeout_seconds,
                 "MVP_NO_SCREENING": mvp_no_screening,
                 "personal_data_transfer_check": (
                     MVP_NO_SCREENING_NOTICE if mvp_no_screening else "enabled"

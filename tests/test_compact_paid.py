@@ -131,7 +131,9 @@ def test_fake_paid_transport(pilot, tmp_path, monkeypatch, variant):
         assert request["response_format"] == {"type": "json_object"}
         assert request["max_tokens"] == 2000
         if variant == "timeout":
-            raise ProviderError("transport_timeout", retryable=True)
+            raise ProviderError("transport_timeout", retryable=True,
+                                diagnostics={"phase": "read", "kind": "deadline",
+                                             "http_status": 200, "received_bytes": 12})
         reply = CompactFakeTransport().post(payload, key, timeout, max_bytes)
         data = json.loads(reply.body)
         if variant == "unknown":
@@ -150,6 +152,9 @@ def test_fake_paid_transport(pilot, tmp_path, monkeypatch, variant):
     assert report["legal_status"] == "not_confirmed"
     text = (tmp_path / "output/compact-analysis.json").read_text()
     assert "synthetic-test-key" not in text
+    if variant == "timeout":
+        assert report["provider_diagnostics"]["received_bytes"] == 12
+        assert json.loads(text)["provider_diagnostics"]["phase"] == "read"
     if variant == "known":
         assert report["status"] == "success"
     else:

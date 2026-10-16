@@ -31,7 +31,7 @@ class ModelSettings(Model):
     # USD per million tokens; passed as OpenRouter provider.max_price caps.
     prompt_price_cap: Decimal = Field(gt=0, le=1000, allow_inf_nan=False)
     completion_price_cap: Decimal = Field(gt=0, le=1000, allow_inf_nan=False)
-    max_output_tokens: int = Field(default=2000, ge=128, le=16000)
+    max_output_tokens: int = Field(default=2000, ge=128, le=32000)
 
 
 class AnalysisConfig(Model):
@@ -57,6 +57,8 @@ class NormativeBasis(Model):
 
 
 class TextGrounding(Model):
+    start: int | None = Field(default=None, ge=0)
+    end: int | None = Field(default=None, ge=1)
     page: int | None = Field(default=None, ge=1)
     evidence_id: str = Field(min_length=1, max_length=200)
     exact_quote: str = Field(min_length=1, max_length=10000)
@@ -99,7 +101,32 @@ class Coverage(Model):
     limitations: list[str] = Field(max_length=100)
 
 
+class CookieEvidence(Model):
+    evidence_id: str = Field(min_length=1, max_length=200)
+    source: HttpUrl
+    exact_quote: str = Field(min_length=1, max_length=10000)
+
+
+class CookieAnalyticsReview(Model):
+    status: Literal["ISSUE", "OK", "NOT_VERIFIED"]
+    rationale: str = Field(min_length=1, max_length=5000)
+    evidence: list[CookieEvidence] = Field(default_factory=list, max_length=100)
+    limitations: list[str] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def evidence_required(self):
+        if self.status != "NOT_VERIFIED" and not self.evidence:
+            raise ValueError("ISSUE/OK require source-bound evidence")
+        return self
+
+
 class AIAuditorResult(Model):
+    # Legacy saved responses remain readable; new Single A responses require this field.
+    cookie_analytics_review: CookieAnalyticsReview = Field(
+        default_factory=lambda: CookieAnalyticsReview(
+            status="NOT_VERIFIED", rationale="Legacy response: cookie review was not supplied"
+        )
+    )
     auditor: Literal["A", "B"]
     findings: list[AIFinding] = Field(max_length=100)
     coverage: list[Coverage] = Field(min_length=9, max_length=10)
@@ -126,6 +153,29 @@ class Usage(Model):
     cost_usd: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
 
 
+class ProviderDiagnostics(Model):
+    phase: Literal["open", "read"] | None = None
+    kind: Literal["timeout", "deadline", "incomplete_read", "http_protocol", "network"] | None = (
+        None
+    )
+    http_status: int | None = Field(default=None, ge=100, le=599, strict=True)
+    received_bytes: int | None = Field(default=None, ge=0, strict=True)
+
+    @classmethod
+    def sanitized(cls, raw):
+        # Validate allowlisted values individually; discard arbitrary strings and extra fields.
+        safe = {}
+        if isinstance(raw, dict):
+            for name in cls.model_fields:
+                if name not in raw:
+                    continue
+                try:
+                    safe[name] = cls.model_validate({name: raw[name]}).model_dump()[name]
+                except ValueError:
+                    pass
+        return cls(**safe) if safe else None
+
+
 class RequestLog(Model):
     auditor: Literal["A", "B"]
     model: str
@@ -139,6 +189,7 @@ class RequestLog(Model):
     status: str
     usage: Usage = Field(default_factory=Usage)
     budget_charge_usd: Decimal = Field(ge=0)
+    provider_diagnostics: ProviderDiagnostics | None = None
 
 
 class AuditorRun(Model):
