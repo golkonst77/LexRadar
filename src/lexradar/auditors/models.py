@@ -63,6 +63,9 @@ class TextGrounding(Model):
 
 
 class AIFinding(Model):
+    proposed_work: list[Literal["legal_documents", "webmaster_instructions"]] = Field(
+        default_factory=list, max_length=2
+    )
     fact_supported: bool = False
     search_scope: Literal["unknown", "text_excerpt", "whole_document", "site_subset"] = "unknown"
     search_limitations: list[str] = Field(default_factory=list, max_length=100)

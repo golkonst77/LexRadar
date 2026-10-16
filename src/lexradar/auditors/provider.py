@@ -18,10 +18,11 @@ ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
 
 class ProviderError(Exception):
-    def __init__(self, code: str, *, retryable: bool = False):
+    def __init__(self, code: str, *, retryable: bool = False, diagnostics: dict | None = None):
         super().__init__(code)
         self.code = code
         self.retryable = retryable
+        self.diagnostics = diagnostics or {}
 
 
 @dataclass(frozen=True)
@@ -47,29 +48,67 @@ class OpenRouterTransport:
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             method="POST",
         )
+        phase = "open"
+        body = bytearray()
+        status = None
         try:
             deadline = time.monotonic() + timeout
             with build_opener(NoRedirects()).open(request, timeout=timeout) as response:
-                body = bytearray()
-                while True:
+                status = response.status
+                phase = "read"
+                # Capture while the response is live. Never touch the socket after EOF.
+                sock = response.fp.raw._sock
+                while not response.isclosed() and response.length != 0:
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
-                        raise ProviderError("transport_timeout", retryable=True)
-                    if response.fp is not None:
-                        response.fp.raw._sock.settimeout(remaining)
+                        raise ProviderError(
+                            "transport_timeout",
+                            retryable=True,
+                            diagnostics={
+                                "phase": phase,
+                                "kind": "deadline",
+                                "http_status": status,
+                                "received_bytes": len(body),
+                            },
+                        )
+                    sock.settimeout(remaining)
                     chunk = response.read1(min(65536, max_bytes + 1 - len(body)))
                     if not chunk:
                         break
                     body.extend(chunk)
                     if len(body) > max_bytes:
                         raise ProviderError("response_size_exceeded")
+                # read1() closes at early EOF without raising for Content-Length.
+                # Check the remaining length even when isclosed() ended the loop.
+                if response.length:
+                    raise http.client.IncompleteRead(b"", response.length)
                 return HTTPReply(response.status, bytes(body))
         except HTTPError as exc:
             status = exc.code
             exc.close()
             return HTTPReply(status, b"")  # Do not persist error bodies or headers.
         except (URLError, TimeoutError, OSError, http.client.HTTPException) as exc:
-            raise ProviderError("transport_error", retryable=True) from exc
+            # Only fixed categories and counts: exception text may contain secrets.
+            cause = exc.reason if isinstance(exc, URLError) else exc
+            kind = (
+                "timeout"
+                if isinstance(cause, TimeoutError)
+                else "incomplete_read"
+                if isinstance(cause, http.client.IncompleteRead)
+                else "http_protocol"
+                if isinstance(cause, http.client.HTTPException)
+                else "network"
+            )
+            raise ProviderError(
+                "transport_error",
+                retryable=True,
+                diagnostics={
+                    "phase": phase,
+                    "kind": kind,
+                    "http_status": status,
+                    "received_bytes": len(body),
+                },
+            ) from exc
 
 
 @dataclass(frozen=True)
@@ -85,8 +124,17 @@ class Provider(Protocol):
 
 
 class OpenRouterProvider:
-    def __init__(self, config: AnalysisConfig, transport: Transport | None = None):
-        key = os.environ.get("OPENROUTER_API_KEY")
+    def __init__(
+        self,
+        config: AnalysisConfig,
+        transport: Transport | None = None,
+        *,
+        offline: bool = False,
+        compact_paid: bool = False,
+    ):
+        if offline and not isinstance(transport, CompactFakeTransport):
+            raise PermissionError("Offline provider requires built-in fake transport")
+        key = "offline-fixture-key" if offline else os.environ.get("OPENROUTER_API_KEY")
         if not key or any(c.isspace() for c in key):
             raise ProviderError("missing_or_invalid_api_key")
         configured = [config.auditor_a, config.auditor_b]
@@ -97,8 +145,13 @@ class OpenRouterProvider:
         self._key = key
         self.config = config
         self.transport = transport or OpenRouterTransport()
+        self.compact_paid = compact_paid
 
     def complete(self, settings: ModelSettings, messages: list[dict[str, str]]) -> ProviderReply:
+        if self.compact_paid:
+            from .compact_profile import PROVIDER, validate_profile
+
+            validate_profile(self.config)
         payload = json.dumps(
             {
                 "model": settings.model,
@@ -107,8 +160,10 @@ class OpenRouterProvider:
                 "temperature": 0,
                 "stream": False,
                 "n": 1,
+                **({"reasoning": {"enabled": False}} if self.compact_paid else {}),
                 "response_format": {"type": "json_object"},
                 "provider": {
+                    **({"only": [PROVIDER]} if self.compact_paid else {}),
                     "allow_fallbacks": False,
                     "require_parameters": True,
                     "max_price": {
@@ -196,3 +251,49 @@ class OfflineProvider:
             "limitations": ["Offline mode: placeholders only; not an actual AI audit"],
         }
         return ProviderReply(json.dumps(result), Usage(cost_usd=Decimal(0)))
+
+
+class CompactFakeTransport:
+    """Synthetic completion envelope through the real provider parser; no I/O."""
+
+    def post(self, payload: bytes, key: str, timeout: float, max_bytes: int) -> HTTPReply:
+        from ..primary.compact import CompactPacket, unpack
+
+        request = json.loads(payload)
+        wire = request["messages"][1]["content"]
+        packet = CompactPacket(wire, "", "", "", None)
+        excerpts = unpack(packet)["excerpts"]
+        item = next(((k, v) for k, v in excerpts.items() if v["quote"]), None)
+        result = {
+            "auditor": "A",
+            "observations": (
+                [
+                    {
+                        "excerpt": item[0],
+                        "quote": item[1]["quote"],
+                        "hypothesis": "Synthetic quote occurrence; human review required",
+                        "status": "potential",
+                    }
+                ]
+                if item
+                else []
+            ),
+            "checks": ["Independently verify facts and applicable current law"],
+        }
+        return HTTPReply(
+            200,
+            json.dumps(
+                {
+                    "model": request["model"],
+                    "choices": [
+                        {
+                            "finish_reason": "stop",
+                            "message": {
+                                "content": json.dumps(result),
+                            },
+                        }
+                    ],
+                    "usage": {"cost": 0},
+                }
+            ).encode(),
+        )

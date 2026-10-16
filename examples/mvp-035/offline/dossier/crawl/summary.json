@@ -1,0 +1,16 @@
+{
+  "stop_reason": "robots_unavailable",
+  "robots_status": "unavailable",
+  "robots_unavailable_policy": "deny_all",
+  "user_agent": "LexRadar/0.2 (bounded evidence collector)",
+  "request_attempts": 1,
+  "requests_sent": 0,
+  "robots_denied_urls": 0,
+  "blocked_urls": 0,
+  "elapsed_seconds": 0.001759981008945033,
+  "options": {
+    "min_delay_seconds": 2,
+    "max_requests": 20,
+    "max_duration_seconds": 90.0
+  }
+}

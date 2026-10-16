@@ -1,7 +1,8 @@
-"""Independent fresh requests; sequential execution shares only the audit budget."""
+"""Independent fresh requests; optional parallel execution is offline only."""
 
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from .budget import Budget, BudgetExceeded
 from .disagreements import compare
 from .evidence import load_packet
 from .models import AnalysisConfig, AnalysisReport, AuditorRun, RequestLog, Usage
-from .preflight import LIMITATION, authorize
+from .preflight import LIMITATION, MVP_NO_SCREENING_NOTICE, authorize
 from .prompts import messages_for
 from .provider import OfflineProvider, OpenRouterProvider, Provider, ProviderError
 from .validator import ResultError, validate_result
@@ -24,16 +25,35 @@ def analyze(
     allow_external_transfer: bool = False,
     packet_approval: Path | None = None,
     provider: Provider | None = None,
+    parallel: bool = False,
+    mvp_no_screening: bool = False,
     sleep=time.sleep,
+    message_builder=messages_for,
 ) -> AnalysisReport:
+    if type(mvp_no_screening) is not bool:
+        raise ValueError("MVP_NO_SCREENING must be an explicit boolean")
+    if mvp_no_screening:
+        from ..single_auditor import messages_for as single_messages
+        from ..single_auditor import profile
+
+        if config != profile() or message_builder is not single_messages:
+            raise ValueError("MVP_NO_SCREENING requires the Single DeepSeek A profile and prompt")
     if mode not in {"offline", "openrouter"}:
         raise ValueError("Unsupported analysis mode")
     if mode == "openrouter" and not allow_external_transfer:
         raise PermissionError("Explicit permission to transfer materials to OpenRouter required")
     if mode == "offline" and isinstance(provider, OpenRouterProvider):
         raise PermissionError("Real OpenRouter provider cannot be injected into offline mode")
+    if parallel and mode != "offline":
+        raise PermissionError("Parallel execution is offline only; paid budget stays sequential")
     packet = load_packet(root, config.max_input_bytes)
-    approval = authorize(packet, packet_approval) if mode == "openrouter" else None
+
+    def approve():
+        if mvp_no_screening:
+            return authorize(packet, packet_approval, mvp_no_screening=True)
+        return authorize(packet, packet_approval)
+
+    approval = approve() if mode == "openrouter" else None
     output = output.resolve()
     if output.exists():
         raise ValueError("Analysis output must be a new directory")
@@ -48,8 +68,11 @@ def analyze(
         if config.single_auditor
         else (("A", config.auditor_a), ("B", config.auditor_b))
     )
-    for auditor, settings in auditors:
-        messages, version, prompt_hash = messages_for(auditor, packet)
+
+    def execute(item):
+        auditor, settings = item
+        local_logs = []
+        messages, version, prompt_hash = message_builder(auditor, packet)
         run = AuditorRun(
             auditor=auditor, model=settings.model, prompt_version=version, status="provider_error"
         )
@@ -62,7 +85,7 @@ def analyze(
             sent = False
             try:
                 if mode == "openrouter":
-                    authorize(packet, packet_approval)
+                    approve()
                     reserved = charge = budget.reserve(settings, messages)
                 # Reconstruct fresh messages even if an injected test provider mutates its input.
                 sent = mode == "openrouter"
@@ -82,7 +105,11 @@ def analyze(
             except ResultError as exc:
                 run.status, status = "invalid_response", str(exc)
                 # Invalid evidence/schema results are not sent back into either auditor's context.
-            logs.append(
+            except Exception:
+                if mode != "offline":
+                    raise
+                run.status, status = "provider_error", "offline_provider_error"
+            local_logs.append(
                 RequestLog(
                     auditor=auditor,
                     model=settings.model,
@@ -101,7 +128,16 @@ def analyze(
             if not retry:
                 break
             sleep(min(config.max_backoff_seconds, 2**attempt))
+        return run, local_logs
+
+    if parallel:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            outcomes = list(executor.map(execute, auditors))
+    else:
+        outcomes = [execute(item) for item in auditors]
+    for run, local_logs in outcomes:
         runs.append(run)
+        logs.extend(local_logs)
     report = AnalysisReport(
         mode=mode,
         collector_manifest_sha256=packet.manifest_sha256,
@@ -118,6 +154,7 @@ def analyze(
         ),
         limitations=[
             *packet.limitations,
+            *([MVP_NO_SCREENING_NOTICE] if mvp_no_screening else []),
             LIMITATION,
             "Agreement is not independent verification of legal correctness",
             "Prompt safeguards cannot guarantee absence of model-level injection effects",
@@ -143,6 +180,10 @@ def analyze(
             {
                 "mode": mode,
                 "schema_version": "0.3",
+                "MVP_NO_SCREENING": mvp_no_screening,
+                "personal_data_transfer_check": (
+                    MVP_NO_SCREENING_NOTICE if mvp_no_screening else "enabled"
+                ),
                 "packet_approval": approval.model_dump(mode="json") if approval else None,
                 "external_transfer_explicitly_permitted": allow_external_transfer
                 if mode == "openrouter"

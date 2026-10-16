@@ -1,0 +1,28 @@
+{
+  "checked_at": "2026-10-14T11:56:19.150410+00:00",
+  "source": "https://openrouter.ai/api/v1/models/deepseek/deepseek-v3.2/endpoints",
+  "retrieval": "public GET via web; selected fields, not full response",
+  "model_id": "deepseek/deepseek-v3.2",
+  "provider_name": "DeepInfra",
+  "tag": "deepinfra/fp4",
+  "pricing_per_token": {
+    "prompt": "0.00000026",
+    "completion": "0.00000038"
+  },
+  "max_completion_tokens": 16384,
+  "required_supported_parameters": [
+    "response_format",
+    "reasoning",
+    "max_tokens"
+  ],
+  "observed_endpoint_status": -2,
+  "availability_confirmed": false,
+  "verified_until": "2026-10-15T12:00:00+00:00",
+  "rechecked_at": "2026-10-14T13:14:56+00:00",
+  "recheck_result": "Public endpoint fields unchanged; status=-2; availability remains unconfirmed",
+  "model_catalog_source": "https://openrouter.ai/api/v1/models",
+  "model_reasoning": {
+    "mandatory": false,
+    "default_enabled": false
+  }
+}
