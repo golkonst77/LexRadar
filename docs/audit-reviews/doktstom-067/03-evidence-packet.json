@@ -1,0 +1,228 @@
+{
+  "analysis_limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
+    "Collector contains partial/unavailable evidence",
+    "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+    "page-0001: Extraction is not legal research"
+  ],
+  "untrusted_collector_data": {
+    "documents": [],
+    "entities": [],
+    "evidence": [
+      {
+        "artifact_path": "artifacts/page-0001.html",
+        "artifacts": [
+          {
+            "kind": "html",
+            "notice": null,
+            "path": "artifacts/page-0001.html",
+            "representation": "original_html",
+            "sha256": "7e079cc0618b4431aa9bf6c543309ad48530435eab298409f3beed34b35ace11",
+            "size": 153398
+          },
+          {
+            "kind": "text",
+            "notice": null,
+            "path": "artifacts/page-0001.txt",
+            "representation": "extracted_text",
+            "sha256": "5db5316523d5800e07265c13ce655792a0ab749d7d0db04fe8b9de87e491bab0",
+            "size": 27127
+          }
+        ],
+        "available": true,
+        "captured_at": "2026-10-16T09:03:45.429942Z",
+        "collection_errors": [
+          "Derivative screenshot unavailable; original source recovery partial"
+        ],
+        "id": "page-0001",
+        "observed_fact": "Locally repaired saved HTML; embedded policy retained; original recovery partial",
+        "sha256": "7e079cc0618b4431aa9bf6c543309ad48530435eab298409f3beed34b35ace11",
+        "signal": "substantive",
+        "source": "https://doktstom.ru/",
+        "status": "partial",
+        "unavailable_reason": null
+      }
+    ],
+    "limits": {
+      "max_documents": 5,
+      "max_file_bytes": 5000000,
+      "max_links_per_page": 200,
+      "max_pages": 10,
+      "max_pdf_page_chars": 100000,
+      "max_pdf_pages": 100,
+      "max_pdf_total_chars": 1000000,
+      "max_redirects": 3,
+      "max_total_bytes": 50000000,
+      "timeout_seconds": 10.0
+    },
+    "origin": {
+      "acquisition_method": "local_saved_html_token_repair",
+      "captured_at_role": "local_import",
+      "declared_source": "https://doktstom.ru/",
+      "http_response_at": null,
+      "imported_at": "2026-10-16T09:03:45.429942Z",
+      "kind": "manual_html_import",
+      "limitations": [
+        "Local derivative: token repairs only; no HTTP request or publisher authentication",
+        "Original HTML SHA256 3257dc3e6b801daf640e8dc52c8a219ba393b3a47f8dfdab6c9d47f3a43aa8fa; original dossier manifest 6b62626ce9f29b8d8277b3b996d3fe0c5a26fc3c22d5e69a22af8a39095a4473",
+        "Recovered ORIGINAL HTML coverage is partial; complete derivative extraction is not complete source review",
+        "CSS visibility, JavaScript, external resources, legal completeness and current site not examined",
+        "No redaction; original form observations retained, not re-observed on a live website"
+      ],
+      "origin_authenticated": false,
+      "original_capture_at": "2026-10-13T15:08:32.556600Z",
+      "reported_capture_date": null,
+      "source_sha256": "7e079cc0618b4431aa9bf6c543309ad48530435eab298409f3beed34b35ace11",
+      "started_at_role": "local_import"
+    },
+    "pages": [
+      {
+        "captured_at": "2026-10-16T09:03:45.429942Z",
+        "categories": [],
+        "document_links": [],
+        "evidence_id": "page-0001",
+        "final_url": null,
+        "forms": [
+          {
+            "consent_links": [],
+            "fields": [
+              {
+                "checked": null,
+                "label": null,
+                "name": "name",
+                "required": false,
+                "tag": "input",
+                "type": "text"
+              },
+              {
+                "checked": null,
+                "label": null,
+                "name": "tel",
+                "required": false,
+                "tag": "input",
+                "type": "tel"
+              },
+              {
+                "checked": null,
+                "label": null,
+                "name": "catcher",
+                "required": false,
+                "tag": "input",
+                "type": "tel"
+              },
+              {
+                "checked": null,
+                "label": null,
+                "name": "type",
+                "required": false,
+                "tag": "input",
+                "type": "hidden"
+              },
+              {
+                "checked": null,
+                "label": null,
+                "name": "doctor",
+                "required": false,
+                "tag": "input",
+                "type": "hidden"
+              }
+            ],
+            "page_url": "https://doktstom.ru/",
+            "policy_links": [],
+            "purpose": null,
+            "screenshot": null,
+            "submission_context": "Запишитесь на консультацию\nнаш специалист перезвонит вам через 15 минут\nЗаписаться\nНажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"",
+            "unavailable_reason": "Original screenshot archived separately; no derivative screenshot generated"
+          }
+        ],
+        "http_status": null,
+        "origin": {
+          "acquisition_method": "local_saved_html_token_repair",
+          "captured_at_role": "local_import",
+          "declared_source": "https://doktstom.ru/",
+          "http_response_at": null,
+          "imported_at": "2026-10-16T09:03:45.429942Z",
+          "kind": "manual_html_import",
+          "limitations": [
+            "Local derivative: token repairs only; no HTTP request or publisher authentication",
+            "Original HTML SHA256 3257dc3e6b801daf640e8dc52c8a219ba393b3a47f8dfdab6c9d47f3a43aa8fa; original dossier manifest 6b62626ce9f29b8d8277b3b996d3fe0c5a26fc3c22d5e69a22af8a39095a4473",
+            "Recovered ORIGINAL HTML coverage is partial; complete derivative extraction is not complete source review",
+            "CSS visibility, JavaScript, external resources, legal completeness and current site not examined",
+            "No redaction; original form observations retained, not re-observed on a live website"
+          ],
+          "origin_authenticated": false,
+          "original_capture_at": "2026-10-13T15:08:32.556600Z",
+          "reported_capture_date": null,
+          "source_sha256": "7e079cc0618b4431aa9bf6c543309ad48530435eab298409f3beed34b35ace11",
+          "started_at_role": "local_import"
+        },
+        "reading": {
+          "extraction_state": "complete",
+          "legal_research_completed": false,
+          "limitations": [
+            "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+            "Extraction is not legal research"
+          ],
+          "max_page_chars": 100000,
+          "max_total_chars": 1000000,
+          "original_chars": 15227,
+          "original_saved": true,
+          "page_count": 1,
+          "page_limit": 100,
+          "pages": [
+            {
+              "extraction_state": "complete",
+              "limitations": [],
+              "original_chars": 15227,
+              "page": 1,
+              "supplied_chars": 15227,
+              "text_available": true,
+              "text_examination": "not_examined",
+              "truncated": false,
+              "visual_examined": false
+            }
+          ],
+          "provenance": "reproduced",
+          "source_sha256": "7e079cc0618b4431aa9bf6c543309ad48530435eab298409f3beed34b35ace11",
+          "supplied_chars": 15227,
+          "text_coverage_complete": true,
+          "text_layer_extracted": true,
+          "text_truncated": false,
+          "unread_page_ranges": [],
+          "visual_examined": false
+        },
+        "requested_url": "https://doktstom.ru/",
+        "text": "[REDACTED_PUBLIC_SITE_PREFIX: рекламный текст, контакты, имена и биографии врачей, номера образовательных документов опущены как несущественные для двух находок.]\nПолитика конфиденциальности интернет-сайта doktstom.ru Оставляя свои персональные данные на сайте, Вы соглашаетесь с настоящей Политикой конфиденциальности. Термины, используемые в настоящей Политике конфиденциальности: Сайт - совокупность логически связанных между собой веб-страниц, а также набор контента, размещаемых в сети «Интернет» по url-адресу: http://doktstom.ru; Персональные данные - любая информация, относящаяся прямо или косвенно к Пользователю Сайта; Оператор – администрация Сайта, осуществляющая сбор и обработку персональных данных Пользователей Сайта; Пользователь – физическое лицо, являющееся посетителем Сайта и предоставляющее свои персональные данные для их обработки Оператором. 1. Защита персональных данных Оператор не может передать или раскрыть персональные данные, предоставленные Пользователем при использовании функций сайта третьим лицам, кроме случаев, описанных законодательством РФ. 2. Получение персональных данных Оператор использует следующий алгоритм сбора персональных данных Пользователя: нажимая на кнопки \"Оставить заявку, обратный звонок или пройти техническое обслуживание\", расположенную в разных частях сайта, открывается форма заявки, в которой Пользователю предлагается указать контактный номер своего телефона, а также имя. Нажимая кнопку «Отправить», Пользователь дает свое согласие на обработку Оператором своих персональных данных, согласно Федеральному закону \"О персональных данных\" от 27.07.2006 N 152-ФЗ. 3. Использование персональных данных Сайт использует персональные данные Пользователя для обслуживания и для улучшения качества предоставляемых услуг. Персональные данные могут быть раскрыты в случаях, описанных законодательством, либо, когда администрация сочтет подобные действия необходимыми для соблюдения юридической процедуры, судебного распоряжения или легального процесса необходимого для работы Пользователя с Сайтом. В других случаях, ни при каких условиях, информация, которую Пользователь передает Сайту, не будет раскрыта третьим лицам. 4. Коммуникация Оператора с Пользователем После того, как Пользователь оставил свои персональные данные, Оператор имеет право совершать звонки по номеру телефона, которые указал Пользователь, с целью обслуживания и с целью улучшения качества предоставляемых услуг. 5. Безопасность персональных данных Сайт обеспечивает безопасность персональных данных от несанкционированного использования их третьими лицами. 6. Получение информации Пользователем об обработке Оператором его персональных данных. Отзыв согласия на обработку персональных данных. Согласно п. 7 ст. 14 Федерального закона \"О персональных данных\" от 27.07.2006 N 152-ФЗ., Пользователь имеет право на получение информации, касающейся обработки его персональных данных. Согласно п. 2 ст. 15 Федерального закона \"О персональных данных\" от 27.07.2006 N 152-ФЗ., Оператор обязан прекратить обработку персональных данных Пользователя по его требованию. 7. Уведомления об изменениях в настоящей Политике Оператор оставляет за собой право вносить изменения в Политику конфиденциальности без дополнительных уведомлений. Нововведения вступают в силу с момента их опубликования. Пользователь может отслеживать изменения в Политике конфиденциальности самостоятельно. [REDACTED_PUBLIC_CONTACT][REDACTED_PUBLIC_CONTACT]Сайт разработан Запишитесь на консультацию наш специалист перезвонит вам через 15 минут Записаться Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"",
+        "title": "Доктор СТОМ — стоматологический центр"
+      }
+    ],
+    "requires_independent_review": true,
+    "schema_version": "0.2",
+    "started_at": "2026-10-16T09:03:45.429942Z",
+    "target_url": "https://doktstom.ru/",
+    "warnings": [
+      "Local derivative: token repairs only; no HTTP request or publisher authentication",
+      "Original HTML SHA256 3257dc3e6b801daf640e8dc52c8a219ba393b3a47f8dfdab6c9d47f3a43aa8fa; original dossier manifest 6b62626ce9f29b8d8277b3b996d3fe0c5a26fc3c22d5e69a22af8a39095a4473",
+      "Recovered ORIGINAL HTML coverage is partial; complete derivative extraction is not complete source review",
+      "CSS visibility, JavaScript, external resources, legal completeness and current site not examined",
+      "No redaction; original form observations retained, not re-observed on a live website"
+    ]
+  },
+  "_publication": {
+    "notice": "Проверенная редакционная копия для публикации, 2026-10-16. Не необработанный журнал и не дословный оригинал ответа DeepSeek.",
+    "reconstructed": true,
+    "redacted": true,
+    "original_packet_sha256": "42d33ebbf0e329b6ea76bb04bdcb9f844877a8f046c18610ce378ca8ab7f06f9",
+    "changes": [
+      "JSON отформатирован; добавлена эта пометка.",
+      "В pages[0].text опущены префикс до политики и публичные телефоны; поля формы и текст политики сохранены.",
+      "Исторические размеры, хеши и reading описывают исходные артефакты до редакции; это не хеши и не полнота данной копии.",
+      "Историческое No redaction в origin относится к локальному импорту, а не этой публикации."
+    ]
+  }
+}

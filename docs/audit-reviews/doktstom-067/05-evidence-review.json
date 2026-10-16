@@ -1,0 +1,73 @@
+{
+  "packet_sha256": "42d33ebbf0e329b6ea76bb04bdcb9f844877a8f046c18610ce378ca8ab7f06f9",
+  "manifest_sha256": "0e7f728a9f130d4f7e46b8c0e0ca30cefb18d71734b6bfb12468b26bb55d46b0",
+  "findings": [
+    {
+      "id": "consent_form_issue",
+      "assessment": "PARTIAL",
+      "reason": "Цитата найдена, но не доказывает всю фактическую и юридическую гипотезу. Неполная выборка не доказывает отсутствие документов или нарушение. Форма и текст согласия присутствуют. Полный сценарий отправки не исследован. Ссылка AI на ч. 4 ст. 9 не обосновывает применение требований к письменному согласию ко всякой веб-форме; основания обработки и актуальность нормы не проверены. В сохранённом тексте перед пояснением стоит «Записаться», тогда как цитата ссылается на «Отправить». AI не подтвердил название кнопки; это текстовая несогласованность, а не доказанное нарушение. Сценарий формы требует отдельной проверки.",
+      "fact": "Форма содержит кнопку 'Отправить' с текстом: 'Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"'",
+      "source": "https://doktstom.ru/",
+      "quotes": [
+        {
+          "page": null,
+          "evidence_id": "page-0001",
+          "exact_quote": "Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"",
+          "exact_match": true
+        }
+      ],
+      "commercially_usable": false,
+      "legal_references_verified": false
+    },
+    {
+      "id": "privacy_policy_issue",
+      "assessment": "PARTIAL",
+      "reason": "Цитата найдена, но не доказывает всю фактическую и юридическую гипотезу. Неполная выборка не доказывает отсутствие документов или нарушение. Общее утверждение о безопасности присутствует. Из него не следует отсутствие мер безопасности или обязанность раскрывать все технические меры в политике; AI не подтвердил правовую применимость своего вывода.",
+      "fact": "Политика конфиденциальности содержит общие положения о защите персональных данных, но не указывает конкретные меры безопасности, применяемые оператором",
+      "source": "https://doktstom.ru/",
+      "quotes": [
+        {
+          "page": null,
+          "evidence_id": "page-0001",
+          "exact_quote": "Сайт обеспечивает безопасность персональных данных от несанкционированного использования их третьими лицами.",
+          "exact_match": true
+        }
+      ],
+      "commercially_usable": false,
+      "legal_references_verified": false
+    }
+  ],
+  "limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
+    "Collector contains partial/unavailable evidence",
+    "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+    "page-0001: Extraction is not legal research"
+  ],
+  "historical_audit_cost_usd": "0.0043350435",
+  "new_ai_calls": 0,
+  "new_cost_usd": "0",
+  "scope": "Сохранённые материалы; актуальное право и живой сайт не проверялись.",
+  "decision": {
+    "outcome": "HOLD",
+    "reasons": [
+      "no_grounded_serviceable_material_finding"
+    ],
+    "allowed_findings": [],
+    "automatic_send_allowed": false,
+    "new_ai_calls": 0,
+    "new_cost_usd": "0"
+  },
+  "_publication": {
+    "notice": "Проверенная редакционная копия для публикации, 2026-10-16. Не необработанный журнал и не дословный оригинал ответа DeepSeek.",
+    "redacted": true,
+    "changes": [
+      "Добавлены решение HOLD и пометка публикации. Транспортных журналов и локальных абсолютных путей нет."
+    ],
+    "source": "qualification-details/evidence-review.json + 04-qualification.json"
+  }
+}

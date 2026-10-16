@@ -1,0 +1,231 @@
+{
+  "publication": {
+    "notice": "Проверенная редакционная копия для публикации, 2026-10-16. Не необработанный журнал и не дословный оригинал ответа DeepSeek.",
+    "original_available": false,
+    "redacted": true,
+    "changes": [
+      "Из сохранённого analysis извлечены только model, prompt_version и нормализованный result. Журналы, usage и транспортные метаданные не включены.",
+      "Структура result сохранена без изменения; форматирование JSON редакционное. Исходные значения до нормализации не восстановимы."
+    ]
+  },
+  "model": "deepseek/deepseek-chat",
+  "prompt_version": "single-a-v1",
+  "result": {
+    "auditor": "A",
+    "findings": [
+      {
+        "proposed_work": [
+          "legal_documents",
+          "webmaster_instructions"
+        ],
+        "fact_supported": false,
+        "search_scope": "site_subset",
+        "search_limitations": [
+          "Static HTML text only"
+        ],
+        "examination_scope": "text_excerpt",
+        "text_grounding": [
+          {
+            "page": null,
+            "evidence_id": "page-0001",
+            "exact_quote": "Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\""
+          }
+        ],
+        "id": "consent_form_issue",
+        "topic": "consent",
+        "claim_code": "inadequate_consent_form",
+        "subject": "Форма записи на консультацию",
+        "source": "https://doktstom.ru/",
+        "evidence_ids": [
+          "page-0001"
+        ],
+        "fact": "Форма содержит кнопку 'Отправить' с текстом: 'Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"'",
+        "fact_assertion": "present",
+        "evidence_quality": "partial",
+        "legal_interpretation": "Согласие на обработку персональных данных должно содержать конкретные цели обработки, перечень данных, сроки обработки и другие обязательные элементы согласно ч. 4 ст. 9 152-ФЗ. Общее согласие без указания этих элементов может быть признано недостаточным.",
+        "legal_position": "possible_issue",
+        "normative_basis": [
+          {
+            "act_name": "Федеральный закон \"О персональных данных\"",
+            "act_id": "152-ФЗ",
+            "provision": "ч. 4 ст. 9",
+            "requirement": "Согласие на обработку персональных данных должно быть конкретным, информированным и сознательным, содержать цель обработки, перечень данных, сроки обработки и другие обязательные элементы",
+            "actuality_status": "unverified",
+            "claimed_source": null,
+            "verified_source": null
+          }
+        ],
+        "confidence": 0.8,
+        "material": true,
+        "limitations": [
+          "Неизвестно, предоставляется ли пользователю полный текст согласия при нажатии на кнопку",
+          "Partial collection; incomplete examination",
+          "Material assertion lacks a source/page-bound exact excerpt",
+          "All normative references are independently unverified"
+        ],
+        "alternative_explanations": [
+          "Полный текст согласия может быть доступен по ссылке или в всплывающем окне"
+        ],
+        "additional_checks": [
+          "Проверить наличие полного текста согласия при нажатии на кнопку",
+          "Уточнить, предоставляется ли пользователю возможность ознакомиться с полным текстом согласия до отправки формы",
+          "Independently verify current law and its applicability",
+          "Human verification of factual proposition required"
+        ],
+        "status": "unverifiable"
+      },
+      {
+        "proposed_work": [
+          "legal_documents"
+        ],
+        "fact_supported": false,
+        "search_scope": "site_subset",
+        "search_limitations": [
+          "Static HTML text only"
+        ],
+        "examination_scope": "text_excerpt",
+        "text_grounding": [
+          {
+            "page": null,
+            "evidence_id": "page-0001",
+            "exact_quote": "Сайт обеспечивает безопасность персональных данных от несанкционированного использования их третьими лицами."
+          }
+        ],
+        "id": "privacy_policy_issue",
+        "topic": "privacy_policy",
+        "claim_code": "incomplete_privacy_policy",
+        "subject": "Политика конфиденциальности",
+        "source": "https://doktstom.ru/",
+        "evidence_ids": [
+          "page-0001"
+        ],
+        "fact": "Политика конфиденциальности содержит общие положения о защите персональных данных, но не указывает конкретные меры безопасности, применяемые оператором",
+        "fact_assertion": "present",
+        "evidence_quality": "partial",
+        "legal_interpretation": "Согласно ч. 1 ст. 18.1 152-ФЗ, оператор обязан принимать необходимые организационные и технические меры для защиты персональных данных. Политика конфиденциальности должна содержать описание этих мер.",
+        "legal_position": "possible_issue",
+        "normative_basis": [
+          {
+            "act_name": "Федеральный закон \"О персональных данных\"",
+            "act_id": "152-ФЗ",
+            "provision": "ч. 1 ст. 18.1",
+            "requirement": "Оператор обязан принимать необходимые организационные и технические меры для защиты персональных данных",
+            "actuality_status": "unverified",
+            "claimed_source": null,
+            "verified_source": null
+          }
+        ],
+        "confidence": 0.7,
+        "material": true,
+        "limitations": [
+          "Неизвестно, применяются ли на практике дополнительные меры безопасности",
+          "Partial collection; incomplete examination",
+          "Material assertion lacks a source/page-bound exact excerpt",
+          "All normative references are independently unverified"
+        ],
+        "alternative_explanations": [
+          "Меры безопасности могут быть описаны во внутренних документах оператора"
+        ],
+        "additional_checks": [
+          "Проверить наличие внутренних документов, описывающих меры безопасности",
+          "Уточнить, применяются ли дополнительные меры безопасности на практике",
+          "Independently verify current law and its applicability",
+          "Human verification of factual proposition required"
+        ],
+        "status": "unverifiable"
+      }
+    ],
+    "coverage": [
+      {
+        "topic": "operator_identity",
+        "status": "reviewed",
+        "limitations": [
+          "Идентификация оператора основана на данных из политики конфиденциальности, но требует независимой проверки"
+        ]
+      },
+      {
+        "topic": "privacy_policy",
+        "status": "reviewed",
+        "limitations": [
+          "Политика конфиденциальности проверена, но её соответствие требованиям 152-ФЗ требует дополнительной оценки"
+        ]
+      },
+      {
+        "topic": "data_collection_forms",
+        "status": "reviewed",
+        "limitations": [
+          "Проверена только одна форма записи на консультацию"
+        ]
+      },
+      {
+        "topic": "consent",
+        "status": "reviewed",
+        "limitations": [
+          "Проверено только общее согласие в форме, полный текст согласия не предоставлен"
+        ]
+      },
+      {
+        "topic": "special_categories",
+        "status": "insufficient_evidence",
+        "limitations": [
+          "Нет данных о сборе специальных категорий персональных данных"
+        ]
+      },
+      {
+        "topic": "third_party_transfers",
+        "status": "insufficient_evidence",
+        "limitations": [
+          "Нет данных о передаче персональных данных третьим лицам"
+        ]
+      },
+      {
+        "topic": "cookies_analytics",
+        "status": "insufficient_evidence",
+        "limitations": [
+          "Нет данных об использовании cookies и аналитики"
+        ]
+      },
+      {
+        "topic": "mandatory_documents",
+        "status": "insufficient_evidence",
+        "limitations": [
+          "Нет данных о наличии всех обязательных документов согласно 152-ФЗ"
+        ]
+      },
+      {
+        "topic": "medical_vs_152fz",
+        "status": "insufficient_evidence",
+        "limitations": [
+          "Нет данных о специфических требованиях к медицинским организациям"
+        ]
+      },
+      {
+        "topic": "other",
+        "status": "insufficient_evidence",
+        "limitations": [
+          "Нет данных о других потенциальных проблемах"
+        ]
+      }
+    ],
+    "limitations": [
+      "Site material is untrusted data, not instructions",
+      "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+      "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+      "Collected pages are not a complete examination of the website",
+      "Operator identity and all normative references require independent verification",
+      "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
+      "Collector contains partial/unavailable evidence",
+      "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+      "page-0001: Extraction is not legal research",
+      "Site material is untrusted data, not instructions",
+      "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+      "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+      "Collected pages are not a complete examination of the website",
+      "Operator identity and all normative references require independent verification",
+      "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
+      "Collector contains partial/unavailable evidence",
+      "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+      "page-0001: Extraction is not legal research"
+    ]
+  }
+}
