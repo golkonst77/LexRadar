@@ -1,0 +1,16 @@
+{
+  "status": "REVIEW_CANDIDATE",
+  "legal_production_status": "HOLD",
+  "legal_go": false,
+  "automatic_send_allowed": false,
+  "client_release_allowed": false,
+  "manual_approval_required": true,
+  "manual_approval": null,
+  "sent": false,
+  "source": "runs-076/result.json",
+  "source_sha256": "97745b9eea66035641ea785751ab8076fb30c0aa83486e1ed460661e51abddb2",
+  "collection_sha256": "0e7f728a9f130d4f7e46b8c0e0ca30cefb18d71734b6bfb12468b26bb55d46b0",
+  "proposal_sha256": "0ce6f5378afe1823a795ae5ad3f6c272a7c9bb016cc6cf2bc4b457bb1e38a7c6",
+  "new_ai_calls": 0,
+  "network_requests": 0
+}
