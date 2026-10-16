@@ -27,6 +27,7 @@ def analyze(
     provider: Provider | None = None,
     parallel: bool = False,
     sleep=time.sleep,
+    message_builder=messages_for,
 ) -> AnalysisReport:
     if mode not in {"offline", "openrouter"}:
         raise ValueError("Unsupported analysis mode")
@@ -56,7 +57,7 @@ def analyze(
     def execute(item):
         auditor, settings = item
         local_logs = []
-        messages, version, prompt_hash = messages_for(auditor, packet)
+        messages, version, prompt_hash = message_builder(auditor, packet)
         run = AuditorRun(
             auditor=auditor, model=settings.model, prompt_version=version, status="provider_error"
         )

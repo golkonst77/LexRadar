@@ -213,11 +213,13 @@ def export_proposal(
     *,
     pdf=False,
     font_path=None,
+    decision=commercial,
+    recheck=checked_report,
 ) -> dict:
     """Single guarded generation/export boundary; HOLD cannot invoke provider."""
     report = report.model_copy(deep=True)
     packet = load_packet(root, 200_000)
-    allowed, reasons = commercial(report, packet)
+    allowed, reasons = decision(report, packet)
     if reasons:
         return {"status": "not_requested", "reasons": reasons}
     request = {
@@ -237,12 +239,19 @@ def export_proposal(
     current = load_packet(root, 200_000)
     if current.sha256 != packet.sha256 or current.manifest_sha256 != packet.manifest_sha256:
         raise ValueError("Dossier changed during generation")
-    checked = checked_report(report, current)
+    checked = recheck(report, current)
     findings = {f.id: f for f in checked.runs[0].result.findings}
     lines = [NOTICE, SERVICE]
     for fid in proposal.finding_ids:
         f = findings[fid]
         lines.append(f"Наблюдение {fid}: {f.fact}")
+        for work in f.proposed_work:
+            lines.append(
+                {
+                    "legal_documents": "После проверки: подготовка юридических документов.",
+                    "webmaster_instructions": "После проверки: подробная инструкция вебмастеру.",
+                }[work]
+            )
         for q in f.text_grounding:
             lines.append(f"{q.evidence_id}; {f.source}; стр. {q.page or 1}: {q.exact_quote}")
     # Stage the whole validated bundle, so PDF failures leave no client files.
