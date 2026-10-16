@@ -1,0 +1,12 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Public home.</p><a href=\"/policy\">Политика</a>"
+    },
+    "/policy": {
+      "html": "Unavailable",
+      "status": 404
+    }
+  },
+  "screenshot_failure": false
+}

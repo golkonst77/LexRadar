@@ -1,0 +1,83 @@
+{
+  "note": "Selected saved local run metadata, not raw HTTP capture or an independent API verification. No completion/site text included.",
+  "runs": [
+    {
+      "path": "/tmp/lexradar-scz-ai-test-002",
+      "requests_sha256": "64816a40303d4344e36ba59fee78ae5ef854bfdc08e8cca8526d9eb434d2daa9",
+      "analysis_sha256": "332cad0c2f769907d035db0f2635113577e1869cace1b92439619a402b5520a8",
+      "completed": false,
+      "auditor_a_result_present": true,
+      "request": {
+        "auditor": "A",
+        "model": "deepseek/deepseek-chat",
+        "started_at": "2026-10-13T16:51:49.101115Z",
+        "duration_seconds": 40.69296842999756,
+        "prompt_version": "a-v1",
+        "prompt_sha256": "3cee26f1c394cbb50d8dcbb3dacd0ed44ce2080f2bc6f459c4b8ee2b273d5e3e",
+        "evidence_packet_sha256": "bc4ca144d26db1ecf787530a05637dc38716b5c91197b6f75f550c957290cf65",
+        "attempt": 1,
+        "request_sent": true,
+        "status": "success",
+        "usage": {
+          "prompt_tokens": 29602,
+          "completion_tokens": 1369,
+          "total_tokens": 30971,
+          "cost_usd": "0.0090278451"
+        },
+        "budget_charge_usd": "0.0090278451"
+      }
+    },
+    {
+      "path": "/tmp/lexradar-scz-single-002",
+      "requests_sha256": "90b3dd16025c59bccc32cabd6cd89dc29a7ada238d46172b18991cd7838f0336",
+      "analysis_sha256": "212de670d8ff2aacf32cc84e84de767502b750c58beb3a761783a22a6a19c050",
+      "completed": true,
+      "auditor_a_result_present": true,
+      "request": {
+        "auditor": "A",
+        "model": "deepseek/deepseek-chat",
+        "started_at": "2026-10-13T19:03:11.036261Z",
+        "duration_seconds": 69.12992829400173,
+        "prompt_version": "a-v2",
+        "prompt_sha256": "6372c15d68f802f2254cc3d2235cdee7e9c0e8820c323e9a6ede5db0cff1d956",
+        "evidence_packet_sha256": "bc4ca144d26db1ecf787530a05637dc38716b5c91197b6f75f550c957290cf65",
+        "attempt": 1,
+        "request_sent": true,
+        "status": "success",
+        "usage": {
+          "prompt_tokens": 29772,
+          "completion_tokens": 2314,
+          "total_tokens": 32086,
+          "cost_usd": "0.0100437246"
+        },
+        "budget_charge_usd": "0.0100437246"
+      }
+    },
+    {
+      "path": "/tmp/lexradar-scz-single-003",
+      "requests_sha256": "3705069bc1d175d8b9b338656bf13331a794ee6dbc39b0dd220a15ca77a29a7d",
+      "analysis_sha256": "e53cb789c6d51b1e86ab7366c8eb32850e1d80e35d35b999a4c159e6584bb771",
+      "completed": true,
+      "auditor_a_result_present": true,
+      "request": {
+        "auditor": "A",
+        "model": "deepseek/deepseek-chat",
+        "started_at": "2026-10-13T19:16:21.971148Z",
+        "duration_seconds": 47.58943733399792,
+        "prompt_version": "a-v3",
+        "prompt_sha256": "8b40ff389184f325d472c171e526eceae5f1e3bde0488799f26ce9a763270f53",
+        "evidence_packet_sha256": "bc4ca144d26db1ecf787530a05637dc38716b5c91197b6f75f550c957290cf65",
+        "attempt": 1,
+        "request_sent": true,
+        "status": "success",
+        "usage": {
+          "prompt_tokens": 29868,
+          "completion_tokens": 1625,
+          "total_tokens": 31493,
+          "cost_usd": "0.0093596607"
+        },
+        "budget_charge_usd": "0.0093596607"
+      }
+    }
+  ]
+}
