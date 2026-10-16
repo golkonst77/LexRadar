@@ -13,6 +13,8 @@ from pydantic import AwareDatetime, Field
 from ..models import Model
 from .evidence import EvidencePacket
 
+MVP_NO_SCREENING_NOTICE = "MVP_NO_SCREENING: проверка передачи персональных данных отключена"
+
 LIMITATION = (
     "Heuristic screening cannot guarantee absence of personal or sensitive data; "
     "human review required"
@@ -83,10 +85,14 @@ def screen(packet: EvidencePacket) -> list[dict[str, str]]:
     return issues
 
 
-def authorize(packet: EvidencePacket, approval_path: Path | None) -> PacketApproval:
+def authorize(
+    packet: EvidencePacket, approval_path: Path | None, *, mvp_no_screening: bool = False
+) -> PacketApproval:
     if hashlib.sha256(packet.payload.encode()).hexdigest() != packet.sha256:
         raise PermissionError("Packet snapshot hash mismatch")
-    if screen(packet):
+    if type(mvp_no_screening) is not bool:
+        raise ValueError("MVP_NO_SCREENING must be an explicit boolean")
+    if not mvp_no_screening and screen(packet):
         raise PermissionError(
             "Potential sensitive data: transfer blocked; review/redact and repeat"
         )

@@ -96,3 +96,17 @@ EOF без пустой строки, завершающей trailers; это н
 deadline при медленной передаче framing. Транспорт использует внутренний путь
 `response.fp.raw._sock`; совместимость проверена локально на Python 3.13.5,
 произвольные HTTPResponse-обёртки этим контрактом не поддерживаются.
+
+## Явный тестовый режим MVP_NO_SCREENING (№55)
+
+Отдельный реальный CLI: `python -m lexradar.single_auditor_live dossier output
+--packet-approval approval.json --allow-external-transfer --mvp-no-screening`.
+Последний флаг отключает только блокировку по screening персональных данных;
+без него действует прежний screening. В Python это `analyze(...,
+mvp_no_screening=True)` с неизменёнными `profile()` и `messages_for` Single A.
+Режим и предупреждение «проверка передачи персональных данных отключена»
+записываются в локальные отчёты. Подтверждение SHA256 конкретного пакета,
+разрешение OpenRouter, целостность, размеры и бюджет остаются обязательными.
+Команда не отправляет результаты клиентам. Точная команда для досье №54,
+результаты офлайн-проверки и условия запуска — в
+[`codex-055-report.md`](codex-reports/codex-055-report.md).

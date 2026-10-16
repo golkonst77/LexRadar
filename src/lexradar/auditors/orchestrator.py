@@ -10,7 +10,7 @@ from .budget import Budget, BudgetExceeded
 from .disagreements import compare
 from .evidence import load_packet
 from .models import AnalysisConfig, AnalysisReport, AuditorRun, RequestLog, Usage
-from .preflight import LIMITATION, authorize
+from .preflight import LIMITATION, MVP_NO_SCREENING_NOTICE, authorize
 from .prompts import messages_for
 from .provider import OfflineProvider, OpenRouterProvider, Provider, ProviderError
 from .validator import ResultError, validate_result
@@ -26,9 +26,18 @@ def analyze(
     packet_approval: Path | None = None,
     provider: Provider | None = None,
     parallel: bool = False,
+    mvp_no_screening: bool = False,
     sleep=time.sleep,
     message_builder=messages_for,
 ) -> AnalysisReport:
+    if type(mvp_no_screening) is not bool:
+        raise ValueError("MVP_NO_SCREENING must be an explicit boolean")
+    if mvp_no_screening:
+        from ..single_auditor import messages_for as single_messages
+        from ..single_auditor import profile
+
+        if config != profile() or message_builder is not single_messages:
+            raise ValueError("MVP_NO_SCREENING requires the Single DeepSeek A profile and prompt")
     if mode not in {"offline", "openrouter"}:
         raise ValueError("Unsupported analysis mode")
     if mode == "openrouter" and not allow_external_transfer:
@@ -38,7 +47,13 @@ def analyze(
     if parallel and mode != "offline":
         raise PermissionError("Parallel execution is offline only; paid budget stays sequential")
     packet = load_packet(root, config.max_input_bytes)
-    approval = authorize(packet, packet_approval) if mode == "openrouter" else None
+
+    def approve():
+        if mvp_no_screening:
+            return authorize(packet, packet_approval, mvp_no_screening=True)
+        return authorize(packet, packet_approval)
+
+    approval = approve() if mode == "openrouter" else None
     output = output.resolve()
     if output.exists():
         raise ValueError("Analysis output must be a new directory")
@@ -70,7 +85,7 @@ def analyze(
             sent = False
             try:
                 if mode == "openrouter":
-                    authorize(packet, packet_approval)
+                    approve()
                     reserved = charge = budget.reserve(settings, messages)
                 # Reconstruct fresh messages even if an injected test provider mutates its input.
                 sent = mode == "openrouter"
@@ -139,6 +154,7 @@ def analyze(
         ),
         limitations=[
             *packet.limitations,
+            *([MVP_NO_SCREENING_NOTICE] if mvp_no_screening else []),
             LIMITATION,
             "Agreement is not independent verification of legal correctness",
             "Prompt safeguards cannot guarantee absence of model-level injection effects",
@@ -164,6 +180,10 @@ def analyze(
             {
                 "mode": mode,
                 "schema_version": "0.3",
+                "MVP_NO_SCREENING": mvp_no_screening,
+                "personal_data_transfer_check": (
+                    MVP_NO_SCREENING_NOTICE if mvp_no_screening else "enabled"
+                ),
                 "packet_approval": approval.model_dump(mode="json") if approval else None,
                 "external_transfer_explicitly_permitted": allow_external_transfer
                 if mode == "openrouter"
