@@ -1,7 +1,8 @@
-"""Independent fresh requests; sequential execution shares only the audit budget."""
+"""Independent fresh requests; optional parallel execution is offline only."""
 
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -24,6 +25,7 @@ def analyze(
     allow_external_transfer: bool = False,
     packet_approval: Path | None = None,
     provider: Provider | None = None,
+    parallel: bool = False,
     sleep=time.sleep,
 ) -> AnalysisReport:
     if mode not in {"offline", "openrouter"}:
@@ -32,6 +34,8 @@ def analyze(
         raise PermissionError("Explicit permission to transfer materials to OpenRouter required")
     if mode == "offline" and isinstance(provider, OpenRouterProvider):
         raise PermissionError("Real OpenRouter provider cannot be injected into offline mode")
+    if parallel and mode != "offline":
+        raise PermissionError("Parallel execution is offline only; paid budget stays sequential")
     packet = load_packet(root, config.max_input_bytes)
     approval = authorize(packet, packet_approval) if mode == "openrouter" else None
     output = output.resolve()
@@ -48,7 +52,10 @@ def analyze(
         if config.single_auditor
         else (("A", config.auditor_a), ("B", config.auditor_b))
     )
-    for auditor, settings in auditors:
+
+    def execute(item):
+        auditor, settings = item
+        local_logs = []
         messages, version, prompt_hash = messages_for(auditor, packet)
         run = AuditorRun(
             auditor=auditor, model=settings.model, prompt_version=version, status="provider_error"
@@ -82,7 +89,11 @@ def analyze(
             except ResultError as exc:
                 run.status, status = "invalid_response", str(exc)
                 # Invalid evidence/schema results are not sent back into either auditor's context.
-            logs.append(
+            except Exception:
+                if mode != "offline":
+                    raise
+                run.status, status = "provider_error", "offline_provider_error"
+            local_logs.append(
                 RequestLog(
                     auditor=auditor,
                     model=settings.model,
@@ -101,7 +112,16 @@ def analyze(
             if not retry:
                 break
             sleep(min(config.max_backoff_seconds, 2**attempt))
+        return run, local_logs
+
+    if parallel:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            outcomes = list(executor.map(execute, auditors))
+    else:
+        outcomes = [execute(item) for item in auditors]
+    for run, local_logs in outcomes:
         runs.append(run)
+        logs.extend(local_logs)
     report = AnalysisReport(
         mode=mode,
         collector_manifest_sha256=packet.manifest_sha256,
