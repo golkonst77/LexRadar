@@ -1,0 +1,44 @@
+{
+  "decision": {
+    "outcome": "HOLD",
+    "reasons": [
+      "no_grounded_serviceable_material_finding"
+    ],
+    "allowed_findings": [],
+    "automatic_send_allowed": false,
+    "new_ai_calls": 0,
+    "new_cost_usd": "0"
+  },
+  "findings": [
+    {
+      "id": "operator_identity_1",
+      "assessment": "UNSUPPORTED",
+      "reason": "Точная привязанная к источнику цитата не подтверждена.",
+      "fact": "Оператор – администрация Сайта, осуществляющая сбор и обработку персональных данных Пользователей Сайта",
+      "source": "https://site-a.example/",
+      "quotes": [],
+      "commercially_usable": false,
+      "legal_references_verified": false
+    },
+    {
+      "id": "consent_form_1",
+      "assessment": "UNSUPPORTED",
+      "reason": "Точная привязанная к источнику цитата не подтверждена.",
+      "fact": "Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"",
+      "source": "https://site-a.example/",
+      "quotes": [],
+      "commercially_usable": false,
+      "legal_references_verified": false
+    },
+    {
+      "id": "policy_purpose_1",
+      "assessment": "UNSUPPORTED",
+      "reason": "Точная привязанная к источнику цитата не подтверждена.",
+      "fact": "Сайт использует персональные данные Пользователя для обслуживания и для улучшения качества предоставляемых услуг",
+      "source": "https://site-a.example/",
+      "quotes": [],
+      "commercially_usable": false,
+      "legal_references_verified": false
+    }
+  ]
+}

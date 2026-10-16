@@ -1,0 +1,251 @@
+{
+  "auditor": "A",
+  "findings": [
+    {
+      "proposed_work": [
+        "legal_documents"
+      ],
+      "fact_supported": false,
+      "search_scope": "unknown",
+      "search_limitations": [],
+      "examination_scope": "unknown",
+      "text_grounding": [],
+      "id": "operator_identity_1",
+      "topic": "operator_identity",
+      "claim_code": "operator_not_clearly_identified",
+      "subject": "Operator identity in privacy policy",
+      "source": "https://site-a.example/",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "fact": "Оператор – администрация Сайта, осуществляющая сбор и обработку персональных данных Пользователей Сайта",
+      "fact_assertion": "present",
+      "evidence_quality": "partial",
+      "legal_interpretation": "Наблюдение: В политике конфиденциальности оператор обозначен как 'администрация Сайта' без указания юридического лица или ИП. Правовая гипотеза: Это может создавать неопределенность относительно субъекта, ответственного за обработку данных. Применимость: 152-ФЗ требует четкого определения оператора. Доказанность: Текст политики подтверждает этот факт, но не доказывает отсутствие иных указаний на сайте.",
+      "legal_position": "possible_issue",
+      "normative_basis": [
+        {
+          "act_name": "Федеральный закон «О персональных данных»",
+          "act_id": "152-ФЗ",
+          "provision": "ст. 3",
+          "requirement": "Оператор - государственный орган, муниципальный орган, юридическое или физическое лицо, самостоятельно или совместно с другими лицами организующие и (или) осуществляющие обработку персональных данных",
+          "actuality_status": "unverified",
+          "claimed_source": null,
+          "verified_source": null
+        }
+      ],
+      "confidence": 0.8,
+      "material": true,
+      "limitations": [
+        "Не проверено наличие других указаний на оператора на сайте",
+        "Partial collection; incomplete examination",
+        "Material assertion lacks a source/page-bound exact excerpt",
+        "All normative references are independently unverified"
+      ],
+      "alternative_explanations": [
+        "Возможно, оператор указан в других разделах сайта"
+      ],
+      "additional_checks": [
+        "Проверить наличие реквизитов юридического лица в других разделах сайта",
+        "Independently verify current law and its applicability",
+        "Human verification of factual proposition required"
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "proposed_work": [
+        "legal_documents",
+        "webmaster_instructions"
+      ],
+      "fact_supported": false,
+      "search_scope": "unknown",
+      "search_limitations": [],
+      "examination_scope": "unknown",
+      "text_grounding": [],
+      "id": "consent_form_1",
+      "topic": "consent",
+      "claim_code": "implied_consent_lacks_specifics",
+      "subject": "Consent form on consultation request",
+      "source": "https://site-a.example/",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "fact": "Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"",
+      "fact_assertion": "present",
+      "evidence_quality": "partial",
+      "legal_interpretation": "Наблюдение: Согласие на обработку данных представлено в общей форме без конкретных целей обработки. Правовая гипотеза: Согласно ч.4 ст.9 152-ФЗ, согласие должно быть конкретным, информированным и сознательным. Применимость: Форма содержит минимальные требования к согласию. Доказанность: Текст формы подтверждает этот факт.",
+      "legal_position": "possible_issue",
+      "normative_basis": [
+        {
+          "act_name": "Федеральный закон «О персональных данных»",
+          "act_id": "152-ФЗ",
+          "provision": "ч.4 ст.9",
+          "requirement": "Согласие на обработку персональных данных должно быть конкретным, информированным и сознательным",
+          "actuality_status": "unverified",
+          "claimed_source": null,
+          "verified_source": null
+        }
+      ],
+      "confidence": 0.7,
+      "material": true,
+      "limitations": [
+        "Не проверено наличие полной версии согласия в других разделах сайта",
+        "Partial collection; incomplete examination",
+        "Material assertion lacks a source/page-bound exact excerpt",
+        "All normative references are independently unverified"
+      ],
+      "alternative_explanations": [
+        "Возможно, полная версия согласия доступна при переходе по ссылке"
+      ],
+      "additional_checks": [
+        "Проверить наличие полной версии согласия с указанием целей обработки",
+        "Independently verify current law and its applicability",
+        "Human verification of factual proposition required"
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "proposed_work": [
+        "legal_documents"
+      ],
+      "fact_supported": false,
+      "search_scope": "unknown",
+      "search_limitations": [],
+      "examination_scope": "unknown",
+      "text_grounding": [],
+      "id": "policy_purpose_1",
+      "topic": "privacy_policy",
+      "claim_code": "processing_purpose_too_vague",
+      "subject": "Processing purposes in privacy policy",
+      "source": "https://site-a.example/",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "fact": "Сайт использует персональные данные Пользователя для обслуживания и для улучшения качества предоставляемых услуг",
+      "fact_assertion": "present",
+      "evidence_quality": "partial",
+      "legal_interpretation": "Наблюдение: Цели обработки сформулированы слишком обобщенно. Правовая гипотеза: Согласно ст.5 152-ФЗ, обработка должна осуществляться для конкретных, заранее определенных целей. Применимость: Формулировка 'улучшение качества услуг' слишком широка. Доказанность: Текст политики подтверждает этот факт.",
+      "legal_position": "possible_issue",
+      "normative_basis": [
+        {
+          "act_name": "Федеральный закон «О персональных данных»",
+          "act_id": "152-ФЗ",
+          "provision": "ст.5",
+          "requirement": "Обработка персональных данных должна осуществляться для конкретных, заранее определенных целей",
+          "actuality_status": "unverified",
+          "claimed_source": null,
+          "verified_source": null
+        }
+      ],
+      "confidence": 0.75,
+      "material": true,
+      "limitations": [
+        "Не проверено наличие более конкретных целей в других разделах политики",
+        "Partial collection; incomplete examination",
+        "Material assertion lacks a source/page-bound exact excerpt",
+        "All normative references are independently unverified"
+      ],
+      "alternative_explanations": [
+        "Возможно, конкретные цели указаны в других разделах политики"
+      ],
+      "additional_checks": [
+        "Проверить полный текст политики на предмет конкретных целей обработки",
+        "Independently verify current law and its applicability",
+        "Human verification of factual proposition required"
+      ],
+      "status": "unverifiable"
+    }
+  ],
+  "coverage": [
+    {
+      "topic": "operator_identity",
+      "status": "reviewed",
+      "limitations": [
+        "Не проверено наличие реквизитов в других разделах сайта"
+      ]
+    },
+    {
+      "topic": "privacy_policy",
+      "status": "reviewed",
+      "limitations": [
+        "Не проверена полная версия политики конфиденциальности"
+      ]
+    },
+    {
+      "topic": "data_collection_forms",
+      "status": "reviewed",
+      "limitations": [
+        "Проверена только одна форма на главной странице"
+      ]
+    },
+    {
+      "topic": "consent",
+      "status": "reviewed",
+      "limitations": [
+        "Не проверено наличие полной версии согласия"
+      ]
+    },
+    {
+      "topic": "special_categories",
+      "status": "insufficient_evidence",
+      "limitations": [
+        "Нет данных о сборе специальных категорий персональных данных"
+      ]
+    },
+    {
+      "topic": "third_party_transfers",
+      "status": "reviewed",
+      "limitations": [
+        "Политика запрещает передачу, но не проверены договоры с подрядчиками"
+      ]
+    },
+    {
+      "topic": "cookies_analytics",
+      "status": "insufficient_evidence",
+      "limitations": [
+        "Нет данных об использовании cookies и аналитики"
+      ]
+    },
+    {
+      "topic": "mandatory_documents",
+      "status": "insufficient_evidence",
+      "limitations": [
+        "Нет данных о наличии всех обязательных документов"
+      ]
+    },
+    {
+      "topic": "medical_vs_152fz",
+      "status": "insufficient_evidence",
+      "limitations": [
+        "Нет данных о сборе медицинских данных через формы"
+      ]
+    },
+    {
+      "topic": "other",
+      "status": "insufficient_evidence",
+      "limitations": [
+        "Нет данных о других потенциальных проблемах"
+      ]
+    }
+  ],
+  "limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
+    "Collector contains partial/unavailable evidence",
+    "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+    "page-0001: Extraction is not legal research",
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
+    "Collector contains partial/unavailable evidence",
+    "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+    "page-0001: Extraction is not legal research"
+  ]
+}

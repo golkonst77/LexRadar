@@ -1,0 +1,298 @@
+{
+  "v1_findings_count": 2,
+  "v2_findings_count": 3,
+  "v1_original_available": false,
+  "v1_findings": [
+    {
+      "proposed_work": [
+        "legal_documents",
+        "webmaster_instructions"
+      ],
+      "fact_supported": false,
+      "search_scope": "site_subset",
+      "search_limitations": [
+        "Static HTML text only"
+      ],
+      "examination_scope": "text_excerpt",
+      "text_grounding": [
+        {
+          "page": null,
+          "evidence_id": "page-0001",
+          "exact_quote": "Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\""
+        }
+      ],
+      "id": "consent_form_issue",
+      "topic": "consent",
+      "claim_code": "inadequate_consent_form",
+      "subject": "Форма записи на консультацию",
+      "source": "https://site-a.example/",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "fact": "Форма содержит кнопку 'Отправить' с текстом: 'Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"'",
+      "fact_assertion": "present",
+      "evidence_quality": "partial",
+      "legal_interpretation": "Согласие на обработку персональных данных должно содержать конкретные цели обработки, перечень данных, сроки обработки и другие обязательные элементы согласно ч. 4 ст. 9 152-ФЗ. Общее согласие без указания этих элементов может быть признано недостаточным.",
+      "legal_position": "possible_issue",
+      "normative_basis": [
+        {
+          "act_name": "Федеральный закон \"О персональных данных\"",
+          "act_id": "152-ФЗ",
+          "provision": "ч. 4 ст. 9",
+          "requirement": "Согласие на обработку персональных данных должно быть конкретным, информированным и сознательным, содержать цель обработки, перечень данных, сроки обработки и другие обязательные элементы",
+          "actuality_status": "unverified",
+          "claimed_source": null,
+          "verified_source": null
+        }
+      ],
+      "confidence": 0.8,
+      "material": true,
+      "limitations": [
+        "Неизвестно, предоставляется ли пользователю полный текст согласия при нажатии на кнопку",
+        "Partial collection; incomplete examination",
+        "Material assertion lacks a source/page-bound exact excerpt",
+        "All normative references are independently unverified"
+      ],
+      "alternative_explanations": [
+        "Полный текст согласия может быть доступен по ссылке или в всплывающем окне"
+      ],
+      "additional_checks": [
+        "Проверить наличие полного текста согласия при нажатии на кнопку",
+        "Уточнить, предоставляется ли пользователю возможность ознакомиться с полным текстом согласия до отправки формы",
+        "Independently verify current law and its applicability",
+        "Human verification of factual proposition required"
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "proposed_work": [
+        "legal_documents"
+      ],
+      "fact_supported": false,
+      "search_scope": "site_subset",
+      "search_limitations": [
+        "Static HTML text only"
+      ],
+      "examination_scope": "text_excerpt",
+      "text_grounding": [
+        {
+          "page": null,
+          "evidence_id": "page-0001",
+          "exact_quote": "Сайт обеспечивает безопасность персональных данных от несанкционированного использования их третьими лицами."
+        }
+      ],
+      "id": "privacy_policy_issue",
+      "topic": "privacy_policy",
+      "claim_code": "incomplete_privacy_policy",
+      "subject": "Политика конфиденциальности",
+      "source": "https://site-a.example/",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "fact": "Политика конфиденциальности содержит общие положения о защите персональных данных, но не указывает конкретные меры безопасности, применяемые оператором",
+      "fact_assertion": "present",
+      "evidence_quality": "partial",
+      "legal_interpretation": "Согласно ч. 1 ст. 18.1 152-ФЗ, оператор обязан принимать необходимые организационные и технические меры для защиты персональных данных. Политика конфиденциальности должна содержать описание этих мер.",
+      "legal_position": "possible_issue",
+      "normative_basis": [
+        {
+          "act_name": "Федеральный закон \"О персональных данных\"",
+          "act_id": "152-ФЗ",
+          "provision": "ч. 1 ст. 18.1",
+          "requirement": "Оператор обязан принимать необходимые организационные и технические меры для защиты персональных данных",
+          "actuality_status": "unverified",
+          "claimed_source": null,
+          "verified_source": null
+        }
+      ],
+      "confidence": 0.7,
+      "material": true,
+      "limitations": [
+        "Неизвестно, применяются ли на практике дополнительные меры безопасности",
+        "Partial collection; incomplete examination",
+        "Material assertion lacks a source/page-bound exact excerpt",
+        "All normative references are independently unverified"
+      ],
+      "alternative_explanations": [
+        "Меры безопасности могут быть описаны во внутренних документах оператора"
+      ],
+      "additional_checks": [
+        "Проверить наличие внутренних документов, описывающих меры безопасности",
+        "Уточнить, применяются ли дополнительные меры безопасности на практике",
+        "Independently verify current law and its applicability",
+        "Human verification of factual proposition required"
+      ],
+      "status": "unverifiable"
+    }
+  ],
+  "v2_findings": [
+    {
+      "proposed_work": [
+        "legal_documents"
+      ],
+      "fact_supported": false,
+      "search_scope": "unknown",
+      "search_limitations": [],
+      "examination_scope": "unknown",
+      "text_grounding": [],
+      "id": "operator_identity_1",
+      "topic": "operator_identity",
+      "claim_code": "operator_not_clearly_identified",
+      "subject": "Operator identity in privacy policy",
+      "source": "https://site-a.example/",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "fact": "Оператор – администрация Сайта, осуществляющая сбор и обработку персональных данных Пользователей Сайта",
+      "fact_assertion": "present",
+      "evidence_quality": "partial",
+      "legal_interpretation": "Наблюдение: В политике конфиденциальности оператор обозначен как 'администрация Сайта' без указания юридического лица или ИП. Правовая гипотеза: Это может создавать неопределенность относительно субъекта, ответственного за обработку данных. Применимость: 152-ФЗ требует четкого определения оператора. Доказанность: Текст политики подтверждает этот факт, но не доказывает отсутствие иных указаний на сайте.",
+      "legal_position": "possible_issue",
+      "normative_basis": [
+        {
+          "act_name": "Федеральный закон «О персональных данных»",
+          "act_id": "152-ФЗ",
+          "provision": "ст. 3",
+          "requirement": "Оператор - государственный орган, муниципальный орган, юридическое или физическое лицо, самостоятельно или совместно с другими лицами организующие и (или) осуществляющие обработку персональных данных",
+          "actuality_status": "unverified",
+          "claimed_source": null,
+          "verified_source": null
+        }
+      ],
+      "confidence": 0.8,
+      "material": true,
+      "limitations": [
+        "Не проверено наличие других указаний на оператора на сайте",
+        "Partial collection; incomplete examination",
+        "Material assertion lacks a source/page-bound exact excerpt",
+        "All normative references are independently unverified"
+      ],
+      "alternative_explanations": [
+        "Возможно, оператор указан в других разделах сайта"
+      ],
+      "additional_checks": [
+        "Проверить наличие реквизитов юридического лица в других разделах сайта",
+        "Independently verify current law and its applicability",
+        "Human verification of factual proposition required"
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "proposed_work": [
+        "legal_documents",
+        "webmaster_instructions"
+      ],
+      "fact_supported": false,
+      "search_scope": "unknown",
+      "search_limitations": [],
+      "examination_scope": "unknown",
+      "text_grounding": [],
+      "id": "consent_form_1",
+      "topic": "consent",
+      "claim_code": "implied_consent_lacks_specifics",
+      "subject": "Consent form on consultation request",
+      "source": "https://site-a.example/",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "fact": "Нажимая \"Отправить\", Вы даете свое согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-Ф3 \"О персональных данных\"",
+      "fact_assertion": "present",
+      "evidence_quality": "partial",
+      "legal_interpretation": "Наблюдение: Согласие на обработку данных представлено в общей форме без конкретных целей обработки. Правовая гипотеза: Согласно ч.4 ст.9 152-ФЗ, согласие должно быть конкретным, информированным и сознательным. Применимость: Форма содержит минимальные требования к согласию. Доказанность: Текст формы подтверждает этот факт.",
+      "legal_position": "possible_issue",
+      "normative_basis": [
+        {
+          "act_name": "Федеральный закон «О персональных данных»",
+          "act_id": "152-ФЗ",
+          "provision": "ч.4 ст.9",
+          "requirement": "Согласие на обработку персональных данных должно быть конкретным, информированным и сознательным",
+          "actuality_status": "unverified",
+          "claimed_source": null,
+          "verified_source": null
+        }
+      ],
+      "confidence": 0.7,
+      "material": true,
+      "limitations": [
+        "Не проверено наличие полной версии согласия в других разделах сайта",
+        "Partial collection; incomplete examination",
+        "Material assertion lacks a source/page-bound exact excerpt",
+        "All normative references are independently unverified"
+      ],
+      "alternative_explanations": [
+        "Возможно, полная версия согласия доступна при переходе по ссылке"
+      ],
+      "additional_checks": [
+        "Проверить наличие полной версии согласия с указанием целей обработки",
+        "Independently verify current law and its applicability",
+        "Human verification of factual proposition required"
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "proposed_work": [
+        "legal_documents"
+      ],
+      "fact_supported": false,
+      "search_scope": "unknown",
+      "search_limitations": [],
+      "examination_scope": "unknown",
+      "text_grounding": [],
+      "id": "policy_purpose_1",
+      "topic": "privacy_policy",
+      "claim_code": "processing_purpose_too_vague",
+      "subject": "Processing purposes in privacy policy",
+      "source": "https://site-a.example/",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "fact": "Сайт использует персональные данные Пользователя для обслуживания и для улучшения качества предоставляемых услуг",
+      "fact_assertion": "present",
+      "evidence_quality": "partial",
+      "legal_interpretation": "Наблюдение: Цели обработки сформулированы слишком обобщенно. Правовая гипотеза: Согласно ст.5 152-ФЗ, обработка должна осуществляться для конкретных, заранее определенных целей. Применимость: Формулировка 'улучшение качества услуг' слишком широка. Доказанность: Текст политики подтверждает этот факт.",
+      "legal_position": "possible_issue",
+      "normative_basis": [
+        {
+          "act_name": "Федеральный закон «О персональных данных»",
+          "act_id": "152-ФЗ",
+          "provision": "ст.5",
+          "requirement": "Обработка персональных данных должна осуществляться для конкретных, заранее определенных целей",
+          "actuality_status": "unverified",
+          "claimed_source": null,
+          "verified_source": null
+        }
+      ],
+      "confidence": 0.75,
+      "material": true,
+      "limitations": [
+        "Не проверено наличие более конкретных целей в других разделах политики",
+        "Partial collection; incomplete examination",
+        "Material assertion lacks a source/page-bound exact excerpt",
+        "All normative references are independently unverified"
+      ],
+      "alternative_explanations": [
+        "Возможно, конкретные цели указаны в других разделах политики"
+      ],
+      "additional_checks": [
+        "Проверить полный текст политики на предмет конкретных целей обработки",
+        "Independently verify current law and its applicability",
+        "Human verification of factual proposition required"
+      ],
+      "status": "unverifiable"
+    }
+  ],
+  "limitation": "v1 original unavailable; independent legal verification required",
+  "v2_completed": true,
+  "assessment": {
+    "v1_decision": "HOLD",
+    "v2_decision": "HOLD",
+    "common_topic": "Согласие в форме заявки",
+    "new_topics": [
+      "Идентификация оператора",
+      "Конкретность целей обработки"
+    ],
+    "removed_topic": "Описание мер безопасности",
+    "quality": "v2 разделяет наблюдение и гипотезу, но не заполняет text_grounding и scope. Все три находки unverifiable; рост числа находок не означает роста доказанности. Применимость ссылки ч.4 ст.9 моделью независимо не проверена.",
+    "experiment_limit": "По сравнению с v1 изменены промпт, лимит вывода и маршрут провайдера; эффект только промпта не установлен."
+  }
+}
