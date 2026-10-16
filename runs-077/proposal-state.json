@@ -1,0 +1,13 @@
+{
+  "status": "REVIEW_CANDIDATE",
+  "legal_production_status": "HOLD",
+  "legal_go": false,
+  "automatic_send_allowed": false,
+  "client_release_allowed": false,
+  "manual_approval_required": true,
+  "manual_approval": null,
+  "sent": false,
+  "source": "runs-076/result.json",
+  "source_sha256": "97745b9eea66035641ea785751ab8076fb30c0aa83486e1ed460661e51abddb2",
+  "proposal_sha256": "3f04a769564c43fdf7f39ae521b6efb8e71c974ca13491ef08c5e50c0ac7c7cb"
+}
