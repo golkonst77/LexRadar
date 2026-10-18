@@ -13,10 +13,11 @@ from .artifacts import ArtifactStore, verify_integrity
 from .crawl import CrawlOptions, CrawlSession
 from .document_priority import document_hints, document_sort_key
 from .document_priority import document_priority as document_priority
-from .extract import DOCUMENT_EXTENSIONS, DOM_SCRIPT, categories, entities
+from .extract import DOCUMENT_EXTENSIONS, DOM_SCRIPT, categories, entities, image_references
 from .models import (
     CollectedEvidence,
     CollectionResult,
+    DocumentImageObservation,
     DocumentObservation,
     FormObservation,
     Limits,
@@ -87,6 +88,8 @@ def _collect(url, limits, allowed, store, session):
     queue = deque([url])
     seen = {url}
     document_urls: dict[str, list[str]] = {}
+    image_budget = limits.max_documents
+    saved_images = {}
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             executable_path=os.environ.get("LEXRADAR_CHROMIUM_PATH"),
@@ -224,6 +227,8 @@ def _collect(url, limits, allowed, store, session):
                             ],
                         )
                         try:
+                            if observation.visibility == "hidden_in_isolated_render":
+                                raise CollectionError("Hidden form; popup not opened")
                             observation.screenshot = store.save(
                                 f"{eid}-form-{index + 1}.png",
                                 page.locator("form").nth(index).screenshot(),
@@ -269,6 +274,61 @@ def _collect(url, limits, allowed, store, session):
                         except CollectionError:
                             continue
                     page_record.document_links = sorted(set(page_record.document_links))
+                    # Document-section candidates, not arbitrary decorative images. No OCR claim.
+                    if "documents" in page_record.categories:
+                        candidates = {}
+                        for item in dom.get("images", []):
+                            for method, reference in image_references(item["tag"], item["values"]):
+                                try:
+                                    from urllib.parse import urljoin
+
+                                    target = canonical_url(urljoin(response.url, reference))
+                                except (CollectionError, ValueError):
+                                    continue
+                                row = candidates.setdefault(
+                                    target,
+                                    DocumentImageObservation(
+                                        url=target,
+                                        declarations=[f"{item['element']}@{method}: {reference}"],
+                                    ),
+                                )
+                                declaration = f"{item['element']}@{method}: {reference}"
+                                if declaration not in row.declarations:
+                                    row.declarations.append(declaration)
+                        for target, row in candidates.items():
+                            page_record.document_images.append(row)
+                            if origin(target) != allowed:
+                                row.download_status = "blocked"
+                                row.limitation += "; external-origin image not downloaded"
+                                continue
+                            if target in saved_images:
+                                row.artifact = saved_images[target]
+                                row.download_status = "saved"
+                                evidence.artifacts.append(row.artifact)
+                                continue
+                            if image_budget <= 0:
+                                row.download_status = "limit"
+                                row.limitation += "; shared document-image download limit"
+                                continue
+                            image_budget -= 1
+                            try:
+                                image = session.get(target, allowed)
+                                if (
+                                    not 200 <= image.status < 300
+                                    or not image.content_type.lower().startswith("image/")
+                                ):
+                                    raise CollectionError("Document image response is not an image")
+                                row.artifact = store.save(
+                                    f"{eid}-document-image-{len(saved_images) + 1:04d}.image",
+                                    image.body,
+                                    "image",
+                                )
+                                saved_images[target] = row.artifact
+                                row.download_status = "saved"
+                                evidence.artifacts.append(row.artifact)
+                            except (CollectionError, OSError) as exc:
+                                row.download_status = "failed"
+                                row.limitation += f"; image download: {str(exc)[:300]}"
                 except (CollectionError, BrowserError, OSError) as exc:
                     evidence.collection_errors.append(str(exc)[:500])
                 finally:

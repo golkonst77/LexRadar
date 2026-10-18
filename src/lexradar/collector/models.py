@@ -32,9 +32,9 @@ class Artifact(Model):
     path: str
     sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     size: int = Field(ge=0)
-    kind: Literal["html", "screenshot", "form_screenshot", "pdf", "text"]
+    kind: Literal["html", "screenshot", "form_screenshot", "pdf", "text", "image"]
     representation: Literal[
-        "original_html", "extracted_text", "isolated_screenshot", "original_pdf"
+        "original_html", "extracted_text", "isolated_screenshot", "original_pdf", "original_image"
     ]
     notice: str | None = None
 
@@ -44,6 +44,7 @@ class Artifact(Model):
             "html": "original_html",
             "text": "extracted_text",
             "pdf": "original_pdf",
+            "image": "original_image",
             "screenshot": "isolated_screenshot",
             "form_screenshot": "isolated_screenshot",
         }
@@ -77,6 +78,11 @@ class InputField(Model):
 
 
 class FormObservation(Model):
+    element: str | None = None
+    visibility: Literal["unknown", "visible_in_isolated_render", "hidden_in_isolated_render"] = (
+        "unknown"
+    )
+    popup_opened: Literal[False] = False
     page_url: HttpUrl
     purpose: str | None = None
     fields: list[InputField]
@@ -97,6 +103,17 @@ class EntityObservation(Model):
     identity_verified: Literal[False] = False
 
 
+class DocumentImageObservation(Model):
+    url: str
+    declarations: list[str] = Field(min_length=1)
+    artifact: Artifact | None = None
+    reading_status: Literal["not_read"] = "not_read"
+    limitation: str = "Image content not read; not proof of document absence"
+    download_status: Literal["not_attempted", "saved", "failed", "blocked", "limit"] = (
+        "not_attempted"
+    )
+
+
 class PageObservation(Model):
     origin: MaterialOrigin = Field(default_factory=MaterialOrigin)
     reading: ReadingState = Field(default_factory=ReadingState)
@@ -108,6 +125,7 @@ class PageObservation(Model):
     text: str | None = None
     categories: list[str] = Field(default_factory=list)
     document_links: list[str] = Field(default_factory=list)
+    document_images: list[DocumentImageObservation] = Field(default_factory=list, max_length=200)
     forms: list[FormObservation] = Field(default_factory=list)
     evidence_id: str
 

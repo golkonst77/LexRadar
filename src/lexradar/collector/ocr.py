@@ -31,7 +31,16 @@ def checked_path(root, relative):
     return path
 
 
-def run_ocr(dossier, evidence_id, output, *, language="rus+eng", max_pages=30, timeout=240):
+def run_ocr(
+    dossier,
+    evidence_id,
+    output,
+    *,
+    language="rus+eng",
+    max_pages=30,
+    timeout=240,
+    artifact_path=None,
+):
     root, output = Path(dossier).absolute(), Path(output).absolute()
     if not 1 <= max_pages <= 100 or not 1 <= timeout <= 900:
         raise ValueError("OCR limits outside bounds")
@@ -46,7 +55,12 @@ def run_ocr(dossier, evidence_id, output, *, language="rus+eng", max_pages=30, t
     evidence = next((e for e in data.evidence if e.id == evidence_id), None)
     if evidence is None:
         raise ValueError("Unknown evidence id")
-    artifact = next((a for a in evidence.artifacts if a.kind == "pdf"), None)
+    candidates = [a for a in evidence.artifacts if a.kind in {"pdf", "image"}]
+    if artifact_path is not None:
+        candidates = [a for a in candidates if a.path == artifact_path]
+    if len(candidates) > 1:
+        raise ValueError("Multiple document artifacts; select --artifact explicitly")
+    artifact = candidates[0] if candidates else None
     if artifact is None:
         raise ValueError("No saved original PDF")
     source = checked_path(root, artifact.path)
@@ -57,6 +71,8 @@ def run_ocr(dossier, evidence_id, output, *, language="rus+eng", max_pages=30, t
         raise ValueError("Original PDF size/hash mismatch")
     if sys.platform != "linux":
         raise ValueError("Offline OCR resource controls require Linux")
+    if artifact.kind == "image":
+        return run_image_ocr(root, evidence, artifact, raw, manifest, output, language, timeout)
     for program in ("pdfinfo", "pdftoppm", "tesseract"):
         if not shutil.which(program):
             raise ValueError(f"Missing {program}; install poppler-utils / tesseract-ocr")
@@ -187,10 +203,86 @@ def run_ocr(dossier, evidence_id, output, *, language="rus+eng", max_pages=30, t
     return report
 
 
+def run_image_ocr(root, evidence, artifact, raw, manifest, output, language, timeout):
+    """Same bounded local reader for saved images; derivative never grants legal trust."""
+    if not shutil.which("tesseract"):
+        raise ValueError("Missing tesseract; image remains not_read")
+    output.mkdir(parents=True, exist_ok=False)
+    source = output / "original.image"
+    source.write_bytes(raw)
+    report = {
+        "audience": "internal_only",
+        "evidence_id": evidence.id,
+        "source_url": str(evidence.source),
+        "source_artifact": artifact.path,
+        "source_sha256": artifact.sha256,
+        "dossier_sha256": hashlib.sha256(manifest).hexdigest(),
+        "language": language,
+        "page_count": 1,
+        "pages": [],
+        "ocr_complete": False,
+        "visual_examined": False,
+        "legal_research_completed": False,
+        "client_release_allowed": False,
+        "automatic_send_allowed": False,
+        "notice": "Unverified image OCR; inspect original. Not imported into legal findings.",
+    }
+    page = {"page": 1, "status": "failed", "error": None, "confidence": None}
+    report["pages"].append(page)
+    prefix = output / "page-0001"
+    try:
+        subprocess.run(
+            ["tesseract", str(source), str(prefix), "-l", language, "--psm", "3", "txt", "tsv"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            timeout=min(timeout, 30),
+            check=True,
+            preexec_fn=resource_bounds,
+            env={**os.environ, "OMP_THREAD_LIMIT": "1"},
+        )
+        textfile, tablefile = prefix.with_suffix(".txt"), prefix.with_suffix(".tsv")
+        if textfile.stat().st_size > 400_000 or tablefile.stat().st_size > 4_000_000:
+            raise ValueError("Image OCR derivative size limit")
+        text = textfile.read_text(encoding="utf-8")
+        confidences = []
+        for row in tablefile.read_text(encoding="utf-8").splitlines()[1:]:
+            columns = row.split("\t")
+            if len(columns) == 12 and columns[-1].strip():
+                value = float(columns[-2])
+                if 0 <= value <= 100:
+                    confidences.append(value)
+        confidence = sum(confidences) / len(confidences) if confidences else None
+        status = (
+            "no_text"
+            if not text.strip()
+            else "low_confidence"
+            if confidence is None or confidence < 70
+            else "ocr_text"
+        )
+        page.update(
+            status=status,
+            confidence=confidence,
+            text=textfile.name,
+            text_sha256=hashlib.sha256(textfile.read_bytes()).hexdigest(),
+            chars=len(text),
+        )
+        report["ocr_complete"] = status == "ocr_text"
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        page["error"] = str(exc)[:300]
+        page["status"] = "timeout" if isinstance(exc, subprocess.TimeoutExpired) else "failed"
+    (output / "ocr.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    return report
+
+
 def ocr_main(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dossier", type=Path)
     parser.add_argument("--evidence", required=True)
+    parser.add_argument(
+        "--artifact", help="Select a saved image/PDF when evidence has several documents"
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--language", default="rus+eng")
     parser.add_argument("--max-pages", type=int, default=30)
@@ -204,6 +296,7 @@ def ocr_main(argv):
             language=args.language,
             max_pages=args.max_pages,
             timeout=args.timeout,
+            artifact_path=args.artifact,
         )
     except (ValueError, OSError, subprocess.SubprocessError) as exc:
         parser.exit(2, f"OCR unavailable: {exc}\n")

@@ -273,6 +273,9 @@ class StaticFormCoverage(Model):
 
 
 class FormRow(Model):
+    declared_id: str | None = None
+    visibility_hint: Literal["unknown", "declared_hidden"] = "unknown"
+    popup_opened: Literal[False] = False
     mechanism: FormMechanism = Field(default_factory=FormMechanism)
     field_spans: list[StaticSpan] = Field(default_factory=list)
     id: str

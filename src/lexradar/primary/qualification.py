@@ -190,7 +190,7 @@ class Qualification:
             "unknown" if "unknown" in levels else "partial" if "partial" in levels else "complete"
         )
 
-    def finding(self, category, objects, facts):
+    def finding(self, category, objects, facts, *, scope_key=None):
         # Exact source content is part of the stable key: edited materials invalidate identity.
         identity = {
             "category": category,
@@ -199,6 +199,8 @@ class Qualification:
                 c.artifact_sha256 or "unknown" for f in facts for c in f.citations
             ),
         }
+        if scope_key is not None:
+            identity["content_scope"] = scope_key
         facts = sorted({f.id: f for f in facts}.values(), key=lambda f: f.id)
         finding = LegalFinding(
             id="finding-" + digest(identity),
@@ -448,12 +450,33 @@ class Qualification:
                 [f for f in facts if set(f.observation_ids) & selected],
             )
 
+    def content_questions(self):
+        codes = {
+            "mailto_recipient_mismatch": "A",
+            "document_image_unread": "G",
+            "price_discrepancy_candidate": "G",
+            "policy_response_period_candidate": "B",
+            "policy_contact_url_candidate": "B",
+            "cross_border_policy_review": "B",
+            "archived_program_reference": "G",
+            "dated_program_role_review": "G",
+        }
+        for observation in self.report.observations:
+            code = observation.description.split(":", 1)[0]
+            if code not in codes:
+                continue
+            fact = self.observed(observation)
+            finding = self.finding(codes[code], fact.objects, [fact], scope_key=(code, fact.id))
+            finding.factual_description = observation.description
+            finding.limitations = unique([*finding.limitations, observation.scope])
+
     def result(self):
         self.organizations()
         self.forms()
         self.standalone_documents()
         self.integrations()
         self.medical()
+        self.content_questions()
         if self.work:
             # Written legal implementation specification, never a technical repair offer.
             related = unique(i for w in self.work for i in w.legal_finding_ids)
