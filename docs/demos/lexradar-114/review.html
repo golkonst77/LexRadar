@@ -1,0 +1,123 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none';
+script-src 'sha256-Q9mMP60n8Q33NlCJPlcUuE5+/8Dm76DlPFysXRWoeYY='; style-src 'unsafe-inline'; connect-src 'none';
+img-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<title>LexRadar · Ручная проверка</title><style>
+body{font:16px/1.5 system-ui;background:#eef3f5;color:#19313b;margin:0}
+main{max-width:1000px;margin:auto;padding:28px}article{background:white;padding:24px;
+margin:24px 0;border-left:5px solid #14796e}label{display:block;margin:12px 0}
+textarea{display:block;box-sizing:border-box;width:100%;min-height:70px}
+input,button,select,textarea{font:inherit}button{padding:10px;margin:6px 12px 6px 0;
+background:#163f48;color:white;border:0;border-radius:4px}button:disabled{opacity:.45}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #e08015}
+blockquote,pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f0f5f7;padding:14px;margin:12px 0}
+.notice{background:#fff0b3;padding:18px}#message{min-height:28px}small{display:block}
+@media(max-width:600px){main{padding:12px}article{padding:14px}}
+</style></head><body><div style="padding:16px;background:#fff0b3;color:#222;font-weight:bold">SYNTHETIC DEMO — только учебные материалы; не клиентское заключение</div><main><h1>LexRadar · Очередь оператора</h1>
+<p class="notice">Локальная проверка сохранённых материалов. CONFIRM подтверждает применимый недостаток,
+а не правонарушение, вину, штраф или незаконную передачу. GO разрешает только черновик.
+Для отправки нужны отдельные утверждения получателя и окончательного КП. Отправки здесь нет.</p>
+<nav aria-label="Список аудитов"><strong>Аудиты:</strong> <span id="auditStatus"></span></nav>
+<label>Оператор <input id="reviewer" maxlength="200" autocomplete="off"></label>
+<p id="summary" role="status"></p><button id="export" type="button">Экспорт решений JSON</button>
+<label>Импорт решений / журнала <input id="import" type="file" accept="application/json,.json"></label>
+<p id="message" role="alert"></p><div id="cards"></div>
+<small>JSON и reviewer не удостоверяют личность. Не публикуйте приватную страницу.
+Внешних запросов нет. Решения в памяти до экспорта. Отмена — новое событие с причиной.</small>
+<script id="data" type="application/json">{"schema_version": "human-review-114.1", "binding": {"audit_id": "synthetic-114", "packet_sha256": "d4176f80aca2d50000903b42475277554597f401539bcb0c863d6946cbdba488", "manifest_sha256": "92fceca34c2d0bb9b8a6aa7b8b84293562bb474a9e07cdf892dd7c2d42ca42d6", "candidates_sha256": "9ed553931e5c21b9b6482eb14281e03a1dd1d2120dad69be9d3c14f2777222cb", "context_sha256": "6330e66a09baaefd53352d04ad505223e4d302a75a83b9842d32f0d4dfeba9d2", "rules_version": "human-review-114.1"}, "industry": "barber", "candidates": [{"finding_id": "F001", "check_id": "WEB-01", "title": "Синтетическая карточка F001", "defect_type": "contradictory_retention", "automatic_status": "REVIEW", "category": "document_defect", "quote": "Срок хранения заявок — 30 дней. Срок хранения заявок — 90 дней.", "evidence_ids": ["page-0002"], "evidence": [{"evidence_id": "page-0002", "source": "https://business.example.invalid/privacy-policy", "page": null, "start": 0, "end": 63, "exact_quote": "Срок хранения заявок — 30 дней. Срок хранения заявок — 90 дней."}], "suggested_basis": "", "limitations": ["SYNTHETIC: учебная карточка, не клиентский аудит."]}, {"finding_id": "F002", "check_id": "WEB-01", "title": "Синтетическая карточка F002", "defect_type": "embedded_consent_document", "automatic_status": "REVIEW", "category": "document_defect", "quote": "Согласие на обработку персональных данных включено в текст договора и отдельно не оформляется.", "evidence_ids": ["page-0002"], "evidence": [{"evidence_id": "page-0002", "source": "https://business.example.invalid/privacy-policy", "page": null, "start": 197, "end": 291, "exact_quote": "Согласие на обработку персональных данных включено в текст договора и отдельно не оформляется."}], "suggested_basis": "", "limitations": ["SYNTHETIC: учебная карточка, не клиентский аудит."]}, {"finding_id": "F003", "check_id": "WEB-01", "title": "Синтетическая карточка F003", "defect_type": "policy_transfers", "automatic_status": "REVIEW", "category": "document_defect", "quote": "Передача третьим лицам осуществляется по договору для обработки заявки.", "evidence_ids": ["page-0002"], "evidence": [{"evidence_id": "page-0002", "source": "https://business.example.invalid/privacy-policy", "page": null, "start": 125, "end": 196, "exact_quote": "Передача третьим лицам осуществляется по договору для обработки заявки."}], "suggested_basis": "", "limitations": ["SYNTHETIC: учебная карточка, не клиентский аудит."]}], "automatic_checks": [{"check_id": "WEB-01", "status": "FAIL", "summary": "В политике срок хранения заявок одновременно составляет 30 и 90 дней без разграничения условий."}, {"check_id": "WEB-02", "status": "REVIEW", "summary": "Статические упоминания аналитики не доказывают запуск или выбор."}, {"check_id": "WEB-03", "status": "REVIEW", "summary": "Формы найдены; поля, исходные отметки и тексты сохранены."}, {"check_id": "WEB-04", "status": "REVIEW", "summary": "Прямое подтверждение объединённого документа не найдено."}, {"check_id": "WEB-05", "status": "NOT_APPLICABLE", "summary": "В обследованных статических формах нет рекламного сценария."}], "history": [], "assessments": {"outcome": "HOLD", "scope": "commercial_draft_only", "hold_reason": "no_supported_material_operator_confirmed_defect", "binding": {"audit_id": "synthetic-114", "packet_sha256": "d4176f80aca2d50000903b42475277554597f401539bcb0c863d6946cbdba488", "manifest_sha256": "92fceca34c2d0bb9b8a6aa7b8b84293562bb474a9e07cdf892dd7c2d42ca42d6", "candidates_sha256": "9ed553931e5c21b9b6482eb14281e03a1dd1d2120dad69be9d3c14f2777222cb", "context_sha256": "6330e66a09baaefd53352d04ad505223e4d302a75a83b9842d32f0d4dfeba9d2", "rules_version": "human-review-114.1"}, "revision": 0, "findings": {"F001": {"automatic_status": "REVIEW", "operator_decision": "UNREVIEWED", "category": "document_defect", "blockers": []}, "F002": {"automatic_status": "REVIEW", "operator_decision": "UNREVIEWED", "category": "document_defect", "blockers": []}, "F003": {"automatic_status": "REVIEW", "operator_decision": "UNREVIEWED", "category": "document_defect", "blockers": []}}, "clarification_queue": ["F001", "F002", "F003"], "confirmed_cards": [], "legal_offense_established": false, "human_approval_required": true, "client_release_allowed": false, "automatic_send_allowed": false, "new_ai_calls": 0}, "evidence_details": {"page-0001": {"provenance": "reproduced", "complete": true, "local_link": "evidence/page-0001.html", "source": "https://business.example.invalid/", "original_sha256": "cf4eb00c167a211a334a3b18569c286509d7fb6922e2feeb533aa4a02cd3a29b"}, "page-0002": {"provenance": "reproduced", "complete": true, "local_link": "evidence/page-0002.html", "source": "https://business.example.invalid/privacy-policy", "original_sha256": "78167e22470cf939a072ac41089f6248823bab614c7851506010d531f324d952"}}}</script><script>
+'use strict';
+const data=JSON.parse(document.getElementById('data').textContent),$=id=>document.getElementById(id);
+let history=data.history,pending=[];const viewed=new Set();
+const labels={technical_observation:'Техническое наблюдение',document_defect:'Недостаток документа',
+ applicable_confirmed_defect:'Подтверждённый применимый недостаток'};
+function node(tag,text,parent){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;
+ if(parent)parent.append(n);return n;}
+function same(a,b){if(a===null||b===null||typeof a!=='object'||typeof b!=='object')return a===b;
+ if(Array.isArray(a)!==Array.isArray(b))return false;const keys=Object.keys(a).sort();
+ return JSON.stringify(keys)===JSON.stringify(Object.keys(b).sort())&&keys.every(k=>same(a[k],b[k]));}
+function latest(id){return [...history,...pending].filter(e=>e.finding_id===id).at(-1);}
+function draw(){ $('cards').replaceChildren();
+ for(const c of data.candidates){const card=node('article',undefined,$('cards')),last=latest(c.finding_id);
+ node('h2',c.finding_id+' · '+c.title,card);
+ node('p','Категория: '+(last?.decision==='CONFIRM'?labels.applicable_confirmed_defect:labels[c.category])+
+ ' · Тип: '+c.defect_type+' · Технический статус: '+c.automatic_status,card);
+ node('blockquote',c.quote||'Воспроизводимая цитата отсутствует — подтверждение заблокировано.',card);
+ const refs=node('details',undefined,card);node('summary','Доказательства и координаты',refs);
+ for(const ref of c.evidence)node('pre',JSON.stringify(ref,null,2),refs);
+ for(const id of c.evidence_ids){const d=data.evidence_details[id];
+ node('p','Источник: '+(d?.source||'не установлен'),refs);
+ node('p','Оригинал SHA256: '+(d?.original_sha256||'не установлен'),refs);
+ node('p',id+' · provenance: '+(d?.provenance||'unknown')+' · Полный текст: '+(d?.complete?'да':'нет'),refs);
+ if(d&&/^evidence\/[A-Za-z0-9_-]+\.html$/.test(d.local_link)){
+ const a=node('a','Открыть локальный безопасный текст '+id,refs);a.href=d.local_link;
+ a.target='_blank';a.rel='noopener noreferrer';a.addEventListener('click',()=>viewed.add(c.finding_id));}}
+ node('p','Packet SHA: '+data.binding.packet_sha256,refs);
+ node('p','Manifest SHA: '+data.binding.manifest_sha256,refs);
+ node('p','Rules: '+data.binding.rules_version,refs);
+ for(const w of c.limitations)node('p','Ограничение: '+w,card);
+ const blockers=data.assessments.findings[c.finding_id].blockers;
+ if(blockers.length)node('p','Подтверждение заблокировано: '+blockers.join(', '),card);
+ node('p','Последнее решение: '+(last?.decision||'Не рассмотрено'),card);
+ if(last)node('p','Причина: '+last.reason,card);
+ function field(label,tag='textarea',value=''){const wrap=node('label',label,card),input=node(tag,undefined,wrap);
+ input.value=value;input.maxLength=2000;return input;}
+ const reason=field('Краткое обоснование','textarea',last?.reason||'');
+ const basis=field('Применимое правовое основание — проверить самостоятельно','textarea',last?.legal_basis||'');
+ node('p','Рабочий ориентир, не подтверждённая норма: '+c.suggested_basis,card);
+ basis.maxLength=1000;
+ const applicability=field('Почему применимо именно к этому сайту','textarea',last?.applicability||'');
+ const severity=field('Существенность','select');
+ for(const [v,t] of [['undetermined','Не определена'],['substantial','Существенный'],['minor','Незначительный']]){
+ const o=node('option',t,severity);o.value=v;}severity.value=last?.severity||'undetermined';
+ function check(text){const label=node('label',undefined,card),box=node('input',undefined,label);
+ box.type='checkbox';label.append(document.createTextNode(text));return box;}
+ const seen=check(' Я открыл и сверил локальные доказательства');
+ const law=check(' Проверено правовое основание');
+ const applicable=check(' Проверена применимость и полный контекст');
+ for(const [decision,label] of [['CONFIRM','Подтвердить'],['REJECT','Отклонить'],
+ ['NEED_MORE_EVIDENCE','Нужно уточнить']]){const button=node('button',label,card);button.type='button';
+ if(decision==='CONFIRM'&&(blockers.length||['PASS','NOT_APPLICABLE'].includes(c.automatic_status)))button.disabled=true;
+ button.addEventListener('click',()=>{try{
+ const reviewer=$('reviewer').value.trim();if(!reviewer||!reason.value.trim())throw Error('Нужны оператор и обоснование.');
+ if(decision==='CONFIRM'&&(!viewed.has(c.finding_id)||!seen.checked||!law.checked||!applicable.checked||
+ !basis.value.trim()||!applicability.value.trim()))throw Error('Откройте доказательства и проверьте основание и применимость.');
+ const values={finding_id:c.finding_id,evidence_ids:c.evidence_ids,binding:data.binding,reviewer,decision,
+ reason:reason.value.trim(),legal_basis:basis.value.trim(),applicability:applicability.value.trim(),
+ severity:severity.value,defect_type:c.defect_type,evidence_viewed:seen.checked,
+ applicability_checked:applicable.checked,legal_basis_checked:law.checked};const prev=latest(c.finding_id);
+ if(prev&&Object.keys(values).every(k=>same(prev[k],values[k])))return;
+ pending.push({event_id:'e-'+crypto.randomUUID().replaceAll('-',''),reviewed_at:new Date().toISOString(),...values});
+ $('message').textContent='Событие добавлено. Экспортируйте JSON и примените локальную команду.';draw();
+ }catch(e){$('message').textContent=e.message;}});}}
+ const count=data.candidates.filter(c=>latest(c.finding_id)?.decision==='CONFIRM'&&
+ latest(c.finding_id).severity==='substantial').length;
+ $('auditStatus').textContent=data.binding.audit_id+' — '+(count?'предварительное GO':'HOLD');
+ $('summary').textContent='Подтверждено: '+count+' · Событий: '+(history.length+pending.length)+
+ ' · Итог проверяет finalize. Отправка запрещена.';}
+$('export').addEventListener('click',()=>{
+ const blob=new Blob([JSON.stringify({binding:data.binding,base_revision:history.length,events:pending},null,2)],
+ {type:'application/json'}),url=URL.createObjectURL(blob),a=node('a');a.href=url;a.download='operator-decisions.json';
+ a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('import').addEventListener('change',async event=>{try{const file=event.target.files[0];if(!file)return;
+ if(file.size>6000000)throw Error('Превышен лимит JSON.');const incoming=JSON.parse(await file.text());
+ if(!same(incoming.binding,data.binding)||!Array.isArray(incoming.events)||incoming.events.length>1000)
+ throw Error('Другой или устаревший пакет.');const ids=new Set();
+ for(const e of incoming.events){const c=data.candidates.find(c=>c.finding_id===e.finding_id);
+ if(!c||!same(e.binding,data.binding)||!same(e.evidence_ids,c.evidence_ids)||e.defect_type!==c.defect_type||
+ !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(e.event_id)||ids.has(e.event_id)||
+ !['CONFIRM','REJECT','NEED_MORE_EVIDENCE'].includes(e.decision)||typeof e.reason!=='string'||
+ typeof e.reviewer!=='string'||typeof e.legal_basis!=='string'||typeof e.applicability!=='string'||
+ !['substantial','minor','undetermined'].includes(e.severity)||!e.reason.trim()||!e.reviewer.trim()||
+ !Number.isFinite(Date.parse(e.reviewed_at))||Date.parse(e.reviewed_at)>Date.now())throw Error('Неверное событие.');
+ if(e.decision==='CONFIRM'&&(data.assessments.findings[c.finding_id].blockers.length||
+ !e.evidence_viewed||!e.legal_basis_checked||!e.applicability_checked||!e.legal_basis.trim()||
+ !e.applicability.trim()||['PASS','NOT_APPLICABLE'].includes(c.automatic_status)))throw Error('Недопустимое подтверждение.');
+ ids.add(e.event_id);}
+ if(incoming.assessment){if(incoming.base_revision!==incoming.events.length||pending.length)
+ throw Error('Сначала сохраните изменения.');history=incoming.events;pending=[];
+ }else{if(incoming.base_revision!==history.length)throw Error('Другая ревизия журнала.');pending=incoming.events;}
+ draw();$('message').textContent='Импорт — неподтверждённый ввод. CLI повторно проверит.';
+ }catch(e){$('message').textContent='Импорт отклонён: '+e.message;}});
+draw();
+</script></main></body></html>

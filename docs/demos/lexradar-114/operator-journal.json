@@ -1,0 +1,155 @@
+{
+  "binding": {
+    "audit_id": "synthetic-114",
+    "packet_sha256": "d4176f80aca2d50000903b42475277554597f401539bcb0c863d6946cbdba488",
+    "manifest_sha256": "92fceca34c2d0bb9b8a6aa7b8b84293562bb474a9e07cdf892dd7c2d42ca42d6",
+    "candidates_sha256": "9ed553931e5c21b9b6482eb14281e03a1dd1d2120dad69be9d3c14f2777222cb",
+    "context_sha256": "6330e66a09baaefd53352d04ad505223e4d302a75a83b9842d32f0d4dfeba9d2",
+    "rules_version": "human-review-114.1"
+  },
+  "base_revision": 3,
+  "events": [
+    {
+      "event_id": "e-de3debcf1cf844399bfb602f2a431920",
+      "finding_id": "F001",
+      "evidence_ids": [
+        "page-0002"
+      ],
+      "binding": {
+        "audit_id": "synthetic-114",
+        "packet_sha256": "d4176f80aca2d50000903b42475277554597f401539bcb0c863d6946cbdba488",
+        "manifest_sha256": "92fceca34c2d0bb9b8a6aa7b8b84293562bb474a9e07cdf892dd7c2d42ca42d6",
+        "candidates_sha256": "9ed553931e5c21b9b6482eb14281e03a1dd1d2120dad69be9d3c14f2777222cb",
+        "context_sha256": "6330e66a09baaefd53352d04ad505223e4d302a75a83b9842d32f0d4dfeba9d2",
+        "rules_version": "human-review-114.1"
+      },
+      "reviewer": "SYNTHETIC browser operator",
+      "reviewed_at": "2026-10-21T18:55:12.311000Z",
+      "decision": "CONFIRM",
+      "reason": "Сверены одинаковые цели и контекст синтетического документа.",
+      "legal_basis": "Учебное основание: 152-ФЗ ст. 5 ч. 7.",
+      "applicability": "Одинаковые заявки без разграничения условий хранения.",
+      "severity": "substantial",
+      "defect_type": "contradictory_retention",
+      "evidence_viewed": true,
+      "applicability_checked": true,
+      "legal_basis_checked": true
+    },
+    {
+      "event_id": "e-2f9d79efe0eb42c7af741b9efc1fa91c",
+      "finding_id": "F002",
+      "evidence_ids": [
+        "page-0002"
+      ],
+      "binding": {
+        "audit_id": "synthetic-114",
+        "packet_sha256": "d4176f80aca2d50000903b42475277554597f401539bcb0c863d6946cbdba488",
+        "manifest_sha256": "92fceca34c2d0bb9b8a6aa7b8b84293562bb474a9e07cdf892dd7c2d42ca42d6",
+        "candidates_sha256": "9ed553931e5c21b9b6482eb14281e03a1dd1d2120dad69be9d3c14f2777222cb",
+        "context_sha256": "6330e66a09baaefd53352d04ad505223e4d302a75a83b9842d32f0d4dfeba9d2",
+        "rules_version": "human-review-114.1"
+      },
+      "reviewer": "SYNTHETIC browser operator",
+      "reviewed_at": "2026-10-21T18:55:12.376000Z",
+      "decision": "REJECT",
+      "reason": "Учебная неприменимость.",
+      "legal_basis": "",
+      "applicability": "",
+      "severity": "undetermined",
+      "defect_type": "embedded_consent_document",
+      "evidence_viewed": false,
+      "applicability_checked": false,
+      "legal_basis_checked": false
+    },
+    {
+      "event_id": "e-9fb574dfa6564029bbbc722e11171f53",
+      "finding_id": "F003",
+      "evidence_ids": [
+        "page-0002"
+      ],
+      "binding": {
+        "audit_id": "synthetic-114",
+        "packet_sha256": "d4176f80aca2d50000903b42475277554597f401539bcb0c863d6946cbdba488",
+        "manifest_sha256": "92fceca34c2d0bb9b8a6aa7b8b84293562bb474a9e07cdf892dd7c2d42ca42d6",
+        "candidates_sha256": "9ed553931e5c21b9b6482eb14281e03a1dd1d2120dad69be9d3c14f2777222cb",
+        "context_sha256": "6330e66a09baaefd53352d04ad505223e4d302a75a83b9842d32f0d4dfeba9d2",
+        "rules_version": "human-review-114.1"
+      },
+      "reviewer": "SYNTHETIC browser operator",
+      "reviewed_at": "2026-10-21T18:55:12.445000Z",
+      "decision": "NEED_MORE_EVIDENCE",
+      "reason": "Нужны условия поручения и получатели.",
+      "legal_basis": "",
+      "applicability": "",
+      "severity": "undetermined",
+      "defect_type": "policy_transfers",
+      "evidence_viewed": false,
+      "applicability_checked": false,
+      "legal_basis_checked": false
+    }
+  ],
+  "assessment": {
+    "outcome": "GO",
+    "scope": "commercial_draft_only",
+    "hold_reason": null,
+    "binding": {
+      "audit_id": "synthetic-114",
+      "packet_sha256": "d4176f80aca2d50000903b42475277554597f401539bcb0c863d6946cbdba488",
+      "manifest_sha256": "92fceca34c2d0bb9b8a6aa7b8b84293562bb474a9e07cdf892dd7c2d42ca42d6",
+      "candidates_sha256": "9ed553931e5c21b9b6482eb14281e03a1dd1d2120dad69be9d3c14f2777222cb",
+      "context_sha256": "6330e66a09baaefd53352d04ad505223e4d302a75a83b9842d32f0d4dfeba9d2",
+      "rules_version": "human-review-114.1"
+    },
+    "revision": 3,
+    "findings": {
+      "F001": {
+        "automatic_status": "REVIEW",
+        "operator_decision": "CONFIRM",
+        "category": "applicable_confirmed_defect",
+        "blockers": []
+      },
+      "F002": {
+        "automatic_status": "REVIEW",
+        "operator_decision": "REJECT",
+        "category": "document_defect",
+        "blockers": []
+      },
+      "F003": {
+        "automatic_status": "REVIEW",
+        "operator_decision": "NEED_MORE_EVIDENCE",
+        "category": "document_defect",
+        "blockers": []
+      }
+    },
+    "clarification_queue": [
+      "F003"
+    ],
+    "confirmed_cards": [
+      {
+        "check_id": "WEB-01",
+        "defect_type": "contradictory_retention",
+        "status": "FAIL",
+        "evidence_level": "independent_review",
+        "title": "ПРОТИВОРЕЧИЕ В СРОКАХ ХРАНЕНИЯ",
+        "fact": "В политике срок хранения заявок одновременно составляет 30 и 90 дней без разграничения условий.",
+        "consequence": "Документ не даёт однозначного срока для работы с заявками; при обращении клиента организации будет сложнее обосновать порядок хранения.",
+        "work": "Подготовим согласованную политику, сроки по целям обработки и инструкцию ответственному за удаление данных.",
+        "evidence": [
+          {
+            "evidence_id": "page-0002",
+            "source": "https://business.example.invalid/privacy-policy",
+            "page": null,
+            "start": 0,
+            "end": 63,
+            "exact_quote": "Срок хранения заявок — 30 дней. Срок хранения заявок — 90 дней."
+          }
+        ]
+      }
+    ],
+    "legal_offense_established": false,
+    "human_approval_required": true,
+    "client_release_allowed": false,
+    "automatic_send_allowed": false,
+    "new_ai_calls": 0
+  }
+}
