@@ -5,7 +5,8 @@ import json
 from pydantic import ValidationError
 
 from .evidence import EvidencePacket
-from .models import AIAuditorResult
+from .grounding import check_quote, exact_locations
+from .models import AIAuditorResult, TextGrounding
 
 
 class ResultError(ValueError):
@@ -13,13 +14,15 @@ class ResultError(ValueError):
 
 
 def validate_result(
-    content: str, auditor: str, packet: EvidencePacket
+    content: str, auditor: str, packet: EvidencePacket, *, require_cookie_review: bool = False
 ) -> tuple[AIAuditorResult, list[str]]:
     notes = []
     try:
         raw = json.loads(content)
         if not isinstance(raw, dict):
             raise ResultError("invalid_response_schema")
+        if require_cookie_review and "cookie_analytics_review" not in raw:
+            raise ResultError("missing_cookie_analytics_review")
         for finding in raw.get("findings", []):
             if finding.get("status") == "confirmed":
                 finding["status"] = "potential"
@@ -32,6 +35,8 @@ def validate_result(
                 basis["actuality_status"] = "unverified"
                 basis["verified_source"] = None
         result = AIAuditorResult.model_validate(raw)
+    except ResultError:
+        raise
     except (ValueError, TypeError, AttributeError, ValidationError) as exc:
         raise ResultError("invalid_response_schema") from exc
     if result.auditor != auditor:
@@ -39,6 +44,26 @@ def validate_result(
     evidence = {e.id: e for e in packet.data.evidence}
     docs = {d.evidence_id: d for d in packet.data.documents}
     pages = {p.evidence_id: p for p in packet.data.pages}
+    review = result.cookie_analytics_review
+    for ref in review.evidence:
+        if ref.evidence_id not in evidence or not exact_locations(
+            packet, [ref.evidence_id], ref.source, ref.exact_quote
+        ):
+            raise ResultError("unsupported_cookie_evidence")
+    if review.status == "OK":
+        if any(
+            c.topic.value == "cookies_analytics" and c.status != "reviewed" for c in result.coverage
+        ):
+            raise ResultError("cookie_ok_with_insufficient_coverage")
+        if any(
+            not evidence[r.evidence_id].available
+            or evidence[r.evidence_id].status != "complete"
+            or not (
+                pages.get(r.evidence_id) or docs.get(r.evidence_id)
+            ).reading.text_coverage_complete
+            for r in review.evidence
+        ):
+            raise ResultError("cookie_ok_with_incomplete_evidence")
     for finding in result.findings:
         finding.fact_supported = False
         if (
@@ -47,6 +72,29 @@ def validate_result(
         ):
             raise ResultError("unknown_or_duplicate_evidence_id")
         supporting = [evidence[eid] for eid in finding.evidence_ids]
+        if not finding.text_grounding and finding.fact_assertion == "present":
+            locations = exact_locations(packet, finding.evidence_ids, finding.source, finding.fact)
+            if locations:
+                finding.text_grounding = [TextGrounding(**locations[0])]
+                finding.examination_scope = "text_excerpt"
+                notes.append("exact_fact_quote_bound_to_unique_packet_span")
+        quote_checks = [check_quote(packet, q) for q in finding.text_grounding]
+        valid_spans = all(c["status"] == "MATCH" for c in quote_checks)
+        for q, check in zip(finding.text_grounding, quote_checks, strict=True):
+            if check["status"] != "MATCH":
+                notes.append(f"{finding.id}: quotation_{check['status'].lower()}")
+                continue
+            own = [
+                m
+                for m in check["matches"]
+                if m["evidence_id"] == q.evidence_id
+                and m["page"] == q.page
+                and (q.start is None or q.start == m["start"])
+                and (q.end is None or q.end == m["end"])
+            ]
+            if len(own) == 1:
+                q.start, q.end = own[0]["start"], own[0]["end"]
+
         if any(q.evidence_id not in finding.evidence_ids for q in finding.text_grounding):
             raise ResultError("quotation_refers_to_uncited_evidence")
         if finding.source not in {e.source for e in supporting}:
@@ -113,23 +161,19 @@ def validate_result(
                     "Only quotation occurrence checked; interpretation needs human review; "
                     "unread pages excluded"
                 )
+        # Only literal proof of the complete fact can set this legacy flag.
+        # Other valid quotations remain independently visible in the assessment sidecar.
         grounded = (
-            finding.fact_assertion == "present" and finding.examination_scope == "text_excerpt"
-        ) and all(
-            any(
-                q.evidence_id == eid
-                and q.exact_quote.strip()
-                and (finding.fact == q.exact_quote if finding.material or eid in docs else True)
-                and (
-                    q.page is not None and q.exact_quote in docs[eid].page_texts.get(q.page, "")
-                    if eid in docs
-                    else q.page in {None, 1} and q.exact_quote in (pages[eid].text or "")
-                )
-                for q in finding.text_grounding
+            finding.fact_assertion == "present"
+            and finding.examination_scope == "text_excerpt"
+            and any(
+                q.exact_quote == finding.fact and check["status"] == "MATCH"
+                for q, check in zip(finding.text_grounding, quote_checks, strict=True)
             )
-            for eid in finding.evidence_ids
         )
         finding.fact_supported = bool(grounded)
+        if not valid_spans:
+            finding.limitations.append("Some quotations failed; see independent quote assessments")
         if finding.fact_assertion == "absent":
             finding.search_limitations.extend(
                 [

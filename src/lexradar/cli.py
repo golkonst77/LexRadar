@@ -9,6 +9,16 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "free-first":
+        from .free_first import main as free_first_main
+
+        free_first_main(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "audit":
+        from .operator_audit import audit_main
+
+        audit_main(sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "ocr-document":
         from .collector.ocr import ocr_main
 
