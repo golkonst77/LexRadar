@@ -136,6 +136,7 @@ class Fetcher:
         before_request=None,
         on_event=None,
         allow_redirects=True,
+        allow_cross_origin=False,
         max_file_bytes=None,
     ) -> Response:
         if self.received >= self.limits.max_total_bytes:
@@ -144,7 +145,7 @@ class Fetcher:
         deadline = time.monotonic() + self.limits.timeout_seconds
         current = canonical_url(url)
         for step in range(self.limits.max_redirects + 1):
-            if origin(current) != allowed_origin:
+            if origin(current) != allowed_origin and not allow_cross_origin:
                 if on_event:
                     on_event("navigation_blocked", current)
                 raise CollectionError("Cross-origin navigation blocked")

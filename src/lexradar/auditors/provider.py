@@ -124,6 +124,9 @@ class Provider(Protocol):
 
 
 class OpenRouterProvider:
+    # Older injected providers may bypass __init__; routing remains opt-in.
+    streamlake = False
+
     def __init__(
         self,
         config: AnalysisConfig,
@@ -131,7 +134,10 @@ class OpenRouterProvider:
         *,
         offline: bool = False,
         compact_paid: bool = False,
+        streamlake: bool = False,
     ):
+        if streamlake and (compact_paid or config.auditor_a.model != "deepseek/deepseek-chat"):
+            raise ValueError("StreamLake experiment requires deepseek/deepseek-chat")
         if offline and not isinstance(transport, CompactFakeTransport):
             raise PermissionError("Offline provider requires built-in fake transport")
         key = "offline-fixture-key" if offline else os.environ.get("OPENROUTER_API_KEY")
@@ -146,8 +152,11 @@ class OpenRouterProvider:
         self.config = config
         self.transport = transport or OpenRouterTransport()
         self.compact_paid = compact_paid
+        self.streamlake = streamlake
 
     def complete(self, settings: ModelSettings, messages: list[dict[str, str]]) -> ProviderReply:
+        if self.streamlake and settings.model != "deepseek/deepseek-chat":
+            raise ValueError("StreamLake experiment requires deepseek/deepseek-chat")
         if self.compact_paid:
             from .compact_profile import PROVIDER, validate_profile
 
@@ -157,12 +166,15 @@ class OpenRouterProvider:
                 "model": settings.model,
                 "messages": messages,
                 "max_tokens": settings.max_output_tokens,
-                "temperature": 0,
+                **({} if settings.model == "openai/gpt-5-mini" else {"temperature": 0}),
+                **({"reasoning": {"effort": "low"}}
+                   if settings.model == "openai/gpt-5-mini" else {}),
                 "stream": False,
                 "n": 1,
                 **({"reasoning": {"enabled": False}} if self.compact_paid else {}),
                 "response_format": {"type": "json_object"},
                 "provider": {
+                    **({"order": ["streamlake"]} if self.streamlake else {}),
                     **({"only": [PROVIDER]} if self.compact_paid else {}),
                     "allow_fallbacks": False,
                     "require_parameters": True,
@@ -193,6 +205,12 @@ class OpenRouterProvider:
             data = json.loads(body)
             if self._key in json.dumps(data, ensure_ascii=False):
                 raise ProviderError("secret_echo_rejected")
+            # Save message content before model/finish/usage checks and result parsing.
+            captured = (data.get("choices") or [{}])[0].get("message", {}).get("content")
+            if isinstance(captured, str) and self._key not in captured:
+                capture = getattr(self, "audit_capture", None)
+                if capture is not None:
+                    capture.response(captured)
             if data.get("error"):
                 raise ProviderError("provider_error", retryable=True)
             if data.get("model") != settings.model:

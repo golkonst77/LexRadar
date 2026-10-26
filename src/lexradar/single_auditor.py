@@ -1,4 +1,4 @@
-"""Single DeepSeek route. CLI only replays local responses; no live API switch."""
+"""Single legal auditor route. CLI only replays local responses; no live API switch."""
 
 import argparse
 import hashlib
@@ -13,40 +13,52 @@ from .auditors.provider import OpenRouterProvider, ProviderError, ProviderReply
 from .auditors.validator import validate_result
 from .offline_mvp import FakeOpenRouterProposal, canonical, export_proposal, quotes_valid
 
-MODEL = "deepseek/deepseek-v3.2"
+# Default migrated using the saved runs-089/090; model remains configurable.
+MODEL = "openai/gpt-5-mini"
 MAX_INPUT_TOKENS_BOUND = 240_000
 
 
-def profile():
-    settings = dict(model=MODEL, prompt_price_cap=1, completion_price_cap=2, max_output_tokens=4000)
+def profile(*, timeout_seconds=120, model=MODEL):
+    if type(timeout_seconds) not in (int, float) or timeout_seconds not in (45, 120):
+        raise ValueError("Single Auditor MVP timeout must be 45 or 120 seconds")
+    settings = dict(model=model, prompt_price_cap=1, completion_price_cap=2,
+                    max_output_tokens=28000 if model == MODEL else 4000)
     return AnalysisConfig(
         single_auditor=True,
         auditor_a=settings,
         auditor_b=settings,
         max_budget_usd="0.50",
-        timeout_seconds=45,
-        retries=1,
+        timeout_seconds=timeout_seconds,
+        retries=0,
         max_backoff_seconds=1,
         max_input_bytes=200_000,
         max_response_bytes=500_000,
     )
 
 
-def messages_for(auditor, packet):
+def messages_for(auditor, packet, *, historical_schema=False):
     if auditor != "A":
         raise ValueError("Only auditor A is allowed")
     base = files("lexradar.auditors").joinpath("prompts/a-v1.txt").read_text()
-    extra = files("lexradar.auditors").joinpath("prompts/single-a-v1.txt").read_text()
+    extra = files("lexradar.auditors").joinpath(
+        "prompts/single-a-v1.txt" if historical_schema else "prompts/single-a-v3-cookie.txt"
+    ).read_text()
     system = (
         base
         + "\n"
         + extra
         + "\nOutput JSON schema:\n"
-        + json.dumps(AIAuditorResult.model_json_schema(), ensure_ascii=False)
+        + (
+            files("lexradar.auditors")
+            .joinpath("prompts/single-a-v1-schema.txt")
+            .read_text(encoding="utf-8")
+            if historical_schema
+            else json.dumps(AIAuditorResult.model_json_schema(), ensure_ascii=False)
+        )
     )
     return (
         [{"role": "system", "content": system}, {"role": "user", "content": packet.payload}],
-        "single-a-v1",
+        "single-a-v1" if historical_schema else "single-a-v3-cookie",
         hashlib.sha256(system.encode()).hexdigest(),
     )
 
@@ -58,11 +70,16 @@ class DeepSeekAdapter(OpenRouterProvider):
     packet approval. Never inject this adapter into offline runs.
     """
 
-    def __init__(self, transport=None):
-        super().__init__(profile(), transport=transport)
+    def __init__(self, transport=None, *, timeout_seconds=120, model=MODEL):
+        super().__init__(profile(timeout_seconds=timeout_seconds, model=model), transport=transport)
 
     def complete(self, settings, messages):
-        if self.config != profile() or settings != profile().auditor_a:
+        if (
+            self.config != profile(
+                timeout_seconds=self.config.timeout_seconds, model=settings.model
+            )
+            or settings != profile(model=settings.model).auditor_a
+        ):
             raise ProviderError("unexpected_single_auditor_configuration")
         if sum(len(m["content"].encode()) for m in messages) + 1024 > MAX_INPUT_TOKENS_BOUND:
             raise ProviderError("input_token_bound_exceeded")
@@ -78,8 +95,8 @@ def checked_report(report, packet):
         or report.collector_manifest_sha256 != packet.manifest_sha256
     ):
         raise ValueError("Dossier/analysis hash mismatch")
-    if len(report.runs) != 1 or report.runs[0].auditor != "A" or report.runs[0].model != MODEL:
-        raise ValueError("Single DeepSeek A required")
+    if len(report.runs) != 1 or report.runs[0].auditor != "A" or not report.runs[0].model:
+        raise ValueError("Single legal auditor A required")
     report = report.model_copy(deep=True)
     if report.runs[0].result is not None:
         report.runs[0].result, _ = validate_result(

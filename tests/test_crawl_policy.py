@@ -5,6 +5,7 @@ import socket
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
 import pytest
 from conftest import FakeCrawlClock
@@ -188,6 +189,8 @@ def test_real_pacing_clock_on_local_server(web, tmp_path):
     "status,mime,body",
     [
         (403, "text/plain", b"Forbidden"),
+        (425, "text/plain", b"Too Early"),
+        (444, "text/plain", b"Connection closed"),
         (429, "text/plain", b"Slow down"),
         (500, "text/plain", b"Error"),
         (200, "text/html", b"<html>Wrong response</html>"),
@@ -223,6 +226,16 @@ def test_robots_fetch_errors_are_not_permission(web, tmp_path, monkeypatch, case
         s.get(url, origin(url))
     assert s.rules is None and s.finish()["robots_status"] == "unavailable"
     assert all(r[0] == "/robots.txt" for r in requests)
+
+
+def test_invalid_robots_agent_is_a_deny_all_skip_reason(web, tmp_path):
+    url, _, routes, requests, _ = web
+    routes["/robots.txt"] = (200, "text/plain", b"User-agent: bot+name\nDisallow:\n")
+    s = session(web, tmp_path)
+    with pytest.raises(CollectionError, match="robots_unavailable: Invalid robots agent"):
+        s.get(url, origin(url))
+    assert [r[0] for r in requests] == ["/robots.txt"]
+    assert s.rules is None and s.finish()["robots_status"] == "unavailable"
 
 
 @pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
@@ -262,6 +275,87 @@ def test_allowed_redirects_paced_and_counted(web, tmp_path):
     assert response.url == url + "c"
     assert [r[0] for r in requests] == ["/robots.txt", "/a", "/b", "/c"]
     assert s.clock.sleeps == [2, 2, 2] and s.finish()["requests_sent"] == 4
+
+
+@pytest.mark.parametrize(
+    "robots_status,robots_body,allowed",
+    [
+        (200, b"User-agent: *\nDisallow: /landing\n", False),
+        (403, b"Forbidden", False),
+        (200, b"User-agent: *\nDisallow:\n", True),
+    ],
+)
+def test_cross_origin_redirect_checks_target_robots_first(
+    web, tmp_path, robots_status, robots_body, allowed
+):
+    url, _, routes, requests, _ = web
+    target_requests = []
+    target_routes = {"/robots.txt": (robots_status, "text/plain", robots_body)}
+
+    class TargetHandler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            target_requests.append(self.path)
+            status, content_type, body = target_routes.get(
+                self.path, (200, "text/html", b"<html>target</html>")
+            )
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    target_server = ThreadingHTTPServer(("127.0.0.1", 0), TargetHandler)
+    target_thread = threading.Thread(target=target_server.serve_forever, daemon=True)
+    target_thread.start()
+    target_url = f"http://127.0.0.1:{target_server.server_port}/landing"
+    routes["/start"] = (302, "text/html", target_url.encode())
+
+    class TwoOriginFixturePolicy(AddressPolicy):
+        def resolve(self, host, port, *, timeout=None):
+            if host != "127.0.0.1" or port not in {url_port, target_server.server_port}:
+                raise CollectionError("Not fixture server")
+            return host
+
+    url_port = int(urlsplit(url).port)
+    s = CrawlSession(
+        Fetcher(Limits(), TwoOriginFixturePolicy()), url, tmp_path, clock=FakeCrawlClock()
+    )
+    try:
+        if allowed:
+            assert s.get(url + "start", origin(url)).url == target_url
+            assert target_requests == ["/robots.txt", "/landing"]
+            assert len(list((tmp_path / "crawl").glob("robots-response*.txt"))) == 2
+        else:
+            expected = (
+                "robots_disallow"
+                if robots_status == 200
+                else "robots_unavailable: Robots HTTP 403"
+            )
+            with pytest.raises(CollectionError, match=expected):
+                s.get(url + "start", origin(url))
+            assert target_requests == ["/robots.txt"]
+        assert [r[0] for r in requests] == ["/robots.txt", "/start"]
+        assert target_requests[0] == "/robots.txt"
+        if not allowed and robots_status == 200:
+            assert any(e["reason"] == "robots_disallow" for e in events(s))
+    finally:
+        s.finish()
+        target_server.shutdown()
+        target_server.server_close()
+        target_thread.join()
+
+
+def test_redirect_missing_location_is_a_collectable_failure(web, tmp_path):
+    url, _, routes, requests, _ = web
+    routes["/start"] = (302, "text/html", b"")
+    s = session(web, tmp_path)
+    with pytest.raises(CollectionError, match="Redirect limit or missing Location"):
+        s.get(url + "start", origin(url))
+    assert [r[0] for r in requests] == ["/robots.txt", "/start"]
+    assert s.finish()["requests_sent"] == 2
 
 
 @pytest.mark.parametrize(

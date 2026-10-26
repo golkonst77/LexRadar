@@ -102,7 +102,7 @@ def safe_link(url, label=None):
     return f'<a href="{esc(url)}">{esc(label or url)}</a>'
 
 
-def render_mvp(root: Path, output: Path, *, fixture=False):
+def render_mvp(root: Path, output: Path, *, fixture=False, replay_source=None):
     """Use local primary evidence, never turn fake AI hypotheses into violations."""
     collection = json.loads((root / "dossier/collection.json").read_text())
     primary = json.loads((root / "analysis/primary.local.json").read_text())
@@ -163,6 +163,13 @@ def render_mvp(root: Path, output: Path, *, fixture=False):
         if fixture
         else "Собраны общедоступные материалы сайта; AI-ответ синтетический."
     )
+    if replay_source:
+        badge = (
+            "ПОВТОРНЫЙ АНАЛИЗ СОХРАНЁННОГО ДОСЬЕ: "
+            + esc(replay_source)
+            + ". Свежий доступ к сайту не подтверждён; состояние могло измениться. "
+            + "AI-ответ синтетический."
+        )
     cards = f"""<article><h2>Предварительное коммерческое предложение</h2>
 <p class="notice">{badge} Платных AI-запросов не было.</p>
 <p>Сайт: {safe_link(collection["target_url"])}. Дата сбора:

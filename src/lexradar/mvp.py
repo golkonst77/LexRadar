@@ -3,13 +3,17 @@
 import argparse
 import hashlib
 import json
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from .audit_documents import generate
 from .auditors.compact_pipeline import analyze_compact
 from .auditors.models import AnalysisConfig, ModelSettings
 from .collector import CrawlOptions, Limits, collect
+from .collector.artifacts import verify_integrity
+from .collector.models import CollectionResult
 from .collector.network import CollectionError, Response, canonical_url, origin
 from .commercial_preview import render_mvp
 
@@ -53,14 +57,41 @@ class FixtureFetcher:
         return Response(url, 200 if body else 404, content_type, body)
 
 
-def run(url, output, *, fixture=None, static_only=False, as_of=None, max_pages=5):
+def run(
+    url,
+    output,
+    *,
+    fixture=None,
+    dossier=None,
+    static_only=False,
+    as_of=None,
+    max_pages=5,
+    pdf=False,
+    font_path=None,
+    sector="unknown",
+):
     url = canonical_url(url)
     if fixture and url != DEMO_URL:
         raise ValueError("Offline fixture requires the exact demo URL")
+    if fixture and dossier:
+        raise ValueError("Choose fixture or saved dossier")
+    saved = None
+    if dossier:
+        if any(path.is_symlink() for path in dossier.rglob("*")):
+            raise ValueError("Saved dossier must not contain symbolic links")
+        saved = CollectionResult.model_validate_json((dossier / "collection.json").read_text())
+        if canonical_url(str(saved.target_url)) != url:
+            raise ValueError("Saved dossier URL mismatch")
+        issues = verify_integrity(saved, dossier)
+        if issues:
+            raise ValueError("Saved dossier integrity failed: " + "; ".join(issues))
+        if output.resolve().is_relative_to(dossier.resolve()):
+            raise ValueError("Output must be outside source dossier")
     output.mkdir(parents=True, exist_ok=False)
     manifest = {
         "url": url,
         "fixture": bool(fixture),
+        "replay_source": str(dossier) if dossier else None,
         "static_only": static_only,
         "ai_mode": "offline",
         "request_sent": False,
@@ -70,14 +101,18 @@ def run(url, output, *, fixture=None, static_only=False, as_of=None, max_pages=5
     }
     try:
         limits = Limits(max_pages=max_pages, max_documents=3, timeout_seconds=8)
-        collection = collect(
-            url,
-            output / "dossier",
-            limits,
-            fetcher=FixtureFetcher(fixture, limits) if fixture else None,
-            static_only=static_only,
-            crawl_options=CrawlOptions(max_requests=20, max_duration_seconds=90),
-        )
+        if saved:
+            shutil.copytree(dossier, output / "dossier")
+            collection = saved
+        else:
+            collection = collect(
+                url,
+                output / "dossier",
+                limits,
+                fetcher=FixtureFetcher(fixture, limits) if fixture else None,
+                static_only=static_only,
+                crawl_options=CrawlOptions(max_requests=20, max_duration_seconds=90),
+            )
         manifest.update(
             pages=len(collection.pages),
             documents=len(collection.documents),
@@ -105,11 +140,14 @@ def run(url, output, *, fixture=None, static_only=False, as_of=None, max_pages=5
             config,
             as_of=as_of or datetime.now(UTC),
             approval_template=False,
+            sector=sector,
         )
         manifest["analysis_status"] = report["status"]
         if report["status"] != "success":
             raise ValueError("Compact analysis failed; inspect saved analysis")
-        render_mvp(output, output / "proposal.html", fixture=bool(fixture))
+        render_mvp(output, output / "proposal.html", fixture=bool(fixture), replay_source=dossier)
+        generate(output, replay_source=dossier, pdf=pdf, font_path=font_path)
+        manifest["pdf_generated"] = pdf
         manifest["status"] = "success"
     except Exception as exc:
         manifest.update(status="failed", error_type=type(exc).__name__, error=str(exc)[:2000])
@@ -130,6 +168,10 @@ def main(argv=None):
     parser.add_argument("url")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--fixture", type=Path)
+    parser.add_argument("--dossier", type=Path, help="Replay saved evidence; no network")
+    parser.add_argument("--pdf", action="store_true", help="Export offline Unicode PDF")
+    parser.add_argument("--font", type=Path, help="FreeMono-compatible TrueType font")
+    parser.add_argument("--sector", choices=["medical", "unknown"], default="unknown")
     parser.add_argument("--static-only", action="store_true")
     parser.add_argument("--as-of", type=datetime.fromisoformat)
     parser.add_argument("--max-pages", type=int, default=5)
@@ -139,6 +181,10 @@ def main(argv=None):
             args.url,
             args.output,
             fixture=args.fixture,
+            dossier=args.dossier,
+            pdf=args.pdf,
+            font_path=args.font,
+            sector=args.sector,
             static_only=args.static_only,
             as_of=args.as_of,
             max_pages=args.max_pages,

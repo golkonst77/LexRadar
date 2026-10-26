@@ -39,6 +39,9 @@ class CrawlSession:
         self.rules = None
         self.robots_checked = False
         self.robots_status = "not_checked"
+        self._rules_by_origin = {}
+        self._robots_checked_origins = set()
+        self._robots_errors = {}
         self.denied = self.blocked = 0
         self.output = output / "crawl"
         self.output.mkdir()
@@ -61,11 +64,11 @@ class CrawlSession:
                 + "\n"
             )
 
-    def stop(self, reason):
+    def stop(self, reason, *, error=None):
         if self.stop_reason is None:
             self.stop_reason = reason
             self.event("stopped", reason=reason)
-        raise CollectionError(reason)
+        raise CollectionError(error or reason)
 
     def remaining(self):
         remaining = self.options.max_duration_seconds - (self.clock.now() - self.started)
@@ -80,12 +83,13 @@ class CrawlSession:
         if self.requests >= self.options.max_requests:
             self.stop("request_count_limit")
 
-    def _before(self, url, *, robots=False):
+    def _before(self, url, *, robots=False, policy_origin=None):
         url = canonical_url(url)
-        if origin(url) != self.origin:
+        target_origin = origin(url)
+        if robots and target_origin != policy_origin:
             self.blocked += 1
             self.event("url_denied", url=url, reason="cross_origin")
-            raise CollectionError("Cross-origin navigation blocked")
+            raise CollectionError("Cross-origin robots redirect blocked")
         path = octets(urlsplit(url).path).lower()
         if any(v in path for v in ("%2f", "%5c", "%25")) or any(
             v in {".", ".."} for v in path.split("/")
@@ -95,14 +99,17 @@ class CrawlSession:
             raise CollectionError("Ambiguous path blocked before robots matching")
         self.check()
         if not robots:
-            self._robots()
-            if not self.rules.allows(url):
+            self._robots(target_origin)
+            rules = self._rules_by_origin[target_origin]
+            if not rules.allows(url):
                 self.denied += 1
                 self.blocked += 1
                 self.event("url_denied", url=url, reason="robots_disallow")
                 raise CollectionError("robots_disallow")
             self.event("url_allowed", url=url, reason="robots_allow")
-        delay = max(self.options.min_delay_seconds, self.rules.crawl_delay if self.rules else 0)
+        else:
+            rules = self._rules_by_origin.get(target_origin)
+        delay = max(self.options.min_delay_seconds, rules.crawl_delay if rules else 0)
         wait = (
             max(0, delay - (self.clock.now() - self.last_attempt))
             if self.last_attempt is not None
@@ -126,66 +133,95 @@ class CrawlSession:
             self.blocked += 1
         self.event(event, url=url, http_status=status)
 
-    def _robots(self):
-        if self.robots_checked:
-            if self.rules is None:
-                self.stop("robots_unavailable")
+    def _robots(self, target_origin=None):
+        target_origin = target_origin or self.origin
+        if target_origin in self._robots_checked_origins:
+            if target_origin not in self._rules_by_origin:
+                reason = self._robots_errors[target_origin]
+                if target_origin == self.origin:
+                    self.stop("robots_unavailable", error=reason)
+                raise CollectionError(reason)
             return
-        self.robots_checked = True
-        scheme, host, port = self.origin
+        self._robots_checked_origins.add(target_origin)
+        if target_origin == self.origin:
+            self.robots_checked = True
+        scheme, host, port = target_origin
         host = f"[{host}]" if ":" in host else host
         authority = host if port == (443 if scheme == "https" else 80) else f"{host}:{port}"
         url = f"{scheme}://{authority}/robots.txt"
+        robots_name = "robots-response.txt"
+        if target_origin != self.origin:
+            origin_hash = hashlib.sha256(repr(target_origin).encode()).hexdigest()[:12]
+            robots_name = f"robots-response-{origin_hash}.txt"
+        artifact = f"crawl/{robots_name}"
         try:
             response = self.fetcher.get(
                 url,
-                self.origin,
-                before_request=lambda u: self._before(u, robots=True),
+                target_origin,
+                before_request=lambda u: self._before(
+                    u, robots=True, policy_origin=target_origin
+                ),
                 on_event=self._network_event,
                 allow_redirects=True,
                 max_file_bytes=MAX_ROBOTS_BYTES,
             )
             if response.status in {404, 410}:
-                (self.output / "robots-response.txt").write_bytes(response.body)
-                self.rules = RobotsRules((), 0, "none")
-                self.robots_status = "absent"
+                (self.output / robots_name).write_bytes(response.body)
+                self._rules_by_origin[target_origin] = RobotsRules((), 0, "none")
+                if target_origin == self.origin:
+                    self.rules = self._rules_by_origin[target_origin]
+                    self.robots_status = "absent"
                 self.event(
                     "robots_absent",
                     url=response.url,
                     http_status=response.status,
                     policy="no_rules",
-                    artifact="crawl/robots-response.txt",
+                    artifact=artifact,
                     sha256=hashlib.sha256(response.body).hexdigest(),
                 )
                 return
             if response.status != 200:
                 raise CollectionError(f"Robots HTTP {response.status}; no permission established")
             # Retain real received bytes; this is a crawl-policy artifact, not legal evidence.
-            (self.output / "robots-response.txt").write_bytes(response.body)
+            (self.output / robots_name).write_bytes(response.body)
             if response.content_type.split(";", 1)[0].strip().lower() != "text/plain":
                 raise ValueError("Robots Content-Type is not text/plain")
-            self.rules = parse_robots(response.body)
-            self.robots_status = "received"
+            rules = parse_robots(response.body)
+            self._rules_by_origin[target_origin] = rules
+            if target_origin == self.origin:
+                self.rules = rules
+                self.robots_status = "received"
             self.event(
                 "robots_received",
                 url=response.url,
                 http_status=response.status,
                 sha256=hashlib.sha256(response.body).hexdigest(),
-                selected_agent=self.rules.selected_agent,
-                crawl_delay=self.rules.crawl_delay,
-                artifact="crawl/robots-response.txt",
+                selected_agent=rules.selected_agent,
+                crawl_delay=rules.crawl_delay,
+                artifact=artifact,
             )
         except (CollectionError, ValueError, OSError) as exc:
-            self.robots_status = "unavailable"
+            reason = f"robots_unavailable: {str(exc)[:300]}"
+            self._robots_errors[target_origin] = reason
+            if target_origin == self.origin:
+                self.robots_status = "unavailable"
             self.event("robots_unavailable", url=url, reason=str(exc)[:300], policy="deny_all")
-            self.stop("robots_unavailable")
+            if target_origin == self.origin:
+                self.stop("robots_unavailable", error=reason)
+            self.blocked += 1
+            self.event("url_denied", url=url, reason="redirect_target_robots_unavailable")
+            raise CollectionError(reason) from exc
 
     def get(self, url, allowed_origin):
         if allowed_origin != self.origin:
             raise CollectionError("Session origin mismatch")
         try:
             return self.fetcher.get(
-                url, allowed_origin, before_request=self._before, on_event=self._network_event
+                url,
+                allowed_origin,
+                before_request=self._before,
+                on_event=self._network_event,
+                allow_cross_origin=True,
             )
         except CollectionError as exc:
             self.event("fetch_rejected_or_failed", url=url, reason=str(exc)[:300])

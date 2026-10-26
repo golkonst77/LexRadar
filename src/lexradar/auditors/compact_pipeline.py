@@ -157,6 +157,8 @@ def analyze_compact(
         report["status"] = "success"
     except (ProviderError, ResultError, BudgetExceeded) as exc:
         report["status"] = str(exc)
+        if isinstance(exc, ProviderError) and exc.diagnostics:
+            report["provider_diagnostics"] = exc.diagnostics
     finally:
         if token is not None:
             charge, state = budget.settle(token, Usage())
