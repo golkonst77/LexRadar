@@ -1,0 +1,29 @@
+{
+  "site_index": 3,
+  "csv_row": 21,
+  "organization": "Семейный медицинский центр «Никор-мед» в Андреевке",
+  "url": "https://nikor-n.ru/",
+  "duration_seconds": 0.669,
+  "status": "ERROR",
+  "reason": "ValueError:Invalid robots agent",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "robots_unavailable",
+    "robots_status": "unavailable",
+    "request_attempts": 1,
+    "requests_sent": 1,
+    "robots_denied_urls": 0,
+    "blocked_urls": 0,
+    "elapsed_seconds": 0.3272338620154187
+  },
+  "error": {
+    "error_type": "ValueError",
+    "code": "ValueError",
+    "retry": false,
+    "outcome": "HOLD",
+    "new_request_allowed": false,
+    "possible_charge_unknown": false
+  }
+}

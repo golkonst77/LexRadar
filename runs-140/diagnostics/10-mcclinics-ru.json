@@ -1,0 +1,29 @@
+{
+  "site_index": 10,
+  "csv_row": 58,
+  "organization": "Клиника «Мать и дитя» Савеловская",
+  "url": "https://mcclinics.ru/",
+  "duration_seconds": 2.477,
+  "status": "ERROR",
+  "reason": "ValueError:Cross-origin navigation blocked",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "queue_exhausted_with_denials",
+    "robots_status": "received",
+    "request_attempts": 2,
+    "requests_sent": 2,
+    "robots_denied_urls": 0,
+    "blocked_urls": 1,
+    "elapsed_seconds": 2.1084307029959746
+  },
+  "error": {
+    "error_type": "ValueError",
+    "code": "ValueError",
+    "retry": false,
+    "outcome": "HOLD",
+    "new_request_allowed": false,
+    "possible_charge_unknown": false
+  }
+}

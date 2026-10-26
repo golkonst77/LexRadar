@@ -1,0 +1,39 @@
+{
+  "site_index": 13,
+  "csv_row": 75,
+  "organization": "Клиника пластической хирургии и косметологии Grandmed",
+  "url": "https://grandmed.ru/",
+  "duration_seconds": 89.65,
+  "status": "DRAFT_HOLD",
+  "reason": "Черновик оставлен на ручное рассмотрение",
+  "risk_signal_summary": "Форма: адрес электронной почты; ссылка на политику обнаружена; отдельная отметка согласия не обнаружена",
+  "html_created": true,
+  "pdf_created": true,
+  "collection": {
+    "stop_reason": "page_limit",
+    "robots_status": "received",
+    "request_attempts": 41,
+    "requests_sent": 41,
+    "robots_denied_urls": 0,
+    "blocked_urls": 0,
+    "elapsed_seconds": 80.88773560000118
+  },
+  "stage_timings_seconds": {
+    "collection_seconds": 80.948,
+    "packet_preparation_seconds": 5.923,
+    "screening_seconds": 0.761,
+    "html_generation_seconds": 0.166,
+    "pdf_generation_seconds": 0.006,
+    "total_seconds": 89.65
+  },
+  "screening": {
+    "source_audit_status": "NOT_RUN",
+    "proposal_assessment": "HOLD",
+    "proposal_created": true,
+    "reason": null,
+    "legal_offense_established": false,
+    "human_approval_required": true,
+    "automatic_send_allowed": false,
+    "client_release_allowed": false
+  }
+}

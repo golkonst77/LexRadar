@@ -1,0 +1,13 @@
+{
+  "input_csv": "clinics_full.csv",
+  "selected": 15,
+  "processed": 15,
+  "sites_with_signals": 1,
+  "proposals_created": 1,
+  "errors": 9,
+  "total_seconds": 445.416,
+  "paid_ai_calls": 0,
+  "single_auditor_calls": 0,
+  "sent": 0,
+  "summary_csv": "summary.csv"
+}

@@ -1,0 +1,29 @@
+{
+  "site_index": 11,
+  "csv_row": 67,
+  "organization": "Клиника \"Скоромед\"",
+  "url": "https://scoromed.ru/",
+  "duration_seconds": 0.717,
+  "status": "ERROR",
+  "reason": "ValueError:robots_disallow",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "queue_exhausted_with_denials",
+    "robots_status": "received",
+    "request_attempts": 1,
+    "requests_sent": 1,
+    "robots_denied_urls": 1,
+    "blocked_urls": 1,
+    "elapsed_seconds": 0.34340289497049525
+  },
+  "error": {
+    "error_type": "ValueError",
+    "code": "ValueError",
+    "retry": false,
+    "outcome": "HOLD",
+    "new_request_allowed": false,
+    "possible_charge_unknown": false
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "site_index": 14,
+  "csv_row": 84,
+  "organization": "Слуховые аппараты \"Мед Аудио\" (м. Курская)",
+  "url": "https://medaudio.ru/",
+  "duration_seconds": 82.178,
+  "status": "HOLD_NO_SIGNAL",
+  "reason": "no_credible_grounded_screening_signals",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "page_limit",
+    "robots_status": "received",
+    "request_attempts": 41,
+    "requests_sent": 41,
+    "robots_denied_urls": 0,
+    "blocked_urls": 0,
+    "elapsed_seconds": 80.14161753299413
+  },
+  "stage_timings_seconds": {
+    "collection_seconds": 80.153,
+    "packet_preparation_seconds": 1.588,
+    "screening_seconds": 0.259,
+    "html_generation_seconds": 0.002,
+    "pdf_generation_seconds": 0.0,
+    "total_seconds": 82.178
+  },
+  "screening": {
+    "source_audit_status": "NOT_RUN",
+    "proposal_assessment": "HOLD",
+    "proposal_created": false,
+    "reason": "no_credible_grounded_screening_signals",
+    "legal_offense_established": false,
+    "human_approval_required": true,
+    "automatic_send_allowed": false,
+    "client_release_allowed": false
+  }
+}

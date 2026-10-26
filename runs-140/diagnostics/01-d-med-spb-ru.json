@@ -1,0 +1,29 @@
+{
+  "site_index": 1,
+  "csv_row": 6,
+  "organization": "Медицинский центр \"Д-мед\"",
+  "url": "https://d-med.spb.ru/",
+  "duration_seconds": 8.815,
+  "status": "ERROR",
+  "reason": "ValueError:Redirect limit or missing Location",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "queue_exhausted",
+    "robots_status": "received",
+    "request_attempts": 5,
+    "requests_sent": 5,
+    "robots_denied_urls": 0,
+    "blocked_urls": 0,
+    "elapsed_seconds": 8.472675125987735
+  },
+  "error": {
+    "error_type": "ValueError",
+    "code": "ValueError",
+    "retry": false,
+    "outcome": "HOLD",
+    "new_request_allowed": false,
+    "possible_charge_unknown": false
+  }
+}

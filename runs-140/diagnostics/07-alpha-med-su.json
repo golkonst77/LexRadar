@@ -1,0 +1,39 @@
+{
+  "site_index": 7,
+  "csv_row": 49,
+  "organization": "Клиника \"Альфамед\"",
+  "url": "https://alpha-med.su/",
+  "duration_seconds": 85.271,
+  "status": "HOLD_NO_SIGNAL",
+  "reason": "no_credible_grounded_screening_signals",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "page_limit",
+    "robots_status": "received",
+    "request_attempts": 41,
+    "requests_sent": 41,
+    "robots_denied_urls": 0,
+    "blocked_urls": 0,
+    "elapsed_seconds": 80.5508317220374
+  },
+  "stage_timings_seconds": {
+    "collection_seconds": 80.588,
+    "packet_preparation_seconds": 3.301,
+    "screening_seconds": 0.334,
+    "html_generation_seconds": 0.103,
+    "pdf_generation_seconds": 0.0,
+    "total_seconds": 85.271
+  },
+  "screening": {
+    "source_audit_status": "NOT_RUN",
+    "proposal_assessment": "HOLD",
+    "proposal_created": false,
+    "reason": "no_credible_grounded_screening_signals",
+    "legal_offense_established": false,
+    "human_approval_required": true,
+    "automatic_send_allowed": false,
+    "client_release_allowed": false
+  }
+}

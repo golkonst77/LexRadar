@@ -1,0 +1,39 @@
+{
+  "site_index": 15,
+  "csv_row": 95,
+  "organization": "Lab4U (ул. 1-я Владимирская, д. 18, корп. 1, Клиника «Астери-Мед»)",
+  "url": "https://lab4u.ru/",
+  "duration_seconds": 2.188,
+  "status": "HOLD_NO_SIGNAL",
+  "reason": "no_credible_grounded_screening_signals",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "queue_exhausted",
+    "robots_status": "received",
+    "request_attempts": 2,
+    "requests_sent": 2,
+    "robots_denied_urls": 0,
+    "blocked_urls": 0,
+    "elapsed_seconds": 2.1337618489633314
+  },
+  "stage_timings_seconds": {
+    "collection_seconds": 2.135,
+    "packet_preparation_seconds": 0.016,
+    "screening_seconds": 0.018,
+    "html_generation_seconds": 0.001,
+    "pdf_generation_seconds": 0.0,
+    "total_seconds": 2.188
+  },
+  "screening": {
+    "source_audit_status": "NOT_RUN",
+    "proposal_assessment": "HOLD",
+    "proposal_created": false,
+    "reason": "no_credible_grounded_screening_signals",
+    "legal_offense_established": false,
+    "human_approval_required": true,
+    "automatic_send_allowed": false,
+    "client_release_allowed": false
+  }
+}

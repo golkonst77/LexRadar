@@ -1,0 +1,29 @@
+{
+  "site_index": 4,
+  "csv_row": 29,
+  "organization": "Медицинский центр \"Мария-Мед\" (ул. Фабрициуса, д. 13)",
+  "url": "https://mariamed.ru/",
+  "duration_seconds": 0.867,
+  "status": "ERROR",
+  "reason": "ValueError:Robots HTTP 444; no permission established",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "robots_unavailable",
+    "robots_status": "unavailable",
+    "request_attempts": 1,
+    "requests_sent": 1,
+    "robots_denied_urls": 0,
+    "blocked_urls": 0,
+    "elapsed_seconds": 0.5265820000204258
+  },
+  "error": {
+    "error_type": "ValueError",
+    "code": "ValueError",
+    "retry": false,
+    "outcome": "HOLD",
+    "new_request_allowed": false,
+    "possible_charge_unknown": false
+  }
+}

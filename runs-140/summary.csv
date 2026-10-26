@@ -1,0 +1,16 @@
+﻿csv_row;organization;url;duration_seconds;risk_signals;html_created;pdf_created;status;reason
+6;"Медицинский центр ""Д-мед""";https://d-med.spb.ru/;8.815;;False;False;ERROR;ValueError:Redirect limit or missing Location
+8;"Клиника ""Меди"" на Академической";https://medi.spb.ru/;0.619;;False;False;ERROR;"ValueError:Robots HTTP 403; no permission established"
+21;Семейный медицинский центр «Никор-мед» в Андреевке;https://nikor-n.ru/;0.669;;False;False;ERROR;ValueError:Invalid robots agent
+29;"Медицинский центр ""Мария-Мед"" (ул. Фабрициуса, д. 13)";https://mariamed.ru/;0.867;;False;False;ERROR;"ValueError:Robots HTTP 444; no permission established"
+43;Меди на Покровском;https://medi.msk.ru/;0.519;;False;False;ERROR;"ValueError:Robots HTTP 403; no permission established"
+46;Мед Тест ( Б-р Адмирала Ушакова, д. 12);https://promedtest.ru/;55.324;;False;False;HOLD_NO_SIGNAL;no_credible_grounded_screening_signals
+49;"Клиника ""Альфамед""";https://alpha-med.su/;85.271;;False;False;HOLD_NO_SIGNAL;no_credible_grounded_screening_signals
+52;"Клиника превентивной эстетической медицины ""Валлекс Мед""";https://vallexm.ru/;0.667;;False;False;ERROR;ValueError:Invalid robots agent
+53;Клиника современной медицины «Лайф Мед Центр»;https://lifemedcenter.ru/;0.769;;False;False;ERROR;"ValueError:Robots HTTP 425; no permission established"
+58;Клиника «Мать и дитя» Савеловская;https://mcclinics.ru/;2.477;;False;False;ERROR;ValueError:Cross-origin navigation blocked
+67;"Клиника ""Скоромед""";https://scoromed.ru/;0.717;;False;False;ERROR;ValueError:robots_disallow
+72;Клиника «МультиМед»;https://med-centr.ru/;112.6;;False;False;HOLD_NO_SIGNAL;no_credible_grounded_screening_signals
+75;Клиника пластической хирургии и косметологии Grandmed;https://grandmed.ru/;89.65;"Форма: адрес электронной почты; ссылка на политику обнаружена; отдельная отметка согласия не обнаружена";True;True;DRAFT_HOLD;Черновик оставлен на ручное рассмотрение
+84;"Слуховые аппараты ""Мед Аудио"" (м. Курская)";https://medaudio.ru/;82.178;;False;False;HOLD_NO_SIGNAL;no_credible_grounded_screening_signals
+95;Lab4U (ул. 1-я Владимирская, д. 18, корп. 1, Клиника «Астери-Мед»);https://lab4u.ru/;2.188;;False;False;HOLD_NO_SIGNAL;no_credible_grounded_screening_signals

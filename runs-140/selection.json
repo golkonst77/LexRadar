@@ -1,0 +1,89 @@
+{
+  "source_file": "clinics_full.csv",
+  "csv_rows": 99,
+  "unique_valid_domains_before_exclusions": 20,
+  "empty_or_unresolved_rows": 56,
+  "duplicate_domains_skipped": 23,
+  "previously_used_domains_excluded": 4,
+  "nikormed_domain_excluded": 0,
+  "eligible_after_first_15": 1,
+  "selected_count": 15,
+  "selection_rule": "First 15 unique valid site domains in CSV order, excluding domains found in earlier runs and nikormed.ru.",
+  "selected": [
+    {
+      "csv_row": 6,
+      "organization": "Медицинский центр \"Д-мед\"",
+      "url": "https://d-med.spb.ru/"
+    },
+    {
+      "csv_row": 8,
+      "organization": "Клиника \"Меди\" на Академической",
+      "url": "https://medi.spb.ru/"
+    },
+    {
+      "csv_row": 21,
+      "organization": "Семейный медицинский центр «Никор-мед» в Андреевке",
+      "url": "https://nikor-n.ru/"
+    },
+    {
+      "csv_row": 29,
+      "organization": "Медицинский центр \"Мария-Мед\" (ул. Фабрициуса, д. 13)",
+      "url": "https://mariamed.ru/"
+    },
+    {
+      "csv_row": 43,
+      "organization": "Меди на Покровском",
+      "url": "https://medi.msk.ru/"
+    },
+    {
+      "csv_row": 46,
+      "organization": "Мед Тест ( Б-р Адмирала Ушакова, д. 12)",
+      "url": "https://promedtest.ru/"
+    },
+    {
+      "csv_row": 49,
+      "organization": "Клиника \"Альфамед\"",
+      "url": "https://alpha-med.su/"
+    },
+    {
+      "csv_row": 52,
+      "organization": "Клиника превентивной эстетической медицины \"Валлекс Мед\"",
+      "url": "https://vallexm.ru/"
+    },
+    {
+      "csv_row": 53,
+      "organization": "Клиника современной медицины «Лайф Мед Центр»",
+      "url": "https://lifemedcenter.ru/"
+    },
+    {
+      "csv_row": 58,
+      "organization": "Клиника «Мать и дитя» Савеловская",
+      "url": "https://mcclinics.ru/"
+    },
+    {
+      "csv_row": 67,
+      "organization": "Клиника \"Скоромед\"",
+      "url": "https://scoromed.ru/"
+    },
+    {
+      "csv_row": 72,
+      "organization": "Клиника «МультиМед»",
+      "url": "https://med-centr.ru/"
+    },
+    {
+      "csv_row": 75,
+      "organization": "Клиника пластической хирургии и косметологии Grandmed",
+      "url": "https://grandmed.ru/"
+    },
+    {
+      "csv_row": 84,
+      "organization": "Слуховые аппараты \"Мед Аудио\" (м. Курская)",
+      "url": "https://medaudio.ru/"
+    },
+    {
+      "csv_row": 95,
+      "organization": "Lab4U (ул. 1-я Владимирская, д. 18, корп. 1, Клиника «Астери-Мед»)",
+      "url": "https://lab4u.ru/"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "site_index": 6,
+  "csv_row": 46,
+  "organization": "Мед Тест ( Б-р Адмирала Ушакова, д. 12)",
+  "url": "https://promedtest.ru/",
+  "duration_seconds": 55.324,
+  "status": "HOLD_NO_SIGNAL",
+  "reason": "no_credible_grounded_screening_signals",
+  "risk_signal_summary": "",
+  "html_created": false,
+  "pdf_created": false,
+  "collection": {
+    "stop_reason": "queue_exhausted",
+    "robots_status": "received",
+    "request_attempts": 27,
+    "requests_sent": 27,
+    "robots_denied_urls": 0,
+    "blocked_urls": 0,
+    "elapsed_seconds": 52.67949706595391
+  },
+  "stage_timings_seconds": {
+    "collection_seconds": 52.693,
+    "packet_preparation_seconds": 1.823,
+    "screening_seconds": 0.455,
+    "html_generation_seconds": 0.141,
+    "pdf_generation_seconds": 0.0,
+    "total_seconds": 55.324
+  },
+  "screening": {
+    "source_audit_status": "NOT_RUN",
+    "proposal_assessment": "HOLD",
+    "proposal_created": false,
+    "reason": "no_credible_grounded_screening_signals",
+    "legal_offense_established": false,
+    "human_approval_required": true,
+    "automatic_send_allowed": false,
+    "client_release_allowed": false
+  }
+}
