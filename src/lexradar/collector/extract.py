@@ -12,12 +12,46 @@ CATEGORIES = {
     "appointment": ("запис", "приём", "appointment"),
     "feedback": ("обратн", "feedback"),
 }
+SCREENING_LINK_PATTERNS = {
+    "appointment": re.compile(r"запис|при[её]м|appointment|booking|форма заявки|форма записи", re.I),
+    "contacts": re.compile(r"контакт|contact|адрес|телефон|как добраться", re.I),
+    "privacy_policy": re.compile(r"политик|персональн|privacy|personal.?data|пдн", re.I),
+    "consent": re.compile(r"соглас|consent|соглашени", re.I),
+    "cookie": re.compile(r"cookies?|куки", re.I),
+}
+ANALYTICS_HINTS = {
+    "yandex_metrika": re.compile(r"mc\.yandex|yandex[-_.]?metri[kc]|ym\s*\(", re.I),
+    "google_analytics": re.compile(r"google-analytics|googletagmanager\.com/gtag|gtag\s*\(", re.I),
+    "google_tag_manager": re.compile(r"googletagmanager\.com/gtm|GTM-[A-Z0-9]+", re.I),
+    "other_analytics": re.compile(r"matomo|clarity\.ms|hotjar|top\.mail\.ru", re.I),
+}
+COOKIE_TEXT = re.compile(r"cookie|cookies|куки", re.I)
 DOCUMENT_EXTENSIONS = (".pdf", ".doc", ".docx", ".rtf", ".odt", ".xls", ".xlsx")
 
 
 def categories(text: str) -> list[str]:
     text = text.lower()
     return [name for name, words in CATEGORIES.items() if any(w in text for w in words)]
+
+
+def screening_link_kind(text: str) -> str | None:
+    return next((kind for kind, pattern in SCREENING_LINK_PATTERNS.items() if pattern.search(text)), None)
+
+
+def screening_link_priority(text: str) -> int:
+    kind = screening_link_kind(text)
+    if kind in {"appointment", "contacts"}:
+        return 0
+    if kind == "privacy_policy":
+        return 1
+    if kind in {"consent", "cookie"}:
+        return 2
+    return 3 if categories(text) else 4
+
+
+def static_analytics_hints(html: bytes) -> list[str]:
+    text = html.decode("utf-8", errors="replace")
+    return [name for name, pattern in ANALYTICS_HINTS.items() if pattern.search(text)]
 
 
 def entities(text: str, source: str) -> list[EntityObservation]:
@@ -49,9 +83,18 @@ def entities(text: str, source: str) -> list[EntityObservation]:
 
 DOM_SCRIPT = r"""() => {
   const text = document.body?.innerText || '';
+  const isVisible = el => {
+    const style = getComputedStyle(el);
+    return el.getClientRects().length > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+  };
+  const controlText = el => [el.innerText, el.value, el.id, el.className,
+    el.getAttribute('aria-label')].filter(Boolean).join(' ').slice(0, 300);
   const links = [...document.querySelectorAll('a[href]')].map(a => ({
-    url: a.href, text: a.innerText.slice(0, 300)
+    url: a.href, text: a.innerText.slice(0, 300), visible: isVisible(a)
   }));
+  const consentControls = [...document.querySelectorAll(
+    'button,[role="button"],a[href],input[type="button"],input[type="submit"],input[type="checkbox"]'
+  )].map(controlText).filter(text => /cookie|куки|consent|соглас|настро|accept|reject|отказ/i.test(text)).slice(0, 50);
   const forms = [...document.querySelectorAll('form')].slice(0, 30).map(form => ({
     purpose: form.getAttribute('aria-label') ||
       form.querySelector('legend,h1,h2,h3')?.innerText || null,
@@ -65,5 +108,5 @@ DOM_SCRIPT = r"""() => {
     submission_context: form.innerText.slice(0,3000),
     links: [...form.querySelectorAll('a[href]')].map(a => ({url:a.href,text:a.innerText}))
   }));
-  return {text, title: document.title, links, forms};
+  return {text, title: document.title, links, forms, consentControls};
 }"""

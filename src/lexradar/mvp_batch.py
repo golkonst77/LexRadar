@@ -121,6 +121,8 @@ def export(root, state):
         "historical_cost_usd",
         "ai_calls",
         "mode",
+        "html_pages_attempted",
+        "html_pages_captured",
     ]
     buffer = io.StringIO(newline="")
     writer = csv.DictWriter(buffer, fieldnames=columns)
@@ -136,10 +138,17 @@ def export(root, state):
         Counter(r.get("qualification", "unevaluated") for r in state["rows"])
     )
     write_json(root / "manifest.json", state)
+    page_stats = (
+        f"HTML pages attempted/captured: {sum(r.get('html_pages_attempted', 0) for r in state['rows'])}/"
+        f"{sum(r.get('html_pages_captured', 0) for r in state['rows'])}. Express screening targets 5 pages and caps at 7.\n\n"
+        if state["mode"] == "prepare"
+        else ""
+    )
     safe_path(root / "report.md").write_text(
         f"# {state['mode'].upper()} batch\n\n"
         f"Model: {MODEL}; Qwen B disabled.\n\n{json.dumps(counts)}\n\n"
         f"Qualification: {json.dumps(state['qualification_summary'])}\n\n"
+        f"{page_stats}"
         "See results.csv and sites/. GO is commercial qualification, not legal clearance.\n"
         "Automatic sending prohibited. Offline cost: 0 USD. Paid limit: 0.50 USD.\n",
         encoding="utf-8",
@@ -191,6 +200,7 @@ def run(
         "model": MODEL,
         "mvp_no_screening": mvp_no_screening,
         "allow_site_collection": allow_site_collection,
+        "collection_profile": "express-screening-144" if mode == "prepare" else None,
         "max_ai_calls": max_ai_calls,
         "timeout_seconds": timeout_seconds,
         "max_total_budget_usd": str(total_budget),
@@ -265,9 +275,16 @@ def run(
                     collection = collect(
                         row["url"],
                         directory / "dossier",
-                        Limits(max_pages=3, max_documents=2),
+                        Limits(max_pages=7, max_documents=2),
                         static_only=True,
+                        screening_mode=True,
                         crawl_options=CrawlOptions(max_requests=16, max_duration_seconds=60),
+                    )
+                    evidence_by_id = {e.id: e for e in collection.evidence}
+                    row["html_pages_attempted"] = len(collection.pages)
+                    row["html_pages_captured"] = sum(
+                        any(a.kind == "html" for a in evidence_by_id[p.evidence_id].artifacts)
+                        for p in collection.pages
                     )
                     if not any(evidence.available for evidence in collection.evidence):
                         row.update(

@@ -38,10 +38,21 @@ class Link:
     form_index: int | None
     parts: list[str] = field(default_factory=list)
     span: StaticSpan | None = None
+    attributes: dict[str, str | None] = field(default_factory=dict)
 
     @property
     def text(self):
         return compact(self.parts)
+
+    @property
+    def visible_in_static_html(self):
+        style = (self.attributes.get("style") or "").replace(" ", "").casefold()
+        return not (
+            "hidden" in self.attributes
+            or (self.attributes.get("aria-hidden") or "").casefold() == "true"
+            or "display:none" in style
+            or "visibility:hidden" in style
+        )
 
 
 @dataclass
@@ -319,7 +330,9 @@ class SavedMarkup(StaticText):
                 self.uncertain("Static link limit; suffix withheld")
                 return
             self.anchor = Link(
-                static_reference(self.url, values["href"]), self.form.index if self.form else None
+                static_reference(self.url, values["href"]),
+                self.form.index if self.form else None,
+                attributes=values,
             )
             self.links.append(self.anchor)
             self.anchor.span = self.span(

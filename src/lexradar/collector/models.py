@@ -87,6 +87,13 @@ class FormObservation(Model):
     unavailable_reason: str | None = None
 
 
+class RelevantLinkObservation(Model):
+    url: str
+    text: str = ""
+    kind: Literal["appointment", "contacts", "privacy_policy", "consent", "cookie"]
+    visible_in_static_html: bool
+
+
 class EntityObservation(Model):
     source: HttpUrl
     raw_text: str
@@ -108,6 +115,10 @@ class PageObservation(Model):
     text: str | None = None
     categories: list[str] = Field(default_factory=list)
     document_links: list[str] = Field(default_factory=list)
+    relevant_links: list[RelevantLinkObservation] = Field(default_factory=list)
+    static_analytics_hints: list[str] = Field(default_factory=list)
+    cookie_text_observed: bool = False
+    consent_management_controls: list[str] = Field(default_factory=list)
     forms: list[FormObservation] = Field(default_factory=list)
     evidence_id: str
 
