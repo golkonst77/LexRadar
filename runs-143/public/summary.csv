@@ -1,0 +1,11 @@
+site_id,previous_status,previous_reason_code,run143_status,run143_reason_code,robots_status,stop_reason,request_attempts,requests_sent,pages_collected,documents_collected,available_evidence_count,proposal_html_created,proposal_pdf_created
+SITE-01,ERROR,redirect_limit_or_missing_location,SKIPPED,redirect_limit_or_missing_location,received,queue_exhausted,5,5,1,0,0,False,False
+SITE-02,ERROR,robots_http_403_no_permission,SKIPPED,robots_http_403_no_permission,unavailable,robots_unavailable,1,1,1,0,0,False,False
+SITE-03,ERROR,invalid_robots_agent,SKIPPED,invalid_robots_agent,unavailable,robots_unavailable,1,1,1,0,0,False,False
+SITE-04,ERROR,robots_http_444_no_permission,SKIPPED,robots_http_444_no_permission,unavailable,robots_unavailable,1,1,1,0,0,False,False
+SITE-05,ERROR,robots_http_403_no_permission,SKIPPED,robots_http_403_no_permission,unavailable,robots_unavailable,1,1,1,0,0,False,False
+SITE-08,ERROR,invalid_robots_agent,SKIPPED,invalid_robots_agent,unavailable,robots_unavailable,1,1,1,0,0,False,False
+SITE-09,ERROR,robots_http_425_no_permission,SKIPPED,robots_http_425_no_permission,unavailable,robots_unavailable,1,1,1,0,0,False,False
+SITE-10,ERROR,cross_origin_navigation_blocked,SUCCESS,evidence_packet_ready_manual_review_required,received,queue_exhausted,4,4,1,0,1,False,False
+SITE-11,ERROR,robots_disallow,SKIPPED,robots_disallow,received,queue_exhausted_with_denials,1,1,1,0,0,False,False
+SITE-13,DRAFT_HOLD,previous_screening_draft_hold,SUCCESS,evidence_packet_ready_manual_review_required,received,page_limit,4,4,3,2,3,False,False

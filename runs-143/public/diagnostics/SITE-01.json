@@ -1,0 +1,16 @@
+{
+  "site_id": "SITE-01",
+  "previous_status": "ERROR",
+  "previous_reason_code": "redirect_limit_or_missing_location",
+  "run143_status": "SKIPPED",
+  "run143_reason_code": "redirect_limit_or_missing_location",
+  "robots_status": "received",
+  "stop_reason": "queue_exhausted",
+  "request_attempts": 5,
+  "requests_sent": 5,
+  "pages_collected": 1,
+  "documents_collected": 0,
+  "available_evidence_count": 0,
+  "proposal_html_created": false,
+  "proposal_pdf_created": false
+}

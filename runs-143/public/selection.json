@@ -1,0 +1,17 @@
+{
+  "run": "143",
+  "selected_count": 10,
+  "selection_rule": "Nine run-140 ERROR rows plus SITE-13 (DRAFT_HOLD).",
+  "site_ids": [
+    "SITE-01",
+    "SITE-02",
+    "SITE-03",
+    "SITE-04",
+    "SITE-05",
+    "SITE-08",
+    "SITE-09",
+    "SITE-10",
+    "SITE-11",
+    "SITE-13"
+  ]
+}

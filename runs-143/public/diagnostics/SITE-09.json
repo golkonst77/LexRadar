@@ -1,0 +1,16 @@
+{
+  "site_id": "SITE-09",
+  "previous_status": "ERROR",
+  "previous_reason_code": "robots_http_425_no_permission",
+  "run143_status": "SKIPPED",
+  "run143_reason_code": "robots_http_425_no_permission",
+  "robots_status": "unavailable",
+  "stop_reason": "robots_unavailable",
+  "request_attempts": 1,
+  "requests_sent": 1,
+  "pages_collected": 1,
+  "documents_collected": 0,
+  "available_evidence_count": 0,
+  "proposal_html_created": false,
+  "proposal_pdf_created": false
+}

@@ -1,0 +1,16 @@
+{
+  "site_id": "SITE-13",
+  "previous_status": "DRAFT_HOLD",
+  "previous_reason_code": "previous_screening_draft_hold",
+  "run143_status": "SUCCESS",
+  "run143_reason_code": "evidence_packet_ready_manual_review_required",
+  "robots_status": "received",
+  "stop_reason": "page_limit",
+  "request_attempts": 4,
+  "requests_sent": 4,
+  "pages_collected": 3,
+  "documents_collected": 2,
+  "available_evidence_count": 3,
+  "proposal_html_created": false,
+  "proposal_pdf_created": false
+}

@@ -1,0 +1,21 @@
+{
+  "run": "143",
+  "selected": 10,
+  "collector_success": 2,
+  "skipped": 8,
+  "errors": 0,
+  "sites_with_legal_signals": "not_evaluated",
+  "html_proposal_drafts": 0,
+  "pdf_proposal_drafts": 0,
+  "ai_calls": 0,
+  "proposals_sent": 0,
+  "elapsed_seconds": 22.5,
+  "skip_reasons": {
+    "redirect_limit_or_missing_location": 1,
+    "robots_http_403_no_permission": 2,
+    "invalid_robots_agent": 2,
+    "robots_http_444_no_permission": 1,
+    "robots_http_425_no_permission": 1,
+    "robots_disallow": 1
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "site_id": "SITE-10",
+  "previous_status": "ERROR",
+  "previous_reason_code": "cross_origin_navigation_blocked",
+  "run143_status": "SUCCESS",
+  "run143_reason_code": "evidence_packet_ready_manual_review_required",
+  "robots_status": "received",
+  "stop_reason": "queue_exhausted",
+  "request_attempts": 4,
+  "requests_sent": 4,
+  "pages_collected": 1,
+  "documents_collected": 0,
+  "available_evidence_count": 1,
+  "proposal_html_created": false,
+  "proposal_pdf_created": false
+}
