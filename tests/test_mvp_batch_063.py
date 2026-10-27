@@ -119,6 +119,10 @@ def test_prepare_marks_closed_robots_policy_as_skipped(monkeypatch, tmp_path):
     assert state["rows"][0]["reason"] == (
         "robots_unavailable: Robots HTTP 403; no permission established"
     )
+    assert state["rows"][0]["draft_type"] == "neutral"
+    assert state["rows"][0]["proposal"]
+    assert state["rows"][0]["manual_approval_required"]
+    assert not state["rows"][0]["automatic_send_allowed"]
 
 
 def test_cli_prints_batch_counts_reasons_and_report_paths(monkeypatch, tmp_path, capsys):
@@ -307,6 +311,7 @@ def test_prepare_pipeline_with_local_collector(inputs, tmp_path, monkeypatch):
     import shutil
 
     import lexradar.collector
+    from lexradar.collector.models import CollectionResult
 
     calls = []
 
@@ -314,14 +319,42 @@ def test_prepare_pipeline_with_local_collector(inputs, tmp_path, monkeypatch):
         calls.append(url)
         index = int(url.split("demo-")[1].split(".")[0])
         shutil.copytree(inputs.parent / f"dossier-{index}", output)
+        return CollectionResult.model_validate_json((output / "collection.json").read_bytes())
 
     monkeypatch.setattr(lexradar.collector, "collect", local_collect)
     state = run(inputs, tmp_path / "prepared", mode="prepare", allow_site_collection=True)
     assert len(calls) == 4
     assert state["summary"] == {"SUCCESS": 4, "SKIPPED": 1}
-    assert not list((tmp_path / "prepared").rglob("proposal.html"))
+    assert len(list((tmp_path / "prepared").rglob("proposal.html"))) == 4
     assert all(row.get("qualification") == "HOLD" for row in state["rows"][:4])
+    assert all(row.get("manual_approval_required") for row in state["rows"][:4])
     assert len(list((tmp_path / "prepared").rglob("packet.json"))) == 4
+
+
+def test_prepare_failure_keeps_neutral_draft_and_continues(inputs, tmp_path, monkeypatch):
+    import shutil
+
+    import lexradar.collector
+    from lexradar.collector.models import CollectionResult
+
+    def local_collect(url, output, *args, **kwargs):
+        if "demo-0" in url:
+            raise RuntimeError("fixture collection failure")
+        shutil.copytree(inputs.parent / "dossier-1", output)
+        return CollectionResult.model_validate_json((output / "collection.json").read_bytes())
+
+    monkeypatch.setattr(lexradar.collector, "collect", local_collect)
+    source = tmp_path / "two-sites.csv"
+    source.write_text(
+        "url,company_name,email\nhttps://demo-0.example/,,\nhttps://demo-1.example/,,\n"
+    )
+    output = tmp_path / "failure-continues"
+    state = run(source, output, mode="prepare", allow_site_collection=True, max_ai_calls=0)
+    first, second = state["rows"]
+    assert first["status"] == "ERROR" and first["draft_type"] == "neutral"
+    assert second["status"] == "SUCCESS" and second["proposal"]
+    assert first["proposal"] and second["proposal"]
+    assert first["manual_approval_required"] and not first["automatic_send_allowed"]
 
 
 def test_paid_resume_never_repeats_request(inputs, tmp_path):

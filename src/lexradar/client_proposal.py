@@ -9,6 +9,7 @@ import re
 from decimal import Decimal
 from html import escape
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 def esc(value):
@@ -57,19 +58,46 @@ def render_client(client, findings, config):
     raw = APPROVED_TEMPLATE.read_bytes()
     if hashlib.sha256(raw).hexdigest() != APPROVED_SHA256:
         raise ValueError("Approved proposal template integrity mismatch")
-    selected = [f for f in findings if f.get("confirmed") is True and f.get("quote", "").strip()]
+    selected = [
+        f
+        for f in findings
+        if f.get("confirmed") is True
+        and (str(f.get("quote") or "").strip() or str(f.get("observation") or "").strip())
+    ]
     selected = sorted(selected, key=lambda f: -f.get("priority", 0))[:4]
     if not selected:
-        raise ValueError("Client proposal requires 2–4 confirmed findings")
-    cards = "".join(
-        f"<li><strong>{esc(f['title'])}</strong> «{esc(f['quote'])}» {esc(f['meaning'])}</li>"
-        for f in selected
-    )
+        raise ValueError("Client proposal requires one evidence-backed observation")
+    cards = []
+    for finding in selected:
+        if finding.get("observation"):
+            source_url = str(finding.get("source_url") or "")
+            parsed = urlsplit(source_url)
+            if (
+                parsed.scheme not in {"https", "http"}
+                or not parsed.hostname
+                or parsed.username
+                or not finding.get("evidence_id")
+                or not re.fullmatch(r"[a-f0-9]{64}", str(finding.get("artifact_sha256", "")))
+            ):
+                raise ValueError("Screening observation lacks a bound page and artifact")
+            cards.append(
+                f'<li><strong>{esc(finding["title"])}</strong> '
+                f'{esc(finding["observation"])} Источник: '
+                f'<a href="{esc(source_url)}">{esc(source_url)}</a>. '
+                f'{esc(finding["meaning"])}</li>'
+            )
+        else:
+            cards.append(
+                f"<li><strong>{esc(finding['title'])}</strong> «{esc(finding['quote'])}» "
+                f"{esc(finding['meaning'])}</li>"
+            )
+    cards = "".join(cards)
+    name = str(client.get("name") or "").strip()
     values = iter(
         (
             esc(config["date"]),
-            esc(client.get("recipient") or "Руководителю " + (client.get("name") or client["url"])),
-            esc(client["url"]),
+            esc(client.get("recipient") or "Руководителю " + (name or "[Название организации]")),
+            esc(client.get("url") or "[Сайт]"),
             cards,
         )
     )
@@ -81,6 +109,36 @@ def render_client(client, findings, config):
         return (match[1] or match[4]) + next(values) + (match[3] or match[6])
 
     return PERSONALIZATION.sub(substitute, template)
+
+
+def render_neutral(client, config):
+    """Render an offer when screening did not produce a client-specific finding."""
+    name = str(client.get("name") or "").strip() or "[Название организации]"
+    recipient = str(client.get("recipient") or f"Руководителю {name}")
+    url = str(client.get("url") or "[Адрес сайта не подтверждён]")
+    note = str(config.get("screening_note") or "")
+    body = f"""<header class="top"><div><div class="eyebrow">Юридическое сопровождение сайтов</div>
+<div class="brand">Просто<span>Бюро</span></div></div><div class="meta">Индивидуальное предложение<br>{esc(config.get('date', ''))}</div></header>
+<h1>КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ</h1>
+<div class="subtitle">Подготовка документов и инструкции вебмастеру</div>
+<div class="recipient"><strong>Кому:</strong> {esc(recipient)}<br><strong>Сайт:</strong> {esc(url)}</div>
+<p>Уважаемые коллеги!</p>
+<p>Предлагаем подготовить комплект документов для процессов вашей организации и подробное техническое задание вебмастеру. Этот проект не утверждает наличие недостатков сайта или нарушение закона.</p>
+<section class="section"><h2>Охват работ</h2><ul class="steps">
+<li>Юридическое обследование форм, маршрутизации данных и связанных документов.</li>
+<li>Подготовка политики, необходимых согласий и инструкций по результатам обследования.</li>
+<li>Техническое задание вебмастеру и консультационное сопровождение внедрения.</li>
+</ul><p>{esc(note)}</p></section>
+<section class="section"><h2>СТОИМОСТЬ И СРОКИ</h2><div class="price"><div>
+<div>Стандартная стоимость: <span class="old">45 000 ₽</span></div>
+<div><span class="tag">Скидка 25% до 01.11.2026 включительно</span></div>
+<div class="note">Экономия — 11 250 ₽</div>
+<div class="note"><strong>В стоимость включены 2 месяца бесплатного консультационного сопровождения после завершения работ.</strong></div>
+</div><div><div class="tiny">ИТОГО ПО ПРЕДЛОЖЕНИЮ</div><div class="sum">33 750 ₽</div></div></div></section>
+<section class="section"><h2>Следующий шаг</h2><p>Уточнить ответственного представителя и фактические процессы организации, затем согласовать документы и сроки.</p>
+<p class="tiny">Черновик ожидает ручного утверждения. Автоматическая отправка отключена.</p></section>
+<footer class="footer"><div><strong>Агентство «ПростоБюро»</strong></div><div>[Контактные данные уточнить]</div></footer>"""
+    return document(body)
 
 
 def document(body):

@@ -9,10 +9,9 @@ import re
 import shutil
 import time
 from collections import Counter
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from .auditors.budget import Budget
 from .auditors.evidence import load_packet
@@ -64,7 +63,7 @@ def proposal(row, report, packet, path, *, demo, allowed_findings=None):
     if not allowed:
         return False
 
-    company = row["input"]["company_name"].strip() or urlsplit(row["url"]).hostname
+    company = row["input"]["company_name"].strip()
     topics = {
         "consent": "Оформление согласий",
         "privacy_policy": "Политика обработки данных",
@@ -115,6 +114,8 @@ def export(root, state):
         "dossier",
         "response",
         "proposal",
+        "proposal_pdf",
+        "draft_type",
         "cost_usd",
         "budget_charge_usd",
         "cost_known",
@@ -153,6 +154,85 @@ def export(root, state):
         "Automatic sending prohibited. Offline cost: 0 USD. Paid limit: 0.50 USD.\n",
         encoding="utf-8",
     )
+
+
+def prepare_draft(row, directory, batch_root, *, partial=False):
+    """Screen the dossier already collected by prepare and create its held draft."""
+    from .proposal_export import build_screening_draft
+
+    dossier = directory / "dossier"
+    collection_data, primary, screening = {}, {}, {}
+    collection = {}
+    try:
+        raw = (dossier / "collection.json").read_bytes()
+        collection = json.loads(raw)
+        collection["manifest_sha256"] = hashlib.sha256(raw).hexdigest()
+        collection_data = collection
+    except (OSError, ValueError):
+        pass
+    if any(e.get("available") for e in collection.get("evidence", [])):
+        try:
+            from .batch import rank
+            from .screening import identity_statements
+            from .verifier.offline import LocalResearch
+            from .verifier.saved_policy import policy_observations
+
+            research = LocalResearch(
+                dossier,
+                registry=None,
+                sector="unknown",
+                as_of=datetime.now(UTC),
+                max_input_bytes=2_000_000,
+            )
+            primary = research.primary.model_dump(mode="json")
+            policies = [p.model_dump(mode="json") for p in policy_observations(research)]
+            screening = rank(primary, policies, collection, identity_statements(research))
+            write_json(directory / "screening-result.json", screening)
+        except Exception as exc:
+            partial = True
+            row.update(status="PARTIAL", reason=f"local_screening_incomplete:{type(exc).__name__}")
+
+    pages = collection.get("pages", [])
+    page_text = " ".join((p.get("text") or "") + " " + (p.get("title") or "") for p in pages)
+    client = {
+        key: row["input"].get(key, "").strip()
+        for key in ("company_name", "recipient")
+    }
+    if client["company_name"] and client["company_name"].casefold() not in page_text.casefold():
+        client["company_name"] = ""
+    if client["recipient"] and client["recipient"].casefold() not in page_text.casefold():
+        client["recipient"] = ""
+    if partial:
+        note = "Сбор или обработка были частичными. Неполная выборка не подтверждает наличие или отсутствие нарушений."
+    elif not screening.get("signals"):
+        note = "Ограниченная выборка не дала достаточного основания для адресного замечания и не подтверждает соответствие сайта требованиям."
+    else:
+        note = "Выводы ограничены сохранёнными общедоступными материалами и требуют ручной проверки."
+    draft_state = build_screening_draft(
+        dossier if dossier.is_dir() else directory,
+        collection,
+        primary,
+        screening,
+        {"name": client["company_name"], "recipient": client["recipient"], "url": row.get("url", "")},
+        directory / "draft",
+        screening_note=note,
+    )
+    row.update(
+        signals=len(screening.get("signals", [])),
+        draft_type=draft_state["draft_type"],
+        proposal=str((directory / "draft/proposal.html").relative_to(batch_root)),
+        proposal_pdf=(
+            str((directory / "draft/proposal.pdf").relative_to(batch_root))
+            if draft_state["pdf_created"]
+            else ""
+        ),
+        ai_calls=0,
+        client_release_allowed=False,
+        automatic_send_allowed=False,
+        manual_approval_required=True,
+        pdf_error=draft_state["pdf_error"] or "",
+    )
+    return row
 
 
 def run(
@@ -268,6 +348,7 @@ def run(
             )
             export(root, state)
             paid_provider = None
+            collection = None
             try:
                 if mode == "prepare":
                     from .collector import CrawlOptions, Limits, collect
@@ -291,7 +372,9 @@ def run(
                             status="SKIPPED",
                             qualification="HOLD",
                             reason=collection_skip_reason(collection),
+                            dossier=str((directory / "dossier").absolute()),
                         )
+                        prepare_draft(row, directory, root)
                         row["files"] = snapshot(directory)
                         export(root, state)
                         continue
@@ -323,6 +406,7 @@ def run(
                         qualification="HOLD",
                         reason="packet_ready_requires_separate_human_approval",
                     )
+                    prepare_draft(row, directory, root)
                     row["files"] = snapshot(directory)
                     export(root, state)
                     continue
@@ -459,10 +543,24 @@ def run(
                         budget_charge_usd=str(paid_provider.budget.charged),
                     )
                 row.update(
-                    status="NEEDS_APPROVAL" if isinstance(exc, PermissionError) else "ERROR",
+                    status=(
+                        "PARTIAL"
+                        if mode == "prepare" and "exceeds input limit" in str(exc).lower()
+                        else "NEEDS_APPROVAL" if isinstance(exc, PermissionError) else "ERROR"
+                    ),
                     qualification="HOLD",
                     reason=f"{type(exc).__name__}: {str(exc)[:500]}",
                 )
+                if mode == "prepare" and not (directory / "draft").exists():
+                    try:
+                        prepare_draft(
+                            row,
+                            directory,
+                            root,
+                            partial=row["status"] == "PARTIAL",
+                        )
+                    except Exception as draft_exc:
+                        row["proposal_error"] = f"{type(draft_exc).__name__}: {str(draft_exc)[:240]}"
             row["files"] = snapshot(directory)
             export(root, state)
         export(root, state)
@@ -473,9 +571,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("csv", type=Path)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument(
-        "--mode", choices=["offline", "saved", "paid", "prepare"], default="offline"
-    )
+    parser.add_argument("--mode", choices=["offline", "saved", "paid", "prepare"], default="offline")
     parser.add_argument("--max-sites", type=int, default=5)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--timeout-seconds", type=int, choices=(45, 120), default=45)
@@ -510,6 +606,7 @@ def main(argv=None):
     successful = [row for row in selected if row["status"] == "SUCCESS"]
     skipped = [row for row in state["rows"] if row["status"] == "SKIPPED"]
     errors = [row for row in selected if row["status"] == "ERROR"]
+    partial = [row for row in selected if row["status"] == "PARTIAL"]
     skip_reasons = Counter(row.get("reason") or "unspecified" for row in skipped)
     signals = (
         str(sum(row.get("signals", 0) for row in selected))
@@ -519,10 +616,14 @@ def main(argv=None):
     print(json.dumps(state["summary"], ensure_ascii=False))
     print(
         f"Выбрано: {len(selected)}; "
-        f"успешно обследовано: {len(successful)}; "
+        f"успешно обследовано: {len(successful)}; частичных: {len(partial)}; "
         f"пропущено: {len(skipped)}; ошибок: {len(errors)}; "
         f"сигналов: {signals}; "
-        f"черновиков: {sum(bool(row.get('proposal')) for row in selected)}; "
+        f"черновиков: {sum(bool(row.get('proposal')) for row in selected)} "
+        f"(риск: {sum(row.get('draft_type') == 'risk_oriented' for row in selected)}, "
+        f"нейтральных: {sum(row.get('draft_type') == 'neutral' for row in selected)}); "
+        f"HTML/PDF: {sum(bool(row.get('proposal')) for row in selected)}/"
+        f"{sum(bool(row.get('proposal_pdf')) for row in selected)}; "
         f"время: {time.monotonic() - started:.1f} с"
     )
     print(

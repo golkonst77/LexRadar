@@ -1,0 +1,11 @@
+﻿site,collection_status,reason,html_pages_attempted,html_pages_captured,screening_observation,proposal_type,html_created_local,pdf_created_local,anonymized_example_published,ai_calls,manual_approval_required,automatic_send_allowed
+SITE-01,SKIPPED,Redirect limit or missing Location,1,0,none sufficiently grounded,neutral,True,True,True,0,True,False
+SITE-02,SKIPPED,robots_unavailable: Robots HTTP 403; no permission established,1,0,none sufficiently grounded,neutral,True,True,True,0,True,False
+SITE-03,SUCCESS,materials captured,7,7,none sufficiently grounded,neutral,True,True,True,0,True,False
+SITE-04,SUCCESS,materials captured,5,5,none sufficiently grounded,neutral,True,True,True,0,True,False
+SITE-05,SUCCESS,materials captured,1,1,static form; field types: text,risk_oriented,True,True,False,0,True,False
+SITE-06,SKIPPED,robots_disallow,1,0,none sufficiently grounded,neutral,True,True,True,0,True,False
+SITE-07,SUCCESS,materials captured,4,4,"static form; field types: checkbox, hidden, text",risk_oriented,True,True,False,0,True,False
+SITE-08,SUCCESS,materials captured,2,2,"static form; field types: checkbox, file, hidden, text, textarea",risk_oriented,True,True,False,0,True,False
+SITE-09,PARTIAL,packet_exceeds_200000_byte_input_limit; available evidence retained,7,6,none sufficiently grounded,neutral,True,True,True,0,True,False
+SITE-10,SUCCESS,materials captured,1,1,none sufficiently grounded,neutral,True,True,True,0,True,False

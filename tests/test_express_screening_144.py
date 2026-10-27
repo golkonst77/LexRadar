@@ -289,7 +289,11 @@ def test_prepare_batch_reports_page_counts_and_static_cookie_inventory(site, tmp
         for key in ("status", "qualification", "reason", "html_pages_attempted", "html_pages_captured")
     }
     assert row["html_pages_attempted"] == 1 and row["html_pages_captured"] == 1
-    assert not row.get("proposal")
+    assert row["proposal"] and row["proposal_pdf"]
+    assert row["manual_approval_required"] and not row["automatic_send_allowed"]
+    assert row["draft_type"] in {"neutral", "risk_oriented"}
+    proposal = (output / row["proposal"]).read_text()
+    assert "33 750 ₽" in proposal and "Нарушение не установлено" not in proposal
     collection = json.loads(
         (output / row["directory"] / "dossier/collection.json").read_text()
     )

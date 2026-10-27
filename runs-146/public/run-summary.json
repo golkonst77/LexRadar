@@ -1,0 +1,31 @@
+{
+  "source": "saved local dossiers from run 145; no new collection",
+  "sites": 10,
+  "statuses": {
+    "SUCCESS": 6,
+    "SKIPPED": 3,
+    "PARTIAL": 1,
+    "ERROR": 0
+  },
+  "proposals": {
+    "html_local": 10,
+    "pdf_local": 10,
+    "risk_oriented_local": 3,
+    "neutral_local": 7,
+    "neutral_examples_published": 7
+  },
+  "collection": {
+    "pages_attempted": 30,
+    "html_pages_captured": 26
+  },
+  "ai_calls": 0,
+  "client_messages_sent": 0,
+  "automatic_send_allowed": false,
+  "manual_approval_required": true,
+  "screening_observations": {
+    "grounded_static_form_observations": 3,
+    "legal_violations_confirmed": 0
+  },
+  "local_replay_seconds": "< 2 seconds",
+  "pdf_method": "existing embedded-font text PDF writer; no browser/PDF service"
+}
