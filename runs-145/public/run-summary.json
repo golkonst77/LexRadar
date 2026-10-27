@@ -1,0 +1,77 @@
+{
+  "run": "145",
+  "run_date": "2026-10-27",
+  "source_commit": "92b8a7e5041583aa0bdabef142a31951a7a1d2e7",
+  "source_branch": "review/lexradar-144",
+  "publication_branch": "review/lexradar-145",
+  "mode": "mvp_batch prepare; static collection plus local saved-evidence screening.rank",
+  "selection_count": 10,
+  "sites_checked_once_in_network_enabled_batch": 10,
+  "statuses": {
+    "SKIPPED": 3,
+    "SUCCESS": 6,
+    "ERROR": 1
+  },
+  "successfully_collected": 6,
+  "skipped": 3,
+  "errors": 1,
+  "html_page_attempts": 30,
+  "html_captured_including_partial_error": 26,
+  "documents_captured": 2,
+  "risk_signals": 0,
+  "html_drafts": 0,
+  "pdf_drafts": 0,
+  "proposals_total": 0,
+  "paid_ai_calls": 0,
+  "client_messages_sent": 0,
+  "page_profile": {
+    "express_screening": true,
+    "target_pages": 5,
+    "page_limit": 7
+  },
+  "max_page_cap_respected": true,
+  "timing": {
+    "network_batch_cli_seconds": 68.9,
+    "successful_crawl_durations_seconds": [
+      14.477,
+      10.187,
+      6.105,
+      8.468,
+      4.412,
+      2.07
+    ],
+    "successful_crawl_mean_seconds": 7.62,
+    "successful_crawl_median_seconds": 7.287,
+    "separate_offline_primary_screening_pass_seconds_for_six_successes": 4.154,
+    "partial_error_screening_pass_seconds": 1.48
+  },
+  "sandbox_dns_preflight": {
+    "sites_attempted": 10,
+    "dns_failures": 10,
+    "http_requests_sent": 0,
+    "included_in_final_site_counts": false
+  },
+  "comparison": {
+    "run140_selected": {
+      "sites": 10,
+      "previously_completed_no_signal_or_draft_hold": 6,
+      "previous_technical_errors": 4,
+      "previous_draft_hold_anchor": 1
+    },
+    "run143_overlap": {
+      "overlap_sites": 5,
+      "success": 2,
+      "skipped": 3,
+      "proposals": 0
+    },
+    "run145_run143_overlap": {
+      "overlap_sites": 5,
+      "success": 2,
+      "skipped": 3,
+      "proposals": 0
+    }
+  },
+  "automatic_send_allowed": false,
+  "client_release_allowed": false,
+  "privacy": "SITE-ID-only public artifacts; no source URLs, names, direct quotes, contact data or raw dossiers."
+}

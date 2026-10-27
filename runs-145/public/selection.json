@@ -1,0 +1,68 @@
+{
+  "source_run": "140",
+  "source_branch": "review/lexradar-144",
+  "criterion": "Five prior HOLD_NO_SIGNAL sites, four prior technical failures and one prior DRAFT_HOLD anchor; IDs only. No new CSV search or parser run.",
+  "selected_count": 10,
+  "sites": [
+    {
+      "site_id": "SITE-01",
+      "previous_run140_status": "ERROR",
+      "previous_reason_code": "redirect_limit_or_missing_location",
+      "selection_reason": "previous technical collection failure"
+    },
+    {
+      "site_id": "SITE-02",
+      "previous_run140_status": "ERROR",
+      "previous_reason_code": "robots_http_403_no_permission",
+      "selection_reason": "previous technical collection failure"
+    },
+    {
+      "site_id": "SITE-06",
+      "previous_run140_status": "HOLD_NO_SIGNAL",
+      "previous_reason_code": "no_credible_grounded_screening_signals",
+      "selection_reason": "previous completed no-signal screen"
+    },
+    {
+      "site_id": "SITE-07",
+      "previous_run140_status": "HOLD_NO_SIGNAL",
+      "previous_reason_code": "no_credible_grounded_screening_signals",
+      "selection_reason": "previous completed no-signal screen"
+    },
+    {
+      "site_id": "SITE-10",
+      "previous_run140_status": "ERROR",
+      "previous_reason_code": "cross_origin_navigation_blocked",
+      "selection_reason": "previous technical collection failure"
+    },
+    {
+      "site_id": "SITE-11",
+      "previous_run140_status": "ERROR",
+      "previous_reason_code": "robots_disallow",
+      "selection_reason": "previous technical collection failure"
+    },
+    {
+      "site_id": "SITE-12",
+      "previous_run140_status": "HOLD_NO_SIGNAL",
+      "previous_reason_code": "no_credible_grounded_screening_signals",
+      "selection_reason": "previous completed no-signal screen"
+    },
+    {
+      "site_id": "SITE-13",
+      "previous_run140_status": "DRAFT_HOLD",
+      "previous_reason_code": "previous_screening_draft_hold",
+      "selection_reason": "prior draft-HOLD anchor; identity redacted"
+    },
+    {
+      "site_id": "SITE-14",
+      "previous_run140_status": "HOLD_NO_SIGNAL",
+      "previous_reason_code": "no_credible_grounded_screening_signals",
+      "selection_reason": "previous completed no-signal screen"
+    },
+    {
+      "site_id": "SITE-15",
+      "previous_run140_status": "HOLD_NO_SIGNAL",
+      "previous_reason_code": "no_credible_grounded_screening_signals",
+      "selection_reason": "previous completed no-signal screen"
+    }
+  ]
+}

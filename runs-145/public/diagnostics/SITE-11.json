@@ -1,0 +1,32 @@
+{
+  "site_id": "SITE-11",
+  "run140_status": "ERROR",
+  "run140_reason_code": "robots_disallow",
+  "selection_reason": "previous technical collection failure",
+  "run145_status": "SKIPPED",
+  "run145_reason_code": "robots_disallow",
+  "stop_reason": "queue_exhausted_with_denials",
+  "robots_status": "received",
+  "html_pages_attempted": 1,
+  "html_pages_captured": 0,
+  "documents_captured": 0,
+  "available_evidence_count": 0,
+  "crawl_elapsed_seconds": 0.194,
+  "screening_group": "not_run",
+  "reading_gaps_count": 0,
+  "risk_signal_count": 0,
+  "risk_signal_kinds": [],
+  "observed_static": {
+    "form_records_in_saved_primary": 0,
+    "analytics_hint_pages": 0,
+    "cookie_text_pages": 0,
+    "consent_control_pages": 0,
+    "document_link_records": 0
+  },
+  "legal_status": "not_confirmed",
+  "html_draft_created": false,
+  "pdf_draft_created": false,
+  "client_release_allowed": false,
+  "automatic_send_allowed": false,
+  "paid_ai_calls": 0
+}

@@ -1,0 +1,32 @@
+{
+  "site_id": "SITE-07",
+  "run140_status": "HOLD_NO_SIGNAL",
+  "run140_reason_code": "no_credible_grounded_screening_signals",
+  "selection_reason": "previous completed no-signal screen",
+  "run145_status": "SUCCESS",
+  "run145_reason_code": "evidence_packet_ready_manual_review_required",
+  "stop_reason": "screening_target_reached",
+  "robots_status": "received",
+  "html_pages_attempted": 5,
+  "html_pages_captured": 5,
+  "documents_captured": 0,
+  "available_evidence_count": 5,
+  "crawl_elapsed_seconds": 10.187,
+  "screening_group": "low_priority",
+  "reading_gaps_count": 0,
+  "risk_signal_count": 0,
+  "risk_signal_kinds": [],
+  "observed_static": {
+    "form_records_in_saved_primary": 0,
+    "analytics_hint_pages": 5,
+    "cookie_text_pages": 5,
+    "consent_control_pages": 0,
+    "document_link_records": 0
+  },
+  "legal_status": "not_confirmed",
+  "html_draft_created": false,
+  "pdf_draft_created": false,
+  "client_release_allowed": false,
+  "automatic_send_allowed": false,
+  "paid_ai_calls": 0
+}

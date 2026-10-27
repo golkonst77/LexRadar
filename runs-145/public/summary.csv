@@ -1,0 +1,11 @@
+site_id,run140_status,run140_reason_code,run145_status,run145_reason_code,stop_reason,robots_status,html_pages_attempted,html_pages_captured,documents_captured,available_evidence_count,crawl_elapsed_seconds,screening_group,reading_gaps_count,risk_signal_count,form_records_in_saved_primary,analytics_hint_pages,cookie_text_pages,consent_control_pages,document_link_records,html_draft_created,pdf_draft_created,client_release_allowed,automatic_send_allowed
+SITE-01,ERROR,redirect_limit_or_missing_location,SKIPPED,redirect_limit_or_missing_location,queue_exhausted,received,1,0,0,0,8.5,not_run,0,0,0,0,0,0,0,False,False,False,False
+SITE-02,ERROR,robots_http_403_no_permission,SKIPPED,robots_http_403_no_permission,robots_unavailable,unavailable,1,0,0,0,0.164,not_run,0,0,0,0,0,0,0,False,False,False,False
+SITE-06,HOLD_NO_SIGNAL,no_credible_grounded_screening_signals,SUCCESS,evidence_packet_ready_manual_review_required,screening_target_reached,received,7,7,0,7,14.477,low_priority,0,0,0,7,7,0,0,False,False,False,False
+SITE-07,HOLD_NO_SIGNAL,no_credible_grounded_screening_signals,SUCCESS,evidence_packet_ready_manual_review_required,screening_target_reached,received,5,5,0,5,10.187,low_priority,0,0,0,5,5,0,0,False,False,False,False
+SITE-10,ERROR,cross_origin_navigation_blocked,SUCCESS,evidence_packet_ready_manual_review_required,queue_exhausted,received,1,1,0,1,6.105,waiting,0,0,1,1,0,0,0,False,False,False,False
+SITE-11,ERROR,robots_disallow,SKIPPED,robots_disallow,queue_exhausted_with_denials,received,1,0,0,0,0.194,not_run,0,0,0,0,0,0,0,False,False,False,False
+SITE-12,HOLD_NO_SIGNAL,no_credible_grounded_screening_signals,SUCCESS,evidence_packet_ready_manual_review_required,screening_signal_found,received,4,4,0,4,8.468,waiting,4,0,1,4,0,0,0,False,False,False,False
+SITE-13,DRAFT_HOLD,previous_screening_draft_hold,SUCCESS,evidence_packet_ready_manual_review_required,screening_signal_found,received,2,2,2,2,4.412,waiting,3,0,7,2,2,2,5,False,False,False,False
+SITE-14,HOLD_NO_SIGNAL,no_credible_grounded_screening_signals,ERROR,packet_over_200000_byte_input_limit,page_limit,received,7,6,0,6,14.084,waiting,6,0,30,6,0,0,0,False,False,False,False
+SITE-15,HOLD_NO_SIGNAL,no_credible_grounded_screening_signals,SUCCESS,evidence_packet_ready_manual_review_required,queue_exhausted,received,1,1,0,1,2.07,low_priority,0,0,0,0,1,0,0,False,False,False,False
