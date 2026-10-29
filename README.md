@@ -161,3 +161,52 @@ zero LLM spend. Optional `--registry` requires an explicit `--normative-date`.
 Open `review-queue.html` locally. `priority_review` is a research priority, not GO;
 `low_priority` is not a clean-site certification. Every row remains HOLD/internal.
 The initial narrow ranking needs real first-pass recall validation before launch.
+
+
+## Точка продолжения: 29.10.2026
+
+Закрыт документационный этап пилота: 10 успешных аудитов, 3 PDF REVIEW,
+2 PENDING_REVIEW в CRM (glaza63.ru, doctorsan.ru), 1 HOLD_IDENTITY (girumed.ru,
+два юрлица), 7 HOLD без PDF. ID Account/Document/Attachment подтверждены отчётом,
+отдельная GET-проверка связей не проводилась. Note POST — 403, пропускается;
+CRM_PREPARE_ONLY не создаёт и не отправляет письма.
+По предыдущему отчёту Codex прошли 42 теста crm_prepare и 36 строгого экспортёра.
+
+Начать с существующего [справочника CRM](docs/espocrm_lexradar_reference.md#закрытие-этапа-29102026-пилот-десяти-новых-клиник)
+и [инструкции интеграции](docs/espo-integration.md#закрытие-этапа-29102026-пилот-десяти-новых-клиник).
+Локальный [разбор трёх досье](docs/crm-identity-three-20261029.md) и
+[runbook pipeline10](docs/pipeline10.md) пока не закоммичены; приватные копии
+сохранены в архиве. Существующие изменения кода остаются в рабочем дереве:
+этот коммит фиксирует закрытие документации, а не полный релиз исходников.
+
+Открыть проект: `cd /home/golkonst/src/LexRadar-compact`.
+Существующий запуск пилота из подготовленного Parser CSV (сетевой; при закрытии
+не выполнялся, требует отдельного разрешённого запуска):
+
+```bash
+PYTHONPATH=src /home/golkonst/src/LexRadar/.venv/bin/python -u -m lexradar.pipeline10 /absolute/private/clinics.csv --output /absolute/private/new-pilot --allow-site-collection
+```
+
+Локальный CRM_PREPARE_ONLY без сети (готовый манифест, запись результата
+в отдельный файл; исходные пути PDF/досье должны существовать):
+
+```bash
+./crm-prepare-only /absolute/private/manifest.json --journal "$HOME/.local/state/lexradar/crm-prepare.json" --output /absolute/private/preview.json
+```
+
+Запись CRM требует отдельного явного `--confirm-prepare-crm`; здесь не запускалась.
+В CRM_PREPARE_ONLY загружается готовый PDF, доказательства остаются локально,
+Note необязателен. Preview не подтверждает связи/права CRM. HOLD не обходить,
+журнал не очищать. Текущая идентификация использует сохранённые доказательства;
+ручной флаг не перекрывает конфликт юрлиц. Строгий экспортёр имеет отдельные
+требования legal_review/одобрения; маршруты не подменяют друг друга.
+
+Архив: `.private-pilots/2026-10-29-ten-new/` (вне Git, 0700/0600),
+проверка копий — `SHA256.json`. Это локальная копия на том же диске.
+Предпочтительный путь вне checkout недоступен по политике среды.
+
+Следующая разработка — веб-центр управления парсером, аудитом, отбором пригодных
+итоговых КП и подготовкой CRM. Новую CLI-обёртку с X сейчас не делать.
+X означает количество пригодных итоговых КП, а не просмотренных сайтов.
+Начать с чтения существующих parser_import/pipeline10/mvp_batch/crm_prepare
+и проектирования состояний задания; веб-панель в этом задании не реализуется.
