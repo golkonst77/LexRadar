@@ -2,8 +2,12 @@
 
 import argparse
 import json
+from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from pathlib import Path
+from urllib.parse import parse_qs, urlencode, urlsplit
+
+from control_organizations import load_organizations
 
 
 PAGE = """<!doctype html>
@@ -17,6 +21,10 @@ PAGE = """<!doctype html>
 * { box-sizing: border-box; }
 body { margin: 0; background: #0c111b; color: #e7edf7; line-height: 1.6; }
 a { color: #a5c7ff; text-underline-offset: 4px; }
+input, select, button { font: inherit; padding: 6px; max-width: 100%; }
+th, td { text-align: left; padding: 10px; border-bottom: 1px solid #29364d; }
+table { width: 100%; }
+dd { margin-bottom: 12px; overflow-wrap: anywhere; }
 a:focus-visible { outline: 2px solid #8dbbff; outline-offset: 5px; }
 header, main, footer { max-width: 1100px; margin: auto; padding: 24px; }
 header { display: flex; align-items: center; justify-content: space-between;
@@ -46,14 +54,14 @@ footer { color: #8c9bb1; font-size: 13px; padding-bottom: 40px; }
 <div class="brand">Lex<span>Radar</span> / Control Center</div>
 <nav aria-label="Разделы центра управления">
 <a href="#overview">Обзор</a><a href="#projects">Проекты</a>
-<a href="#reports">Отчёты</a><a href="#settings">Настройки</a>
+<a href="/organizations">Организации</a><a href="#reports">Отчёты</a><a href="#settings">Настройки</a>
 </nav>
 </header>
 <main id="overview">
 <span class="badge">● Сервер работает</span>
 <h1>Центр управления LexRadar</h1>
 <p class="lead">Единая точка входа для будущей работы с проектами и отчётами.
-Сейчас доступна стартовая страница и проверка состояния сервера.</p>
+Доступны организации из сохранённых результатов и проверка состояния сервера.</p>
 <div class="grid">
 <article id="projects"><h2>Проекты</h2><p>Список проектов и их состояние.</p>
 <span class="soon">Скоро · раздел в разработке</span></article>
@@ -74,11 +82,96 @@ footer { color: #8c9bb1; font-size: 13px; padding-bottom: 40px; }
 """
 
 
+def organization_page(content):
+    start, tail = PAGE.split('<main id="overview">', 1)
+    start = start.replace('href="#', 'href="/#')
+    return start + '<main>' + content + '</main>' + tail.split('</main>', 1)[1]
+
+
+def status_label(value):
+    return {"not_confirmed": "Не подтверждён", "unknown": "Не указан"}.get(value, value)
+
+
 class ControlHandler(BaseHTTPRequestHandler):
+    def organizations(self, path):
+        records, warnings = load_organizations(getattr(self.server, 'results_dir', Path.cwd()))
+        warning = ('<p role="status">Часть файлов недоступна или имеет неподдерживаемый формат: '
+                   + str(warnings) + '.</p>') if warnings else ''
+        notice = '<p>Внутренние данные. Упоминание организации не подтверждает её роль или нарушение.</p>'
+        if path != '/organizations':
+            identifier = path.removeprefix('/organizations/')
+            record = next((r for r in records if r['id'] == identifier), None)
+            if record is None:
+                self.respond_json(404, {"error": "not_found"})
+                return
+            content = '<a href="/organizations">← Организации</a><h1>' + escape(record['name']) + '</h1>'
+            content += notice + warning + '<dl>'
+            for label, value in (
+                ('ИНН', record['inn'] or 'Не указан'),
+                ('Сайт', ', '.join(record['websites']) or 'Не указан'),
+                ('Правовой статус', status_label(record['status'])),
+                ('Источник', record['source']),
+                ('ID в результате', record['row']['id']),
+            ):
+                content += '<dt>' + label + '</dt><dd>' + escape(value) + '</dd>'
+            content += ('</dl><h2>Сохранённые сведения</h2>'
+                        '<pre style="white-space:pre-wrap;overflow-wrap:anywhere">')
+            content += escape(json.dumps(record['row'], ensure_ascii=False, indent=2)) + '</pre>'
+        else:
+            params = parse_qs(urlsplit(self.path).query)
+            query = params.get('q', [''])[0].strip()
+            selected = params.get('status', [''])[0]
+            statuses = sorted({r['status'] for r in records})
+            try:
+                page = max(1, int(params.get('page', ['1'])[0]))
+            except ValueError:
+                page = 1
+            filtered = [r for r in records if (not selected or r['status'] == selected)
+                        and query.casefold() in ' '.join(
+                            [r['name'], r['inn'], *r['websites']]).casefold()]
+            pages = max(1, (len(filtered) + 19) // 20)
+            page = min(page, pages)
+            content = '<h1>Организации</h1>' + notice + warning
+            content += ('<form method="get" action="/organizations"><label>Поиск по названию, сайту, ИНН '
+                        '<input name="q" value="' + escape(query, quote=True) + '"></label> '
+                        '<label>Правовой статус <select name="status"><option value="">Все</option>')
+            for status in sorted(set(statuses + ([selected] if selected else []))):
+                content += '<option value="' + escape(status, quote=True) + '"'
+                content += (' selected' if status == selected else '') + '>'
+                content += escape(status_label(status)) + '</option>'
+            content += '</select></label> <button type="submit">Найти</button></form>'
+            content += '<p>Найдено: ' + str(len(filtered)) + '</p>'
+            if not filtered:
+                content += ('<p>Организаций пока нет.</p>' if not records
+                            else '<p>По запросу ничего не найдено.</p>')
+            else:
+                content += ('<div style="overflow-x:auto"><table><thead><tr>'
+                            '<th>Название</th><th>Сайт</th><th>ИНН</th>'
+                            '<th>Правовой статус</th></tr></thead><tbody>')
+                for record in filtered[(page - 1) * 20:page * 20]:
+                    content += ('<tr><td><a href="/organizations/' + record['id'] + '">'
+                                + escape(record['name']) + '</a></td>')
+                    for value in (', '.join(record['websites']) or '—',
+                                  record['inn'] or '—', status_label(record['status'])):
+                        content += '<td>' + escape(value) + '</td>'
+                    content += '</tr>'
+                content += '</tbody></table></div>'
+            content += ('<nav aria-label="Страницы организаций"><span>Страница '
+                        + str(page) + ' из ' + str(pages) + '</span>')
+            for target, label in ((page - 1, 'Назад'), (page + 1, 'Далее')):
+                if 1 <= target <= pages:
+                    link = '/organizations?' + urlencode(
+                        {'q': query, 'status': selected, 'page': target})
+                    content += '<a href="' + escape(link, quote=True) + '">' + label + '</a>'
+            content += '</nav>'
+        self.respond(200, organization_page(content).encode('utf-8'), 'text/html; charset=utf-8')
+
     def do_GET(self):
         path = urlsplit(self.path).path
         if path == "/":
             self.respond(200, PAGE.encode("utf-8"), "text/html; charset=utf-8")
+        elif path == "/organizations" or path.startswith("/organizations/"):
+            self.organizations(path)
         elif path == "/health":
             self.respond_json(200, {"status": "ok"})
         elif path == "/api/status":
@@ -107,11 +200,14 @@ class ControlHandler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--results-dir", type=Path, default=Path.cwd(),
+                        help="Directory containing saved primary-audit results (default: cwd)")
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("port must be between 1 and 65535")
     with ThreadingHTTPServer(("127.0.0.1", args.port), ControlHandler) as server:
+        server.results_dir = args.results_dir.absolute()
         print(f"LexRadar Control Center: http://127.0.0.1:{args.port}", flush=True)
         try:
             server.serve_forever()
