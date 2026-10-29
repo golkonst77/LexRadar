@@ -1,0 +1,323 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "legal-source-card-0.1",
+      "default": "legal-source-card-0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "act_id": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Act Id",
+      "type": "string"
+    },
+    "source_kind": {
+      "enum": [
+        "normative_act",
+        "official_explanation",
+        "judicial_act",
+        "secondary_material",
+        "ai_claim"
+      ],
+      "title": "Source Kind",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal_data",
+        "medical",
+        "consumer",
+        "paid_medical",
+        "other"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "act_name": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Act Name",
+      "type": "string"
+    },
+    "act_number": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Act Number",
+      "type": "string"
+    },
+    "document_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Document Date"
+    },
+    "provision": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Provision",
+      "type": "string"
+    },
+    "norm_text": {
+      "maxLength": 50000,
+      "minLength": 1,
+      "title": "Norm Text",
+      "type": "string"
+    },
+    "source_url": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Url"
+    },
+    "publication_id": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Publication Id"
+    },
+    "publication_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Publication Date"
+    },
+    "revision": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Revision",
+      "type": "string"
+    },
+    "effective_from": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Effective From"
+    },
+    "effective_until": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Effective Until"
+    },
+    "transition_from": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transition From"
+    },
+    "transition_until": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transition Until"
+    },
+    "transition_note": {
+      "anyOf": [
+        {
+          "maxLength": 3000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transition Note"
+    },
+    "claimed_lifecycle": {
+      "default": "unknown",
+      "enum": [
+        "active",
+        "repealed",
+        "not_yet_effective",
+        "unknown"
+      ],
+      "title": "Claimed Lifecycle",
+      "type": "string"
+    },
+    "checked_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Checked At"
+    },
+    "verification_method": {
+      "enum": [
+        "local_integrity",
+        "human_review",
+        "llm",
+        "unverified"
+      ],
+      "title": "Verification Method",
+      "type": "string"
+    },
+    "text_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Text Sha256",
+      "type": "string"
+    },
+    "original_path": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Original Path",
+      "type": "string"
+    },
+    "revision_check_basis": {
+      "maxLength": 3000,
+      "minLength": 1,
+      "title": "Revision Check Basis",
+      "type": "string"
+    },
+    "claimed_official": {
+      "default": false,
+      "title": "Claimed Official",
+      "type": "boolean"
+    },
+    "claimed_status": {
+      "default": "unverified",
+      "maxLength": 100,
+      "title": "Claimed Status",
+      "type": "string"
+    },
+    "claimed_reviewer": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Claimed Reviewer"
+    },
+    "intended_use": {
+      "default": "context",
+      "enum": [
+        "binding_norm",
+        "context"
+      ],
+      "title": "Intended Use",
+      "type": "string"
+    },
+    "source_availability": {
+      "default": "unknown",
+      "enum": [
+        "saved_locally",
+        "unavailable",
+        "unknown"
+      ],
+      "title": "Source Availability",
+      "type": "string"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "title": "Limitations",
+      "type": "array"
+    },
+    "uncertainties": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "title": "Uncertainties",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "act_id",
+    "source_kind",
+    "domain",
+    "act_name",
+    "act_number",
+    "document_date",
+    "provision",
+    "norm_text",
+    "source_url",
+    "publication_id",
+    "publication_date",
+    "revision",
+    "effective_from",
+    "effective_until",
+    "checked_at",
+    "verification_method",
+    "text_sha256",
+    "original_path",
+    "revision_check_basis",
+    "limitations",
+    "uncertainties"
+  ],
+  "title": "LegalSourceCard",
+  "type": "object"
+}

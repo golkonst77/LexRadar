@@ -1,0 +1,281 @@
+{
+  "schema_version": "0.2",
+  "target_url": "https://clinic.example/",
+  "started_at": "2026-01-01T00:00:00Z",
+  "limits": {
+    "max_pages": 10,
+    "max_documents": 10,
+    "max_file_bytes": 5000000,
+    "max_total_bytes": 50000000,
+    "timeout_seconds": 10.0,
+    "max_redirects": 3,
+    "max_links_per_page": 200,
+    "max_pdf_pages": 100
+  },
+  "pages": [],
+  "documents": [
+    {
+      "reading": {
+        "original_saved": true,
+        "source_sha256": "c273b361c2f12b45228a3d60274a9a9bc328c6ec3a14065862b7206e0193a155",
+        "extraction_state": "complete",
+        "text_layer_extracted": true,
+        "text_truncated": false,
+        "original_chars": 45,
+        "supplied_chars": 46,
+        "page_count": 2,
+        "pages": [
+          {
+            "text_examination": "not_examined",
+            "page": 1,
+            "original_chars": 23,
+            "supplied_chars": 23,
+            "text_available": true,
+            "extraction_state": "complete",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": []
+          },
+          {
+            "text_examination": "not_examined",
+            "page": 2,
+            "original_chars": 22,
+            "supplied_chars": 22,
+            "text_available": true,
+            "extraction_state": "complete",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": []
+          }
+        ],
+        "max_page_chars": 100000,
+        "max_total_chars": 1000000,
+        "page_limit": 100,
+        "provenance": "reproduced",
+        "text_coverage_complete": true,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": [
+          "Extraction is not visual inspection or legal research"
+        ]
+      },
+      "page_texts": {
+        "1": "Synthetic readable page",
+        "2": "Another synthetic page"
+      },
+      "requested_url": "https://clinic.example/full.pdf",
+      "final_url": null,
+      "http_status": null,
+      "evidence_id": "document-0001",
+      "text": "Synthetic readable page\nAnother synthetic page",
+      "extraction_status": "text",
+      "extraction_reason": null
+    },
+    {
+      "reading": {
+        "original_saved": true,
+        "source_sha256": "4fc3e89123fe78215c732963d59e152da4334d2ae3b5a07ab767b4b3c07dc6c1",
+        "extraction_state": "partial",
+        "text_layer_extracted": true,
+        "text_truncated": true,
+        "original_chars": 51,
+        "supplied_chars": 22,
+        "page_count": 3,
+        "pages": [
+          {
+            "text_examination": "not_examined",
+            "page": 1,
+            "original_chars": 23,
+            "supplied_chars": 10,
+            "text_available": true,
+            "extraction_state": "partial",
+            "truncated": true,
+            "visual_examined": false,
+            "limitations": [
+              "Text clipped by per-page or total safety limit"
+            ]
+          },
+          {
+            "text_examination": "not_examined",
+            "page": 2,
+            "original_chars": 28,
+            "supplied_chars": 10,
+            "text_available": true,
+            "extraction_state": "partial",
+            "truncated": true,
+            "visual_examined": false,
+            "limitations": [
+              "Text clipped by per-page or total safety limit"
+            ]
+          },
+          {
+            "text_examination": "not_examined",
+            "page": 3,
+            "original_chars": 0,
+            "supplied_chars": 0,
+            "text_available": false,
+            "extraction_state": "no_text",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": [
+              "No extracted text; visual inspection needed"
+            ]
+          }
+        ],
+        "max_page_chars": 10,
+        "max_total_chars": 1000000,
+        "page_limit": 100,
+        "provenance": "reproduced",
+        "text_coverage_complete": false,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": [
+          "Extraction is not visual inspection or legal research"
+        ]
+      },
+      "page_texts": {
+        "1": "Synthetic ",
+        "2": "Unread lon"
+      },
+      "requested_url": "https://clinic.example/partial.pdf",
+      "final_url": null,
+      "http_status": null,
+      "evidence_id": "document-0002",
+      "text": "Synthetic \nUnread lon\n",
+      "extraction_status": "visual_review_required",
+      "extraction_reason": "Some pages lack extracted text or text is incomplete; visual review required"
+    },
+    {
+      "reading": {
+        "original_saved": true,
+        "source_sha256": "93aac58abeaf76f8348a4715846d1f47c9d922840c84959c036bdcb30be49acb",
+        "extraction_state": "complete",
+        "text_layer_extracted": false,
+        "text_truncated": false,
+        "original_chars": 0,
+        "supplied_chars": 1,
+        "page_count": 2,
+        "pages": [
+          {
+            "text_examination": "not_examined",
+            "page": 1,
+            "original_chars": 0,
+            "supplied_chars": 0,
+            "text_available": false,
+            "extraction_state": "no_text",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": [
+              "No extracted text; visual inspection needed"
+            ]
+          },
+          {
+            "text_examination": "not_examined",
+            "page": 2,
+            "original_chars": 0,
+            "supplied_chars": 0,
+            "text_available": false,
+            "extraction_state": "no_text",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": [
+              "No extracted text; visual inspection needed"
+            ]
+          }
+        ],
+        "max_page_chars": 100000,
+        "max_total_chars": 1000000,
+        "page_limit": 100,
+        "provenance": "reproduced",
+        "text_coverage_complete": false,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": [
+          "Extraction is not visual inspection or legal research"
+        ]
+      },
+      "page_texts": {},
+      "requested_url": "https://clinic.example/unread.pdf",
+      "final_url": null,
+      "http_status": null,
+      "evidence_id": "document-0003",
+      "text": "\n",
+      "extraction_status": "visual_review_required",
+      "extraction_reason": "Some pages lack extracted text or text is incomplete; visual review required"
+    }
+  ],
+  "entities": [],
+  "evidence": [
+    {
+      "id": "document-0001",
+      "source": "https://clinic.example/full.pdf",
+      "captured_at": "2026-01-01T00:00:00Z",
+      "observed_fact": "Synthetic PDF fixture only; no real collection or legal conclusion",
+      "available": true,
+      "artifact_path": "artifacts/full.pdf",
+      "sha256": "c273b361c2f12b45228a3d60274a9a9bc328c6ec3a14065862b7206e0193a155",
+      "signal": "substantive",
+      "status": "complete",
+      "collection_errors": [],
+      "unavailable_reason": null,
+      "artifacts": [
+        {
+          "path": "artifacts/full.pdf",
+          "sha256": "c273b361c2f12b45228a3d60274a9a9bc328c6ec3a14065862b7206e0193a155",
+          "size": 1056,
+          "kind": "pdf",
+          "representation": "original_pdf",
+          "notice": null
+        }
+      ]
+    },
+    {
+      "id": "document-0002",
+      "source": "https://clinic.example/partial.pdf",
+      "captured_at": "2026-01-01T00:00:00Z",
+      "observed_fact": "Synthetic PDF fixture only; no real collection or legal conclusion",
+      "available": true,
+      "artifact_path": "artifacts/partial.pdf",
+      "sha256": "4fc3e89123fe78215c732963d59e152da4334d2ae3b5a07ab767b4b3c07dc6c1",
+      "signal": "substantive",
+      "status": "complete",
+      "collection_errors": [],
+      "unavailable_reason": null,
+      "artifacts": [
+        {
+          "path": "artifacts/partial.pdf",
+          "sha256": "4fc3e89123fe78215c732963d59e152da4334d2ae3b5a07ab767b4b3c07dc6c1",
+          "size": 1184,
+          "kind": "pdf",
+          "representation": "original_pdf",
+          "notice": null
+        }
+      ]
+    },
+    {
+      "id": "document-0003",
+      "source": "https://clinic.example/unread.pdf",
+      "captured_at": "2026-01-01T00:00:00Z",
+      "observed_fact": "Synthetic PDF fixture only; no real collection or legal conclusion",
+      "available": true,
+      "artifact_path": "artifacts/unread.pdf",
+      "sha256": "93aac58abeaf76f8348a4715846d1f47c9d922840c84959c036bdcb30be49acb",
+      "signal": "substantive",
+      "status": "complete",
+      "collection_errors": [],
+      "unavailable_reason": null,
+      "artifacts": [
+        {
+          "path": "artifacts/unread.pdf",
+          "sha256": "93aac58abeaf76f8348a4715846d1f47c9d922840c84959c036bdcb30be49acb",
+          "size": 551,
+          "kind": "pdf",
+          "representation": "original_pdf",
+          "notice": null
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "requires_independent_review": true
+}

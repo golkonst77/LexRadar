@@ -1,0 +1,113 @@
+{
+  "schema_version": "0.2",
+  "target_url": "https://clinic.example/",
+  "started_at": "2026-10-10T00:00:00Z",
+  "limits": {
+    "max_pages": 10,
+    "max_documents": 10,
+    "max_file_bytes": 5000000,
+    "max_total_bytes": 50000000,
+    "timeout_seconds": 10.0,
+    "max_redirects": 3,
+    "max_links_per_page": 200,
+    "max_pdf_pages": 100
+  },
+  "pages": [
+    {
+      "reading": {
+        "original_saved": null,
+        "source_sha256": null,
+        "extraction_state": "partial",
+        "text_layer_extracted": true,
+        "text_truncated": false,
+        "original_chars": null,
+        "supplied_chars": 7,
+        "page_count": 1,
+        "pages": [
+          {
+            "text_examination": "not_examined",
+            "page": 1,
+            "original_chars": null,
+            "supplied_chars": 7,
+            "text_available": true,
+            "extraction_state": "partial",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": [
+              "Mismatched HTML closing element; suffix withheld",
+              "Unclosed HTML elements; complete extraction not established"
+            ]
+          }
+        ],
+        "max_page_chars": 100000,
+        "max_total_chars": 100000,
+        "page_limit": 100,
+        "provenance": "unknown",
+        "text_coverage_complete": false,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": [
+          "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+          "Extraction is not legal research",
+          "Mismatched HTML closing element; suffix withheld",
+          "Unclosed HTML elements; complete extraction not established"
+        ]
+      },
+      "requested_url": "https://clinic.example/",
+      "final_url": "https://clinic.example/",
+      "captured_at": "2026-10-10T00:00:00Z",
+      "http_status": 200,
+      "title": null,
+      "text": "Телефон",
+      "categories": [],
+      "document_links": [],
+      "forms": [],
+      "evidence_id": "page-0001"
+    }
+  ],
+  "documents": [],
+  "entities": [],
+  "evidence": [
+    {
+      "id": "page-0001",
+      "source": "https://clinic.example/",
+      "captured_at": "2026-10-10T00:00:00Z",
+      "observed_fact": "Synthetic saved fixture, not a real browser collection",
+      "available": true,
+      "artifact_path": "artifacts/page-0001.html",
+      "sha256": "078d9a22233e9f73c2b06266f945afdb9f281332cde8108a0259c55a3cf05673",
+      "signal": "substantive",
+      "status": "complete",
+      "collection_errors": [],
+      "unavailable_reason": null,
+      "artifacts": [
+        {
+          "path": "artifacts/page-0001.html",
+          "sha256": "078d9a22233e9f73c2b06266f945afdb9f281332cde8108a0259c55a3cf05673",
+          "size": 198,
+          "kind": "html",
+          "representation": "original_html",
+          "notice": null
+        },
+        {
+          "path": "artifacts/page-0001.txt",
+          "sha256": "822f9fd9ba2d117e7a4c1dd10c410eab7a3a5cc0417cd149633649cc5fb23c1b",
+          "size": 14,
+          "kind": "text",
+          "representation": "extracted_text",
+          "notice": null
+        },
+        {
+          "path": "artifacts/synthetic-pixel.png",
+          "sha256": "1f3b40322c29a8108ead1415f2aae739495eaee8b1952323ffcdc1a4258ea186",
+          "size": 68,
+          "kind": "screenshot",
+          "representation": "isolated_screenshot",
+          "notice": "Isolated screenshot: JavaScript and external resources disabled; not an exact reproduction of the live website"
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "requires_independent_review": true
+}

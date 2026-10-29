@@ -1,0 +1,11 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Public home.</p><a href=\"/policy\">Политика</a>"
+    },
+    "/policy": {
+      "html": "<p>Linked policy describes processing.</p>"
+    }
+  },
+  "screenshot_failure": false
+}

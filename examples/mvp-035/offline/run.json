@@ -1,0 +1,15 @@
+{
+  "url": "https://demo.lexradar.example/",
+  "fixture": true,
+  "static_only": true,
+  "ai_mode": "offline",
+  "request_sent": false,
+  "cost_usd": "0",
+  "client_release_allowed": false,
+  "status": "failed",
+  "pages": 1,
+  "documents": 0,
+  "available": 0,
+  "error_type": "ValueError",
+  "error": "No available evidence; inspect dossier and crawl journal"
+}

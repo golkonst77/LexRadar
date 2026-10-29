@@ -1,0 +1,18 @@
+{
+  "timezone": "Europe/Moscow",
+  "working_days": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "start_hour": 9,
+  "end_hour": 18,
+  "emails_per_hour": 5,
+  "interval_minutes": 12,
+  "dry_run": true,
+  "enabled": false,
+  "sender": "sender@example.invalid",
+  "espo_api": "https://crm.example.invalid/api/v1/"
+}

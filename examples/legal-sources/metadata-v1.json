@@ -1,0 +1,29 @@
+{
+  "id": "synthetic-v1",
+  "act_id": "synthetic-act",
+  "source_kind": "normative_act",
+  "domain": "other",
+  "act_name": "SYNTHETIC TEST ONLY, NOT A LAW",
+  "act_number": "SYNTHETIC-1",
+  "document_date": "2024-01-01",
+  "provision": "Synthetic provision 1",
+  "norm_text": "Synthetic provision ONE; not Russian legislation.",
+  "source_url": "https://pravo.gov.ru/synthetic-unverified-fixture",
+  "publication_id": null,
+  "publication_date": "2024-01-02",
+  "revision": "Synthetic v1",
+  "effective_from": "2024-02-01",
+  "effective_until": "2025-12-31",
+  "checked_at": null,
+  "verification_method": "unverified",
+  "revision_check_basis": "Synthetic declaration only; not independent evidence",
+  "limitations": [
+    "SYNTHETIC; not official law"
+  ],
+  "uncertainties": [
+    "Origin unverified"
+  ],
+  "source_availability": "saved_locally",
+  "intended_use": "binding_norm",
+  "claimed_lifecycle": "unknown"
+}

@@ -1,0 +1,13 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Public home.</p><a href=\"/policy.pdf\">Политика PDF</a>"
+    },
+    "/policy.pdf": {
+      "pdf_pages": [
+        null
+      ]
+    }
+  },
+  "screenshot_failure": false
+}

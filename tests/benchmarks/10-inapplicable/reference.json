@@ -1,0 +1,53 @@
+{
+  "id": "10-inapplicable",
+  "situation": "Claim concerns inpatient activity outside this synthetic operator scope",
+  "observed_facts": [
+    {
+      "kind": "text_contains",
+      "value": "Only outpatient services."
+    }
+  ],
+  "units": [
+    {
+      "id": "10-inapplicable-unit",
+      "topic": "medical_vs_152fz",
+      "claim_code": "inpatient_requirement",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "expected_problem": false,
+      "rationale": "Claim concerns inpatient activity outside this synthetic operator scope",
+      "norm_ids": [
+        "323-template"
+      ],
+      "expected_operator_ref": null,
+      "expected_applicability": "not_applicable"
+    }
+  ],
+  "permitted_hypotheses": [
+    "Investigate public text and applicability with a human."
+  ],
+  "forbidden_conclusions": [
+    "Confirmed violation based solely on synthetic model assertion.",
+    "Full website compliance.",
+    "Automatic GO or client sending."
+  ],
+  "expected_evidence_ids": [
+    "page-0001"
+  ],
+  "normative_references": {
+    "323-template": "unverified"
+  },
+  "expected_limitations": [
+    "No automatic live legal-source verification"
+  ],
+  "admissible_statuses": {
+    "inpatient_requirement": [
+      "potential_issue"
+    ]
+  },
+  "material_pages": {
+    "page-0001": 1
+  },
+  "disagreement_expected": false
+}

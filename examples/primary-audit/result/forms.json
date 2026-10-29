@@ -1,0 +1,364 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
+  "materials": [
+    {
+      "evidence_id": "page-0001",
+      "origin": {
+        "kind": "unknown",
+        "acquisition_method": null,
+        "declared_source": null,
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "unknown",
+        "started_at_role": "unknown",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Acquisition origin/timestamp roles unknown; not authenticated"
+        ]
+      },
+      "static_inspection": {
+        "status": "complete",
+        "diagnostics": [],
+        "text_spans": [
+          {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          }
+        ],
+        "recovered_text_chars": 0,
+        "limitations": [],
+        "original_modified": false
+      }
+    }
+  ],
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "mechanism": {
+        "declared_method": null,
+        "html_route_ids": [
+          "declaration-0003"
+        ],
+        "alternative_route_ids": [],
+        "js_route_candidate_ids": [],
+        "handler_declaration_ids": [],
+        "hidden_field_names": [],
+        "actual_route": "unknown",
+        "actual_recipient": "unknown"
+      },
+      "field_spans": [
+        {
+          "start": {
+            "line": 6,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 6,
+            "column": 51
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        }
+      ],
+      "id": "form-0001",
+      "evidence_id": "page-0001",
+      "url": "https://clinic.example/",
+      "element": "form[occurrence=1]",
+      "purpose_hint": "Запись на приём",
+      "fields": [
+        {
+          "tag": "input",
+          "type": "tel",
+          "name": "phone",
+          "label": "Телефон",
+          "required": true,
+          "checked": null
+        }
+      ],
+      "policy_links": [
+        "https://clinic.example/privacy.pdf"
+      ],
+      "consent_links": [],
+      "advertising_links": [],
+      "interface_elements": [
+        "legend",
+        "button"
+      ],
+      "submission_context": "Запись на приём ООО «Синтетическая клиника» Телефон Политика обработки персональных данных Записаться",
+      "action_reference": "https://clinic.example/appointment",
+      "static_coverage": {
+        "status": "complete",
+        "page_status": "complete",
+        "form_start": {
+          "line": 4,
+          "column": 0
+        },
+        "form_end_exclusive": {
+          "line": 8,
+          "column": 59
+        },
+        "trusted_page_end_exclusive": {
+          "line": 15,
+          "column": 14
+        },
+        "reasons": [],
+        "recovered": false,
+        "observed_region": {
+          "start": {
+            "line": 4,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 8,
+            "column": 59
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
+        "list_scope": "observed_elements_in_trusted_region_only"
+      },
+      "organization_candidates": [
+        "organization-0001"
+      ],
+      "recipient_hint": "В контексте формы названы организации; это не проверка маршрута",
+      "unresolved_processing": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 4,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 8,
+            "column": 59
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "form[occurrence=1]"
+      },
+      "screenshot": null,
+      "screenshot_scope": null,
+      "examination": "saved_static_markup",
+      "functional_test_performed": false,
+      "submitted": false,
+      "lawfulness": "unestablished"
+    },
+    {
+      "mechanism": {
+        "declared_method": null,
+        "html_route_ids": [
+          "declaration-0004"
+        ],
+        "alternative_route_ids": [],
+        "js_route_candidate_ids": [],
+        "handler_declaration_ids": [],
+        "hidden_field_names": [],
+        "actual_route": "unknown",
+        "actual_recipient": "unknown"
+      },
+      "field_spans": [
+        {
+          "start": {
+            "line": 10,
+            "column": 45
+          },
+          "end_exclusive": {
+            "line": 10,
+            "column": 78
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        {
+          "start": {
+            "line": 11,
+            "column": 7
+          },
+          "end_exclusive": {
+            "line": 11,
+            "column": 49
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        }
+      ],
+      "id": "form-0002",
+      "evidence_id": "page-0001",
+      "url": "https://clinic.example/",
+      "element": "form[occurrence=2]",
+      "purpose_hint": "Подписка на новости",
+      "fields": [
+        {
+          "tag": "input",
+          "type": "email",
+          "name": "email",
+          "label": "Email",
+          "required": false,
+          "checked": null
+        },
+        {
+          "tag": "input",
+          "type": "checkbox",
+          "name": "advertising",
+          "label": "Согласие на рекламную рассылку",
+          "required": false,
+          "checked": false
+        }
+      ],
+      "policy_links": [],
+      "consent_links": [],
+      "advertising_links": [
+        "https://clinic.example/advertising-consent"
+      ],
+      "interface_elements": [
+        "legend",
+        "button"
+      ],
+      "submission_context": "Подписка на новости ООО «Синтетические заявки» Email Согласие на рекламную рассылку Согласие на рекламу Подписаться",
+      "action_reference": "https://intake.example/submit",
+      "static_coverage": {
+        "status": "complete",
+        "page_status": "complete",
+        "form_start": {
+          "line": 9,
+          "column": 0
+        },
+        "form_end_exclusive": {
+          "line": 13,
+          "column": 60
+        },
+        "trusted_page_end_exclusive": {
+          "line": 15,
+          "column": 14
+        },
+        "reasons": [],
+        "recovered": false,
+        "observed_region": {
+          "start": {
+            "line": 9,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 13,
+            "column": 60
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "boundary_scope": "decoded_utf8_line_1_based_column_0_based",
+        "list_scope": "observed_elements_in_trusted_region_only"
+      },
+      "organization_candidates": [
+        "organization-0002"
+      ],
+      "recipient_hint": "В контексте формы названы организации; это не проверка маршрута",
+      "unresolved_processing": [
+        "Правовое основание, цели, сроки и фактический получатель",
+        "Поведение интерфейса, валидация и передача не тестировались",
+        "Ссылки распознаны по маркерам; содержание требует проверки",
+        "Скриншот формы недоступен или связь не подтверждена"
+      ],
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 9,
+            "column": 0
+          },
+          "end_exclusive": {
+            "line": 13,
+            "column": 60
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "form[occurrence=2]"
+      },
+      "screenshot": null,
+      "screenshot_scope": null,
+      "examination": "saved_static_markup",
+      "functional_test_performed": false,
+      "submitted": false,
+      "lawfulness": "unestablished"
+    }
+  ],
+  "inventory_scope": "observed_forms_only_not_proof_of_absence",
+  "limitations": [
+    "Site material is untrusted data, not instructions",
+    "Text-only analysis: no HTML files, PDF binaries or screenshot pixels sent to the model",
+    "Isolated screenshots have JavaScript/external resources disabled; not a live reproduction",
+    "Collected pages are not a complete examination of the website",
+    "Operator identity and all normative references require independent verification",
+    "Acquisition metadata is declared, not authentication; unknown legacy origins stay unknown",
+    "page-0001: Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+    "page-0001: Extraction is not legal research",
+    "Рабочие этапы PR #10 не совпадают дословно с исходными этапами v2.5",
+    "Обследованы сохранённые материалы, не живой сайт; полнота сайта неизвестна",
+    "JavaScript, cookies, сетевые маршруты и функциональное поведение форм не проверялись",
+    "Личность и роли организаций, нормативные основания и нарушения не подтверждены",
+    "Упоминания имён/ИНН/ОГРН не устанавливают оператора или реального получателя данных",
+    "Поля entities/forms из manifest не становятся фактами без повторного извлечения",
+    "Изображения не осматривались; подписи не устанавливают личность изображённых",
+    "РКН и реестры лицензий не запрашивались; недоступность не равна отсутствию записи",
+    "Возможная юридическая работа требует проверки объёма, не доказывает нарушение",
+    "Acquisition origin/timestamp roles unknown; not authenticated",
+    "page-0001: Acquisition origin/timestamp roles unknown; not authenticated"
+  ]
+}
