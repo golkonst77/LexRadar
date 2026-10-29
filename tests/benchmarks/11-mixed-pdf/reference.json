@@ -1,0 +1,55 @@
+{
+  "id": "11-mixed-pdf",
+  "situation": "Claim of whole-document review despite one unread page",
+  "observed_facts": [
+    {
+      "kind": "pdf_mixed",
+      "evidence_id": "document-0001"
+    }
+  ],
+  "units": [
+    {
+      "id": "11-mixed-pdf-unit",
+      "topic": "mandatory_documents",
+      "claim_code": "whole_pdf_issue",
+      "evidence_ids": [
+        "document-0001"
+      ],
+      "expected_problem": false,
+      "rationale": "Claim of whole-document review despite one unread page",
+      "norm_ids": [
+        "152-template"
+      ],
+      "expected_operator_ref": null,
+      "expected_applicability": null
+    }
+  ],
+  "permitted_hypotheses": [
+    "Investigate public text and applicability with a human."
+  ],
+  "forbidden_conclusions": [
+    "Confirmed violation based solely on synthetic model assertion.",
+    "Full website compliance.",
+    "Automatic GO or client sending."
+  ],
+  "expected_evidence_ids": [
+    "page-0001",
+    "document-0001"
+  ],
+  "normative_references": {
+    "152-template": "unverified"
+  },
+  "expected_limitations": [
+    "No automatic live legal-source verification"
+  ],
+  "admissible_statuses": {
+    "whole_pdf_issue": [
+      "insufficient_evidence"
+    ]
+  },
+  "material_pages": {
+    "page-0001": 1,
+    "document-0001": 2
+  },
+  "disagreement_expected": false
+}

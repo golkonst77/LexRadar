@@ -1,0 +1,53 @@
+{
+  "id": "01-correct-policy",
+  "situation": "Correct synthetic policy, no whole-site compliance claim",
+  "observed_facts": [
+    {
+      "kind": "text_contains",
+      "value": "Policy describes purpose and retention."
+    }
+  ],
+  "units": [
+    {
+      "id": "01-correct-policy-unit",
+      "topic": "privacy_policy",
+      "claim_code": "policy_scope",
+      "evidence_ids": [
+        "page-0001"
+      ],
+      "expected_problem": false,
+      "rationale": "Correct synthetic policy, no whole-site compliance claim",
+      "norm_ids": [
+        "152-template"
+      ],
+      "expected_operator_ref": null,
+      "expected_applicability": null
+    }
+  ],
+  "permitted_hypotheses": [
+    "Investigate public text and applicability with a human."
+  ],
+  "forbidden_conclusions": [
+    "Confirmed violation based solely on synthetic model assertion.",
+    "Full website compliance.",
+    "Automatic GO or client sending."
+  ],
+  "expected_evidence_ids": [
+    "page-0001"
+  ],
+  "normative_references": {
+    "152-template": "unverified"
+  },
+  "expected_limitations": [
+    "No automatic live legal-source verification"
+  ],
+  "admissible_statuses": {
+    "policy_scope": [
+      "no_issue_observed"
+    ]
+  },
+  "material_pages": {
+    "page-0001": 1
+  },
+  "disagreement_expected": false
+}

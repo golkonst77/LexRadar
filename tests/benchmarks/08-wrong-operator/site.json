@@ -1,0 +1,8 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Operator is second entity.</p><p>ООО «Синтетическая Альфа»</p><p>ООО «Синтетическая Бета»</p>"
+    }
+  },
+  "screenshot_failure": false
+}

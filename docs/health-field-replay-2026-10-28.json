@@ -1,0 +1,134 @@
+{
+  "packets": 158,
+  "errors": [],
+  "unique_sites": 122,
+  "additional_proposals_latest_sites": 1,
+  "additional_sites": [
+    "dr-zaytsev.ru"
+  ],
+  "health_latest_sites": [
+    "cmclinic.ru",
+    "dr-zaytsev.ru"
+  ],
+  "additional_snapshot_proposals": 1,
+  "offline_tests_passed": 173,
+  "html_artifact_hashes_verified": 506,
+  "method": "Latest packet per normalized host; saved HTML reparsed in memory only for matching existing forms and fields; original dossiers unchanged.",
+  "observations": [
+    {
+      "packet": "runs/production-medical-100-live/sites/row-000050/packet.json",
+      "host": "dr-zaytsev.ru",
+      "started_at": "2026-10-27T15:31:03.918476+00:00",
+      "before": [],
+      "after": [
+        6
+      ],
+      "health": {
+        "rule_id": 6,
+        "confirmed": true,
+        "evidence": [
+          {
+            "evidence_id": "page-0001",
+            "url": "https://dr-zaytsev.ru/",
+            "manifest_pointer": "forms/3/fields/7",
+            "quote": "Что вас беспокоит? Например: боль в горле Что вас беспокоит?",
+            "checked": "На сайте предусмотрено поле свободного ввода сведений о причинах обращения, жалобах или состоянии здоровья пациента. Такие сведения могут относиться к специальным категориям персональных данных. Рекомендуется проверить правовые основания их обработки и соответствие опубликованных документов фактическому сбору данных",
+            "artifacts": [
+              {
+                "path": "artifacts/page-0001.html",
+                "sha256": "312dd114c5928f3184872918e286f149bb7a5b7f98bb0c56c16c894942fb9eb7"
+              },
+              {
+                "path": "artifacts/page-0001.txt",
+                "sha256": "5cacccd0533847329071d11e896899d15b17eb367834fbb0608e002ee3d13918"
+              }
+            ],
+            "scope": "Сохранённые данные; текущая работа сайта и JavaScript не проверялись",
+            "field": {
+              "placeholder": "Например: боль в горле",
+              "aria_label": null,
+              "associated_label": "Что вас беспокоит?",
+              "disabled": false,
+              "readonly": false,
+              "tag": "input",
+              "type": "text",
+              "name": "MESSAGE",
+              "label": "Что вас беспокоит?",
+              "required": false,
+              "checked": null
+            }
+          }
+        ],
+        "manual_review": true,
+        "legal_violation_established": false
+      },
+      "refreshed_forms": 13
+    },
+    {
+      "packet": "runs/production-medical-30-live/sites/row-000027/packet.json",
+      "host": "cmclinic.ru",
+      "started_at": "2026-10-27T15:12:10.727446+00:00",
+      "before": [
+        3
+      ],
+      "after": [
+        3,
+        6
+      ],
+      "health": {
+        "rule_id": 6,
+        "confirmed": true,
+        "evidence": [
+          {
+            "evidence_id": "page-0001",
+            "url": "https://cmclinic.ru/",
+            "manifest_pointer": "forms/8/fields/6",
+            "quote": "Опишите проблему",
+            "checked": "На сайте предусмотрено поле свободного ввода сведений о причинах обращения, жалобах или состоянии здоровья пациента. Такие сведения могут относиться к специальным категориям персональных данных. Рекомендуется проверить правовые основания их обработки и соответствие опубликованных документов фактическому сбору данных",
+            "artifacts": [
+              {
+                "path": "artifacts/page-0001.html",
+                "sha256": "7e79e16aecb986dca44b1979b5a3390c90aaa426f54a6b9e8f5e3ff320f71979"
+              },
+              {
+                "path": "artifacts/page-0001.txt",
+                "sha256": "b8d5fbdd831ad748d1d2162438a726dfa7d2962a7fd1fde60be330da3b6ae0da"
+              }
+            ],
+            "scope": "Сохранённые данные; текущая работа сайта и JavaScript не проверялись",
+            "field": {
+              "placeholder": "Опишите проблему",
+              "aria_label": null,
+              "associated_label": null,
+              "disabled": false,
+              "readonly": false,
+              "tag": "textarea",
+              "type": "textarea",
+              "name": "comment",
+              "label": null,
+              "required": false,
+              "checked": null
+            }
+          }
+        ],
+        "manual_review": true,
+        "legal_violation_established": false
+      },
+      "refreshed_forms": 18
+    }
+  ],
+  "zrenie_results": [
+    {
+      "packet": "runs/experiment-ignore-robots-2026-10-27-network-ready/sites/row-000030/packet.json",
+      "rules": []
+    },
+    {
+      "packet": "runs/experiment-ignore-robots-2026-10-28-fixed-https/sites/row-000030/packet.json",
+      "rules": []
+    },
+    {
+      "packet": "runs/recheck-two-2026-10-28-live/sites/row-000003/packet.json",
+      "rules": []
+    }
+  ]
+}

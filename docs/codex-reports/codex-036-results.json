@@ -1,0 +1,391 @@
+[
+  {
+    "root": "runs-036/doktstom-result",
+    "packet_bytes": 39856,
+    "packet_sha256": "f652e53d5614c7e8356546dc921e5458b51c4b644e4ce0bd5134673f8defb8a0",
+    "primary_sha256": "10a41394efc973e9ca5ea00c7219c00b8e27207bd1f2815a6d0b5c5b8ad91db6",
+    "manifest_sha256": "9d0d456b10c578c4bea06bdfdaab14bfcc759ccca33ecf04b150dec23e49fca0",
+    "hashes_checked": 15,
+    "deterministic_replay": true,
+    "quotes_verified": 13,
+    "sent_evidence_ids": [
+      "page-0001"
+    ],
+    "page_attempts": 1,
+    "forms": 1,
+    "documents": [],
+    "selection": {
+      "policy": "essential_round_robin_then_secondary_16_v1",
+      "total": {
+        "materials": 1,
+        "medical_checks": 8,
+        "missing_checks": 140,
+        "observations": 326,
+        "organizations": 2,
+        "popup_relations": 29,
+        "services": 133,
+        "stages": 13,
+        "declarations": 239,
+        "flows": 1,
+        "forms": 1,
+        "hypotheses": 130,
+        "integration_groups": 128
+      },
+      "complete": false,
+      "included": {
+        "materials": 1,
+        "medical_checks": 8,
+        "missing_checks": 0,
+        "observations": 16,
+        "organizations": 2,
+        "popup_relations": 0,
+        "services": 0,
+        "stages": 12,
+        "declarations": 1,
+        "flows": 0,
+        "forms": 1,
+        "hypotheses": 0,
+        "integration_groups": 0
+      }
+    },
+    "crawl": {
+      "stop_reason": "queue_exhausted",
+      "robots_status": "absent",
+      "robots_unavailable_policy": "deny_all",
+      "user_agent": "LexRadar/0.2 (bounded evidence collector)",
+      "request_attempts": 2,
+      "requests_sent": 2,
+      "robots_denied_urls": 0,
+      "blocked_urls": 0,
+      "elapsed_seconds": 2.1713112619472668,
+      "options": {
+        "min_delay_seconds": 2,
+        "max_requests": 20,
+        "max_duration_seconds": 90.0
+      }
+    },
+    "request_sent": false,
+    "cost_usd": "0",
+    "excerpts_checked": 15
+  },
+  {
+    "root": "runs-036/medicpro-result",
+    "packet_bytes": 39982,
+    "packet_sha256": "a5584059c36ddff7b101547bb9fd7371fb071f2a4949a4f22e79820533f3c347",
+    "primary_sha256": "c99a7fb5dc202c4954f8c78a09e9dc8f8c14c090fcd52038a672bb38666c33b1",
+    "manifest_sha256": "d9b524782ee12629ddf11c944e1527f3d9666a9535ac9daf6099bbb3dca55047",
+    "hashes_checked": 38,
+    "deterministic_replay": true,
+    "quotes_verified": 6,
+    "sent_evidence_ids": [
+      "document-0001",
+      "page-0002",
+      "page-0003",
+      "page-0006"
+    ],
+    "page_attempts": 12,
+    "forms": 30,
+    "documents": [
+      {
+        "url": "https://medicpro-kaluga.ru/wp-content/uploads/2024/03/14-pril.-1-pravila-povedeniya-paczienta-v-med.-org.pdf",
+        "status": "text",
+        "pages": 7
+      }
+    ],
+    "selection": {
+      "policy": "essential_round_robin_then_secondary_16_v1",
+      "total": {
+        "missing_checks": 450,
+        "observations": 1647,
+        "organizations": 1,
+        "popup_relations": 13,
+        "services": 414,
+        "stages": 13,
+        "declarations": 460,
+        "flows": 30,
+        "forms": 30,
+        "hypotheses": 441,
+        "integration_groups": 43,
+        "materials": 13,
+        "medical_checks": 8
+      },
+      "complete": false,
+      "included": {
+        "missing_checks": 0,
+        "observations": 5,
+        "organizations": 1,
+        "popup_relations": 0,
+        "services": 0,
+        "stages": 3,
+        "declarations": 0,
+        "flows": 0,
+        "forms": 4,
+        "hypotheses": 0,
+        "integration_groups": 0,
+        "materials": 4,
+        "medical_checks": 4
+      }
+    },
+    "crawl": {
+      "stop_reason": "page_limit",
+      "robots_status": "received",
+      "robots_unavailable_policy": "deny_all",
+      "user_agent": "LexRadar/0.2 (bounded evidence collector)",
+      "request_attempts": 15,
+      "requests_sent": 15,
+      "robots_denied_urls": 0,
+      "blocked_urls": 0,
+      "elapsed_seconds": 34.01183001702884,
+      "options": {
+        "min_delay_seconds": 2,
+        "max_requests": 20,
+        "max_duration_seconds": 90.0
+      }
+    },
+    "request_sent": false,
+    "cost_usd": "0",
+    "excerpts_checked": 10
+  },
+  {
+    "root": "runs-036/fomin-result",
+    "packet_bytes": 39923,
+    "packet_sha256": "943e177cf2caaa9a876aaeba15403ac9780ef2a334edb574174ae304291ab70d",
+    "primary_sha256": "c44c1bee506ed398e9ccd51c7f0efbfcc2fb5791298dfc9f39be783a5e38e66d",
+    "manifest_sha256": "5be83d8ec4f9f6980e4a2edb8edeaae1859b9fb9f5d98d474e20fed867b19e9c",
+    "hashes_checked": 37,
+    "deterministic_replay": true,
+    "quotes_verified": 27,
+    "sent_evidence_ids": [
+      "document-0001",
+      "page-0001",
+      "page-0002",
+      "page-0004",
+      "page-0005",
+      "page-0006",
+      "page-0007",
+      "page-0008",
+      "page-0009",
+      "page-0010",
+      "page-0011",
+      "page-0012"
+    ],
+    "page_attempts": 12,
+    "forms": 11,
+    "documents": [
+      {
+        "url": "https://kaluga.fomin-clinic.ru/upload/iblock/fb7/2xu1jut1qvrd8ljkyie1y6ndlxnhrhxs/Politika-konfidentsialnosti-Kaluga.pdf",
+        "status": "text",
+        "pages": 8
+      },
+      {
+        "url": "https://kaluga.fomin-clinic.ru/upload/medialibrary/cba/cy3uzkkhtfkyiq46rt20yvhy0x4z4nya/Soglasie_na_obrabotku_personalnykh_dannykh.pdf",
+        "status": "text",
+        "pages": 2
+      },
+      {
+        "url": "https://kaluga.fomin-clinic.ru/upload/medialibrary/196/hzq6cai75jygsoakiq7bgoz3ngiuinxd/tarifnoe_soglashenie_ko.pdf",
+        "status": "failed",
+        "pages": null
+      }
+    ],
+    "selection": {
+      "policy": "essential_round_robin_then_secondary_16_v1",
+      "total": {
+        "materials": 15,
+        "medical_checks": 8,
+        "missing_checks": 263,
+        "observations": 772,
+        "organizations": 2,
+        "popup_relations": 11,
+        "services": 231,
+        "stages": 13,
+        "declarations": 253,
+        "flows": 11,
+        "forms": 11,
+        "hypotheses": 253,
+        "integration_groups": 31
+      },
+      "complete": false,
+      "included": {
+        "materials": 3,
+        "medical_checks": 3,
+        "missing_checks": 0,
+        "observations": 3,
+        "organizations": 2,
+        "popup_relations": 0,
+        "services": 0,
+        "stages": 3,
+        "declarations": 0,
+        "flows": 0,
+        "forms": 4,
+        "hypotheses": 0,
+        "integration_groups": 0
+      }
+    },
+    "crawl": {
+      "stop_reason": "page_limit",
+      "robots_status": "received",
+      "robots_unavailable_policy": "deny_all",
+      "user_agent": "LexRadar/0.2 (bounded evidence collector)",
+      "request_attempts": 15,
+      "requests_sent": 15,
+      "robots_denied_urls": 1,
+      "blocked_urls": 1,
+      "elapsed_seconds": 28.15467763901688,
+      "options": {
+        "min_delay_seconds": 2,
+        "max_requests": 20,
+        "max_duration_seconds": 90.0
+      }
+    },
+    "request_sent": false,
+    "cost_usd": "0",
+    "excerpts_checked": 31
+  },
+  {
+    "root": "runs-036/doktstom-saved-result",
+    "packet_bytes": 39856,
+    "packet_sha256": "3157b5df6a1350c1a1e65fbbe22bf1465dfd3c73672f5956da154f2d667a8ad7",
+    "primary_sha256": "3de338005f5059cae0a9baf17a2ea0645150ba0607c91c28544bdd21e6797eb8",
+    "manifest_sha256": "65dce3454cccf2b05ca3945600f8f3a22df2747936ca69cab920fd808840436d",
+    "hashes_checked": 15,
+    "deterministic_replay": true,
+    "quotes_verified": 13,
+    "sent_evidence_ids": [
+      "page-0001"
+    ],
+    "page_attempts": 1,
+    "forms": 1,
+    "documents": [],
+    "selection": {
+      "policy": "essential_round_robin_then_secondary_16_v1",
+      "total": {
+        "materials": 1,
+        "medical_checks": 8,
+        "missing_checks": 140,
+        "observations": 326,
+        "organizations": 2,
+        "popup_relations": 29,
+        "services": 133,
+        "stages": 13,
+        "declarations": 239,
+        "flows": 1,
+        "forms": 1,
+        "hypotheses": 130,
+        "integration_groups": 128
+      },
+      "complete": false,
+      "included": {
+        "materials": 1,
+        "medical_checks": 8,
+        "missing_checks": 0,
+        "observations": 16,
+        "organizations": 2,
+        "popup_relations": 0,
+        "services": 0,
+        "stages": 12,
+        "declarations": 1,
+        "flows": 0,
+        "forms": 1,
+        "hypotheses": 0,
+        "integration_groups": 0
+      }
+    },
+    "crawl": {
+      "stop_reason": "queue_exhausted",
+      "robots_status": "absent",
+      "robots_unavailable_policy": "deny_all",
+      "user_agent": "LexRadar/0.2 (bounded evidence collector)",
+      "request_attempts": 2,
+      "requests_sent": 2,
+      "robots_denied_urls": 0,
+      "blocked_urls": 0,
+      "elapsed_seconds": 2.1524892619927414,
+      "options": {
+        "min_delay_seconds": 2,
+        "max_requests": 20,
+        "max_duration_seconds": 90.0
+      }
+    },
+    "request_sent": false,
+    "cost_usd": "0",
+    "excerpts_checked": 15
+  },
+  {
+    "root": "runs-036/medicpro-saved-result",
+    "packet_bytes": 39905,
+    "packet_sha256": "b9f5ff90d31d2496db45511c1bd69bbdfd1f5fbbbd143c0d2917bc87959724ae",
+    "primary_sha256": "d65ff78f5e57d5d236a07ca4ad6d9e8970ef049cc42f1d4f5c75c7f376b6c887",
+    "manifest_sha256": "63f96dd1c36ae26a77dd348227907ba51a5298e1ddd1f08c8692221a2a623df0",
+    "hashes_checked": 24,
+    "deterministic_replay": true,
+    "quotes_verified": 6,
+    "sent_evidence_ids": [
+      "document-0001",
+      "page-0002",
+      "page-0003"
+    ],
+    "page_attempts": 5,
+    "forms": 12,
+    "documents": [
+      {
+        "url": "https://medicpro-kaluga.ru/wp-content/uploads/2024/03/14-pril.-1-pravila-povedeniya-paczienta-v-med.-org.pdf",
+        "status": "text",
+        "pages": 7
+      }
+    ],
+    "selection": {
+      "policy": "essential_round_robin_then_secondary_16_v1",
+      "total": {
+        "missing_checks": 186,
+        "observations": 690,
+        "organizations": 1,
+        "popup_relations": 6,
+        "services": 166,
+        "stages": 13,
+        "declarations": 186,
+        "flows": 12,
+        "forms": 12,
+        "hypotheses": 177,
+        "integration_groups": 38,
+        "materials": 6,
+        "medical_checks": 8
+      },
+      "complete": false,
+      "included": {
+        "missing_checks": 0,
+        "observations": 5,
+        "organizations": 1,
+        "popup_relations": 0,
+        "services": 0,
+        "stages": 4,
+        "declarations": 0,
+        "flows": 0,
+        "forms": 4,
+        "hypotheses": 0,
+        "integration_groups": 0,
+        "materials": 5,
+        "medical_checks": 4
+      }
+    },
+    "crawl": {
+      "stop_reason": "page_limit",
+      "robots_status": "received",
+      "robots_unavailable_policy": "deny_all",
+      "user_agent": "LexRadar/0.2 (bounded evidence collector)",
+      "request_attempts": 7,
+      "requests_sent": 7,
+      "robots_denied_urls": 0,
+      "blocked_urls": 0,
+      "elapsed_seconds": 14.241777196992189,
+      "options": {
+        "min_delay_seconds": 2,
+        "max_requests": 20,
+        "max_duration_seconds": 90.0
+      }
+    },
+    "request_sent": false,
+    "cost_usd": "0",
+    "excerpts_checked": 10
+  }
+]
