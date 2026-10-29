@@ -21,6 +21,8 @@ def text(row, key):
 
 
 def website(value):
+    if not isinstance(value, str):
+        return ''
     try:
         url = urlsplit(value)
         if (url.scheme in {'http', 'https'} and url.hostname and not url.username
@@ -95,6 +97,8 @@ def load_leads(root):
                             warnings += 1
                             continue
                         company, url, phone, email, card, status = [text(row, k) for k in keys]
+                        if len(records) >= 20000:
+                            return sorted(records, key=lambda r: (r['name'].casefold(), r['id'])), warnings + 1
                         records.append({
                             'id': hashlib.sha256(('parser\0' + source + '\0' + json.dumps(row, ensure_ascii=False, sort_keys=True)).encode()).hexdigest(),
                             'name': company, 'websites': [website(url)] if website(url) else [],

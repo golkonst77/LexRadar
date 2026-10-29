@@ -42,9 +42,8 @@ class ControlCenterTest(unittest.TestCase):
         self.assertIn("text/html; charset=utf-8", headers)
         self.assertIn('<html lang="ru">', page)
         self.assertIn("Центр управления LexRadar", page)
-        for section in ("projects", "reports", "settings"):
-            self.assertIn(f'href="#{section}"', page)
-            self.assertIn(f'id="{section}"', page)
+        for route in ('organizations', 'reports', 'jobs', 'crm', 'settings'):
+            self.assertIn(f'href="/{route}"', page)
         for path, expected in (
             ("/health", {"status": "ok"}),
             ("/api/status", {
@@ -90,7 +89,7 @@ class OrganizationTest(unittest.TestCase):
                      '/organizations/%2e%2e%2fsecret'):
             self.assertIn('404 Not Found', self.request(path)[0])
         self.assertFalse(list(self.root.iterdir()))
-        self.assertIn('href="/#overview"', self.request('/organizations')[1])
+        self.assertIn('href="/"', self.request('/organizations')[1])
 
     def test_search_pagination_detail_and_read_only(self):
         path = self.write('run/primary/audit.json', self.audit(23))
@@ -301,7 +300,7 @@ class OrganizationTest(unittest.TestCase):
                           self.request('/organizations/' + record['id'])[1])
         self.assertEqual(path.read_bytes(), original)
 
-    def test_single_audited_organization_uses_target_not_citation_urls(self):
+    def test_single_mention_does_not_prove_website_ownership(self):
         audit = self.audit()
         audit['organizations'][0]['identification_sources'] = [
             {'url': 'https://clinic.test/documents'},
@@ -310,9 +309,9 @@ class OrganizationTest(unittest.TestCase):
         self.write('audit.json', audit)
         records, warnings = load_organizations(self.root)
         self.assertEqual(warnings, 0)
-        self.assertEqual(records[0]['websites'], ['https://clinic.test/'])
-        self.assertIn('https://clinic.test/', self.request('/organizations')[1])
-        self.assertIn('Найдено: 1', self.request('/organizations?q=CLINIC.TEST')[1])
+        self.assertEqual(records[0]['websites'], [])
+        self.assertNotIn('https://clinic.test/', self.request('/organizations')[1])
+        self.assertIn('Найдено: 0', self.request('/organizations?q=CLINIC.TEST')[1])
         del audit['target_url']
         self.write('audit.json', audit)
         self.assertEqual(load_organizations(self.root)[0][0]['websites'], [])

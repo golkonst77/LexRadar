@@ -22,7 +22,7 @@ def load_organizations(root):
         nonlocal warnings
         warnings += 1
 
-    visited = 0
+    visited, total = 0, 0
     try:
         # fwalk + dir_fd keep reads tied to the visited directory; never follow links.
         for directory, dirs, files, descriptor in os.fwalk(
@@ -44,11 +44,12 @@ def load_organizations(root):
                              dir_fd=descriptor)
                 with os.fdopen(fd, 'rb') as stream:
                     info = os.fstat(stream.fileno())
-                    if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_BYTES:
+                    if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_BYTES or total + info.st_size > 32_000_000:
                         raise ValueError('Unsupported result file')
                     raw = stream.read(MAX_BYTES + 1)
                 if len(raw) > MAX_BYTES:
                     raise ValueError('Result too large')
+                total += len(raw)
                 data = json.loads(raw)
                 if not isinstance(data, dict):
                     raise ValueError('Expected object')
@@ -70,9 +71,10 @@ def load_organizations(root):
                         warnings += 1
                         continue
                     seen.add(row['id'])
-                    target = data.get('target_url')
                     # Citation URLs locate mentions, not the organization's own website.
-                    urls = [target] if len(rows) == 1 and isinstance(target, str) else []
+                    urls = []
+                    if len(records) >= 20000:
+                        return sorted(records, key=lambda r: (r['name'].casefold(), r['id'])), warnings + 1
                     records.append({
                         'id': hashlib.sha256((source + '\0' + row['id']).encode()).hexdigest(),
                         'name': row['name'],

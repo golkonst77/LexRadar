@@ -8,7 +8,7 @@ from pathlib import Path
 
 from control_organizations import MAX_BYTES
 
-def read_file(root, relative, limit=MAX_BYTES):
+def read_file(root, relative, limit=MAX_BYTES, *, prefix=None):
     """Open every path component without following links, including the root."""
     relative = Path(relative)
     if relative.is_absolute() or not relative.parts or '..' in relative.parts:
@@ -27,7 +27,7 @@ def read_file(root, relative, limit=MAX_BYTES):
             info = os.fstat(stream.fileno())
             if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
                 raise ValueError('Unsupported file')
-            raw = stream.read(limit + 1)
+            raw = stream.read(min(prefix, limit + 1) if prefix is not None else limit + 1)
             if len(raw) > limit:
                 raise ValueError('File too large')
             return raw
@@ -51,24 +51,26 @@ def proposals(root, record):
     directory = Path(record['source']).parent
     documents = []
     try:
-        # Directory listing reveals names only; read_file enforces containment on every read.
-        names = sorted((Path(root) / directory).iterdir())
-        for path in names:
-            if path.name != 'proposal.pdf' and not (
-                path.name.startswith('proposal-') and path.suffix == '.pdf'
-            ):
-                continue
-            relative = directory / path.name
-            try:
-                raw = read_file(root, relative, 50_000_000)
-                if raw.startswith(b'%PDF-'):
-                    documents.append({'id': document_id(relative), 'name': path.name,
-                                      'relative': relative})
-            except (OSError, ValueError):
-                continue
+        # shortcut: list at most 2048 entries / 64 PDFs; use a focused results directory for larger archives.
+        with os.scandir(Path(root) / directory) as entries:
+            for index, entry in enumerate(entries):
+                if index >= 2048 or len(documents) >= 64:
+                    break
+                if entry.name != 'proposal.pdf' and not (
+                    entry.name.startswith('proposal-') and entry.name.endswith('.pdf')
+                ):
+                    continue
+                relative = directory / entry.name
+                try:
+                    raw = read_file(root, relative, 50_000_000, prefix=5)
+                    if raw.startswith(b'%PDF-'):
+                        documents.append({'id': document_id(relative), 'name': entry.name,
+                                          'relative': relative})
+                except (OSError, ValueError):
+                    continue
     except OSError:
         pass
-    return documents
+    return sorted(documents, key=lambda d: d['name'])
 
 
 def audit_details(root, record):
