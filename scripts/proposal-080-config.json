@@ -1,0 +1,4 @@
+{
+  "client": {"name": "Доктор СТОМ", "city": "Калуга", "industry": "стоматологический", "url": "https://doktstom.ru/"},
+  "commercial": {"sender": "ИП Исполнитель", "date": "16.10.2026", "tariffs": {}, "existing_client_discount_percent": 0}
+}

@@ -1,0 +1,8 @@
+{
+  "routes": {
+    "/": {
+      "html": "<!doctype html><title>Synthetic fixture</title><p>Performer listed as different organization.</p>"
+    }
+  },
+  "screenshot_failure": false
+}

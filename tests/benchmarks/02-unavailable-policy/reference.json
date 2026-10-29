@@ -1,0 +1,55 @@
+{
+  "id": "02-unavailable-policy",
+  "situation": "Policy link returns HTTP 404; absence is not proven",
+  "observed_facts": [
+    {
+      "kind": "unavailable",
+      "evidence_id": "page-0002"
+    }
+  ],
+  "units": [
+    {
+      "id": "02-unavailable-policy-unit",
+      "topic": "privacy_policy",
+      "claim_code": "document_unavailable_illegal",
+      "evidence_ids": [
+        "page-0002"
+      ],
+      "expected_problem": false,
+      "rationale": "Policy link returns HTTP 404; absence is not proven",
+      "norm_ids": [
+        "152-template"
+      ],
+      "expected_operator_ref": null,
+      "expected_applicability": null
+    }
+  ],
+  "permitted_hypotheses": [
+    "Investigate public text and applicability with a human."
+  ],
+  "forbidden_conclusions": [
+    "Confirmed violation based solely on synthetic model assertion.",
+    "Full website compliance.",
+    "Automatic GO or client sending."
+  ],
+  "expected_evidence_ids": [
+    "page-0001",
+    "page-0002"
+  ],
+  "normative_references": {
+    "152-template": "unverified"
+  },
+  "expected_limitations": [
+    "No automatic live legal-source verification"
+  ],
+  "admissible_statuses": {
+    "document_unavailable_illegal": [
+      "rejected"
+    ]
+  },
+  "material_pages": {
+    "page-0001": 1,
+    "page-0002": 1
+  },
+  "disagreement_expected": false
+}
