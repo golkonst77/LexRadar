@@ -102,13 +102,14 @@ class OrganizationTest(unittest.TestCase):
         self.assertIn('Клиника 19', page)
         self.assertNotIn('Клиника 20', page)
         self.assertIn('Далее', page)
-        filtered_page = self.request('/organizations?q=clinic.test&status=not_confirmed')[1]
-        self.assertIn('q=clinic.test&amp;status=not_confirmed&amp;page=2', filtered_page)
+        filtered_page = self.request('/organizations?q=770000&status=not_confirmed')[1]
+        self.assertIn('q=770000&amp;status=not_confirmed&amp;page=2', filtered_page)
         for query in (quote('кЛиНиКа 21'), '7700000021'):
             page = self.request('/organizations?q=' + query)[1]
             self.assertIn('Найдено: 1', page)
             self.assertIn('Клиника 21', page)
-        self.assertIn('Найдено: 23', self.request('/organizations?q=CLINIC.TEST')[1])
+        self.assertIn('По запросу ничего не найдено',
+                      self.request('/organizations?q=CLINIC.TEST')[1])
         self.assertIn('Клиника 22', self.request('/organizations?page=2')[1])
         for number in ('oops', '-9', '9999999999'):
             self.assertIn('200 OK', self.request('/organizations?page=' + number)[0])
@@ -267,12 +268,52 @@ class OrganizationTest(unittest.TestCase):
         (self.root / 'audit.json').write_bytes((source / 'audit.json').read_bytes())
         records, warnings = load_organizations(self.root)
         self.assertEqual((len(records), warnings), (2, 0))
-        self.assertEqual(records[0]['websites'][0], 'https://clinic.example/')
+        self.assertTrue(all(r['websites'] == [] for r in records))
         (self.root / 'audit.json').unlink()
         (self.root / 'organizations.json').write_bytes((source / 'organizations.json').read_bytes())
         records, warnings = load_organizations(self.root)
         self.assertEqual((len(records), warnings), (2, 0))
-        self.assertIn('https://clinic.example/', records[0]['websites'])
+        self.assertTrue(all(r['websites'] == [] for r in records))
+
+    def test_kaluga_mentions_are_not_organization_websites(self):
+        audit = self.audit(4)
+        audit['target_url'] = 'https://kaluga-med.ru/'
+        names = ['АО РОСНО-МС', 'ЗАО МАКС-М', 'ООО МЕГАКЛИНИКА', 'ООО ЯНДЕКС']
+        for row, name in zip(audit['organizations'], names):
+            row['name'] = name
+            row['identification_sources'] = [
+                {'url': 'https://kaluga-med.ru/documents', 'quote': name},
+                {'url': 'https://kaluga-med.ru/links', 'quote': name},
+            ]
+        path = self.write('audit.json', audit)
+        original = path.read_bytes()
+        records, warnings = load_organizations(self.root)
+        self.assertEqual((len(records), warnings), (4, 0))
+        self.assertEqual({r['name'] for r in records}, set(names))
+        self.assertTrue(all(r['websites'] == [] for r in records))
+        page = self.request('/organizations')[1]
+        self.assertNotIn('kaluga-med.ru', page)
+        self.assertEqual(page.count('<td>—</td>'), 4)
+        for record in records:
+            self.assertIn('<dt>Сайт</dt><dd>—</dd>',
+                          self.request('/organizations/' + record['id'])[1])
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_single_audited_organization_uses_target_not_citation_urls(self):
+        audit = self.audit()
+        audit['organizations'][0]['identification_sources'] = [
+            {'url': 'https://clinic.test/documents'},
+            {'url': 'https://third-party.test/mention'},
+        ]
+        self.write('audit.json', audit)
+        records, warnings = load_organizations(self.root)
+        self.assertEqual(warnings, 0)
+        self.assertEqual(records[0]['websites'], ['https://clinic.test/'])
+        self.assertIn('https://clinic.test/', self.request('/organizations')[1])
+        self.assertIn('Найдено: 1', self.request('/organizations?q=CLINIC.TEST')[1])
+        del audit['target_url']
+        self.write('audit.json', audit)
+        self.assertEqual(load_organizations(self.root)[0][0]['websites'], [])
 
 
 if __name__ == "__main__":

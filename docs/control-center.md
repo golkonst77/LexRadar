@@ -55,9 +55,13 @@ python3 control_center.py --results-dir /absolute/path/to/results --port 8090
 [методологии первичного аудита](primary-audit-methodology.md):
 
 - `audit.json`, `schema_version=primary-audit-0.1`: массив `organizations`,
-  сайт `target_url`, правовой статус `legal_status`.
-- `organizations.json`, `audience=internal_only`: массив `rows`, сайты из
-  `identification_sources[].url`. Статус при отсутствии `legal_status` — «Не указан».
+  сайт `target_url` только для результата с одной организацией, правовой статус `legal_status`.
+- `organizations.json`, `audience=internal_only`: массив `rows`.
+  Статус при отсутствии `legal_status` — «Не указан».
+
+`identification_sources[].url` — адреса упоминаний, а не официальные сайты организаций.
+При нескольких организациях сайт проверяемого ресурса им не присваивается.
+Если сайт не установлен, в списке и карточке показывается прочерк.
 
 Если оба файла находятся рядом, используется только `audit.json`, чтобы не удваивать
 организации. Повреждённый аудит не заменяется потенциально устаревшей матрицей.

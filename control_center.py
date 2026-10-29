@@ -166,7 +166,7 @@ class ControlHandler(BaseHTTPRequestHandler):
             content += notice + warning + '<dl>'
             for label, value in (
                 ('ИНН', record['inn'] or 'Не указан'),
-                ('Сайт', ', '.join(record['websites']) or 'Не указан'),
+                ('Сайт', ', '.join(record['websites']) or '—'),
                 ('Правовой статус', status_label(record['status'])),
                 ('Источник', record['source']),
                 ('ID в результате', record['row']['id']),
