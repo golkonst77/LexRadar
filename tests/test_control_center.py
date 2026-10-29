@@ -27,13 +27,13 @@ class MemoryConnection:
 
 
 class ControlCenterTest(unittest.TestCase):
-    def request(self, path):
+    def request(self, path, binary=False):
         connection = MemoryConnection(path)
         ControlHandler(connection, ("127.0.0.1", 0),
                        SimpleNamespace(results_dir=getattr(self, "root", Path.cwd())))
         headers, body = bytes(connection.response).split(b"\r\n\r\n", 1)
         self.assertIn(f"Content-Length: {len(body)}".encode(), headers)
-        return headers.decode("ascii"), body.decode("utf-8")
+        return headers.decode("ascii"), body if binary else body.decode("utf-8")
 
     def test_routes(self):
         headers, page = self.request("/")
@@ -173,6 +173,93 @@ class OrganizationTest(unittest.TestCase):
             self.assertIn('Часть файлов недоступна', self.request('/organizations')[1])
             self.assertEqual(load_organizations(self.root / 'linked'), ([], 1))
         self.assertEqual(load_organizations(self.root / 'absent'), ([], 0))
+
+    def test_observations_hypotheses_and_proposal_documents(self):
+        source = Path(__file__).resolve().parents[1] / 'examples/primary-audit/result/audit.json'
+        self.write('run/audit.json', json.loads(source.read_text()))
+        pdf = self.root / 'run/proposal.pdf'
+        # Transport fixture only: no PDF generation or rendering is involved.
+        pdf.write_bytes(b'%PDF-1.4 saved transport fixture\n%\xff\xfe')
+        (pdf.parent / 'privacy.pdf').write_bytes(b'%PDF-private source document')
+        records, _ = load_organizations(self.root)
+        from control_results import proposals
+        documents = proposals(self.root, records[0])
+        self.assertEqual([d['name'] for d in documents], ['proposal.pdf'])
+        page = self.request('/organizations/' + records[0]['id'])[1]
+        self.assertIn('Проблемы и наблюдения сайта', page)
+        self.assertIn('Какие основания и получатели', page)
+        self.assertIn('artifact_sha256', page)
+        self.assertIn('unconfirmed', page)
+        self.assertIn('not_performed', page)
+        self.assertIn('Скачать PDF', page)
+        url = '/documents/' + records[0]['id'] + '/' + documents[0]['id']
+        for suffix, disposition in (('', 'inline'), ('?download=1', 'attachment')):
+            headers, body = self.request(url + suffix, binary=True)
+            self.assertIn('200 OK', headers)
+            self.assertIn('application/pdf', headers)
+            self.assertIn('Content-Disposition: ' + disposition, headers)
+            self.assertEqual(body, pdf.read_bytes())
+        pdf.unlink()
+        self.assertIn('404 Not Found', self.request(url)[0])
+        self.assertIn('Готовых PDF-коммерческих предложений',
+                      self.request('/organizations/' + records[0]['id'])[1])
+
+    def test_document_containment_and_empty_states(self):
+        from control_results import proposals, read_file
+        self.write('run/audit.json', self.audit())
+        record = load_organizations(self.root)[0][0]
+        page = self.request('/organizations/' + record['id'])[1]
+        self.assertIn('Сохранённых проблем и наблюдений нет', page)
+        with tempfile.TemporaryDirectory() as outside:
+            secret = Path(outside) / 'secret.pdf'
+            secret.write_bytes(b'%PDF-secret')
+            (self.root / 'run/proposal.pdf').symlink_to(secret)
+            (self.root / 'link').symlink_to(outside, target_is_directory=True)
+            self.assertEqual(proposals(self.root, record), [])
+            for relative in ('../secret.pdf', str(secret), 'link/secret.pdf',
+                             'run/proposal.pdf'):
+                with self.subTest(relative=relative), self.assertRaises((ValueError, OSError)):
+                    read_file(self.root, relative)
+            import os
+            os.mkfifo(self.root / 'run/proposal-pipe.pdf')
+            self.assertEqual(proposals(self.root, record), [])
+            for path in ('/documents/../../etc/passwd', '/documents/%2e%2e/secret',
+                         '/documents/' + record['id'] + '/proposal.pdf'):
+                self.assertIn('404 Not Found', self.request(path)[0])
+        (self.root / 'run/proposal.pdf').unlink()
+        (self.root / 'run/proposal.pdf').write_bytes(b'not a PDF')
+        self.assertEqual(proposals(self.root, record), [])
+
+    def test_result_isolation_and_untrusted_observations(self):
+        from control_results import proposals, read_file
+        audit = self.audit()
+        audit['observations'] = [{'id': 'o1', 'stage_id': '01',
+                                  'description': '<script>bad</script>',
+                                  'citations': [{'quote': '<img src=x onerror=bad>'}]}]
+        audit['hypotheses'] = [{'question': 'Review', 'observation_ids': None}]
+        self.write('a/audit.json', audit)
+        self.write('b/audit.json', self.audit())
+        records, _ = load_organizations(self.root)
+        first = next(r for r in records if r['source'] == 'a/audit.json')
+        second = next(r for r in records if r['source'] == 'b/audit.json')
+        pdf = self.root / 'a/proposal.pdf'
+        pdf.write_bytes(b'%PDF-existing transport fixture')
+        doc = proposals(self.root, first)[0]
+        self.assertEqual(proposals(self.root, second), [])
+        url = '/documents/' + second['id'] + '/' + doc['id']
+        self.assertIn('404 Not Found', self.request(url)[0])
+        page = self.request('/organizations/' + first['id'])[1]
+        self.assertIn('&lt;script&gt;', page)
+        self.assertNotIn('<img', page)
+        self.assertNotIn('<script>', page)
+        with self.assertRaises(ValueError):
+            read_file(self.root, 'a/proposal.pdf', limit=5)
+        with tempfile.TemporaryDirectory() as outside:
+            # Replacing a directory after discovery cannot redirect a subsequent read.
+            (self.root / 'a').rename(self.root / 'old-a')
+            (self.root / 'a').symlink_to(outside, target_is_directory=True)
+            with self.assertRaises(OSError):
+                read_file(self.root, doc['relative'])
 
     def test_repository_format_fixture(self):
         source = Path(__file__).resolve().parents[1] / 'examples/primary-audit/result'

@@ -5,9 +5,10 @@ import json
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, quote, urlencode, urlsplit
 
 from control_organizations import load_organizations
+from control_results import audit_details, proposals, read_file, rows
 
 
 PAGE = """<!doctype html>
@@ -92,6 +93,63 @@ def status_label(value):
     return {"not_confirmed": "Не подтверждён", "unknown": "Не указан"}.get(value, value)
 
 
+def saved_details(root, record):
+    content = '<h2>Проблемы и наблюдения сайта</h2>'
+    data = audit_details(root, record)
+    observations = rows(data or {}, 'observations')
+    hypotheses = rows(data or {}, 'hypotheses')
+    if not observations and not hypotheses:
+        content += '<p>Сохранённых проблем и наблюдений нет. Это не подтверждает отсутствие проблем.</p>'
+    else:
+        content += ('<p>Данные сайта из этого результата; принадлежность каждой проблемы '
+                    'организации не установлена. Юридическое нарушение не подтверждено.</p>')
+        stages = {str(r.get('stage_id')): r for r in rows(data, 'stages')}
+        indexed = {str(r.get('id')): r for r in observations}
+        for item in observations + hypotheses:
+            stage = stages.get(str(item.get('stage_id')), {})
+            title = item.get('description') or item.get('question') or item.get('id', 'Наблюдение')
+            content += '<article><h3>' + escape(str(title)) + '</h3>'
+            for label, value in (
+                ('Этап', stage.get('title', item.get('stage_id', 'Не указан'))),
+                ('Статус проверки этапа', stage.get('status', 'not_checked')),
+                ('Статус гипотезы', item.get('status')),
+                ('Область проверки', item.get('scope') or stage.get('status_scope')),
+                ('Недостающие сведения', item.get('missing_information')),
+                ('Требуемые проверки', item.get('required_checks')),
+                ('Ограничения', stage.get('limitations')),
+            ):
+                if value:
+                    content += '<p>' + label + ': ' + escape(str(value)) + '</p>'
+            evidence = [item] if 'description' in item else []
+            references = item.get('observation_ids', [])
+            if isinstance(references, list):
+                evidence += [indexed[i] for i in references if isinstance(i, str) and i in indexed]
+            content += '<h4>Подтверждения из результата</h4>'
+            citations = [c for observation in evidence for c in rows(observation, 'citations')]
+            if not citations:
+                content += '<p>Подтверждения не сохранены.</p>'
+            for citation in citations:
+                content += ('<pre style="white-space:pre-wrap;overflow-wrap:anywhere">'
+                            + escape(json.dumps(citation, ensure_ascii=False, indent=2)) + '</pre>')
+            content += '</article>'
+    checks = rows(data or {}, 'missing_checks')
+    if checks:
+        content += '<h3>Невыполненные проверки сайта</h3>'
+        for check in checks:
+            content += ('<p>' + escape(str(check.get('question', ''))) + ' — '
+                        + escape(str(check.get('state', 'not_performed'))) + '</p>')
+    content += '<h2>Готовые PDF-коммерческие предложения</h2>'
+    documents = proposals(root, record)
+    if not documents:
+        content += '<p>Готовых PDF-коммерческих предложений для этого результата нет.</p>'
+    for document in documents:
+        link = '/documents/' + record['id'] + '/' + document['id']
+        content += ('<p>' + escape(document['name']) + ' · <a href="' + link
+                    + '">Открыть PDF</a> · <a href="' + link
+                    + '?download=1">Скачать PDF</a></p>')
+    return content
+
+
 class ControlHandler(BaseHTTPRequestHandler):
     def organizations(self, path):
         records, warnings = load_organizations(getattr(self.server, 'results_dir', Path.cwd()))
@@ -117,6 +175,7 @@ class ControlHandler(BaseHTTPRequestHandler):
             content += ('</dl><h2>Сохранённые сведения</h2>'
                         '<pre style="white-space:pre-wrap;overflow-wrap:anywhere">')
             content += escape(json.dumps(record['row'], ensure_ascii=False, indent=2)) + '</pre>'
+            content += saved_details(self.server.results_dir, record)
         else:
             params = parse_qs(urlsplit(self.path).query)
             query = params.get('q', [''])[0].strip()
@@ -166,12 +225,44 @@ class ControlHandler(BaseHTTPRequestHandler):
             content += '</nav>'
         self.respond(200, organization_page(content).encode('utf-8'), 'text/html; charset=utf-8')
 
+    def document(self, path):
+        parts = path.split('/')
+        root = self.server.results_dir
+        records, _ = load_organizations(root)
+        record = next((r for r in records if len(parts) == 4 and r['id'] == parts[2]), None)
+        documents = proposals(root, record) if record else []
+        document = next((d for d in documents if d['id'] == parts[3]), None)
+        if document:
+            try:
+                raw = read_file(root, document['relative'], 50_000_000)
+                if not raw.startswith(b'%PDF-'):
+                    raise ValueError('Invalid PDF')
+            except (OSError, ValueError):
+                document = None
+        if not document:
+            self.respond_json(404, {"error": "not_found"})
+            return
+        download = parse_qs(urlsplit(self.path).query).get('download') == ['1']
+        disposition = 'attachment' if download else 'inline'
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/pdf')
+        self.send_header('Content-Disposition',
+                         disposition + "; filename=proposal.pdf; filename*=UTF-8''"
+                         + quote(document['name'], safe=''))
+        self.send_header('Content-Length', str(len(raw)))
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.end_headers()
+        self.wfile.write(raw)
+
     def do_GET(self):
         path = urlsplit(self.path).path
         if path == "/":
             self.respond(200, PAGE.encode("utf-8"), "text/html; charset=utf-8")
         elif path == "/organizations" or path.startswith("/organizations/"):
             self.organizations(path)
+        elif path.startswith("/documents/"):
+            self.document(path)
         elif path == "/health":
             self.respond_json(200, {"status": "ok"})
         elif path == "/api/status":
