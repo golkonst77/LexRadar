@@ -46,6 +46,8 @@ def document_id(relative):
 
 def proposals(root, record):
     """Only known proposal names beside this result, never collected site PDFs."""
+    if record.get('kind') == 'parser':
+        return []
     directory = Path(record['source']).parent
     documents = []
     try:
@@ -70,7 +72,7 @@ def proposals(root, record):
 
 
 def audit_details(root, record):
-    if Path(record['source']).name != 'audit.json':
+    if record.get('kind') == 'parser' or Path(record['source']).name != 'audit.json':
         return None
     try:
         data = json.loads(read_file(root, record['source']))

@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, urlencode, urlsplit
 
 from control_organizations import load_organizations
+from control_leads import DEFAULT_PARSER_DIR, load_leads
 from control_results import audit_details, proposals, read_file, rows
 
 
@@ -62,7 +63,7 @@ footer { color: #8c9bb1; font-size: 13px; padding-bottom: 40px; }
 <span class="badge">● Сервер работает</span>
 <h1>Центр управления LexRadar</h1>
 <p class="lead">Единая точка входа для будущей работы с проектами и отчётами.
-Доступны организации из сохранённых результатов и проверка состояния сервера.</p>
+Доступны лиды Parser v3 и проверка состояния сервера.</p>
 <div class="grid">
 <article id="projects"><h2>Проекты</h2><p>Список проектов и их состояние.</p>
 <span class="soon">Скоро · раздел в разработке</span></article>
@@ -152,53 +153,68 @@ def saved_details(root, record):
 
 class ControlHandler(BaseHTTPRequestHandler):
     def organizations(self, path):
-        records, warnings = load_organizations(getattr(self.server, 'results_dir', Path.cwd()))
+        mentions = path.startswith('/mentions')
+        base = '/mentions' if mentions else '/organizations'
+        status_title = 'Правовой статус' if mentions else 'Статус обработки'
+        records, warnings = (load_organizations(self.server.results_dir) if mentions else
+                             load_leads(getattr(self.server, 'parser_dir', DEFAULT_PARSER_DIR)))
         warning = ('<p role="status">Часть файлов недоступна или имеет неподдерживаемый формат: '
                    + str(warnings) + '.</p>') if warnings else ''
-        notice = '<p>Внутренние данные. Упоминание организации не подтверждает её роль или нарушение.</p>'
-        if path != '/organizations':
-            identifier = path.removeprefix('/organizations/')
+        notice = ('<p>Упоминания организаций в аудитах; это не лиды Parser v3.</p>' if mentions else
+                  '<p>Лиды Parser v3. Контакты из экспорта; скрининг не является юридическим аудитом.</p>')
+        notice += '<p><a href="/organizations">Лиды Parser v3</a> · <a href="/mentions">Упоминания в аудитах</a></p>'
+        if path != base:
+            identifier = path.removeprefix(base + '/')
             record = next((r for r in records if r['id'] == identifier), None)
             if record is None:
                 self.respond_json(404, {"error": "not_found"})
                 return
-            content = '<a href="/organizations">← Организации</a><h1>' + escape(record['name']) + '</h1>'
+            content = '<a href="' + base + '">← Организации</a><h1>' + escape(record['name']) + '</h1>'
             content += notice + warning + '<dl>'
             for label, value in (
                 ('ИНН', record['inn'] or 'Не указан'),
                 ('Сайт', ', '.join(record['websites']) or '—'),
-                ('Правовой статус', status_label(record['status'])),
+                (status_title, status_label(record['status'])),
                 ('Источник', record['source']),
-                ('ID в результате', record['row']['id']),
+                ('Запись в файле', record.get('record_number', str(record['row'].get('id', '')))),
+                ('Телефон', record.get('phone', '') or '—'),
+                ('Email', record.get('email', '') or '—'),
+                ('Карточка источника / агрегатор', record.get('source_card', '') or '—'),
             ):
+                if label == status_title and not record['status']:
+                    continue
                 content += '<dt>' + label + '</dt><dd>' + escape(value) + '</dd>'
             content += ('</dl><h2>Сохранённые сведения</h2>'
                         '<pre style="white-space:pre-wrap;overflow-wrap:anywhere">')
             content += escape(json.dumps(record['row'], ensure_ascii=False, indent=2)) + '</pre>'
-            content += saved_details(self.server.results_dir, record)
+            content += (saved_details(self.server.results_dir, record) if mentions else
+                        '<p>Подтверждённой связи с аудитом и PDF нет.</p>')
         else:
             params = parse_qs(urlsplit(self.path).query)
             query = params.get('q', [''])[0].strip()
             selected = params.get('status', [''])[0]
-            statuses = sorted({r['status'] for r in records})
+            statuses = sorted({r['status'] for r in records if r['status']})
             try:
                 page = max(1, int(params.get('page', ['1'])[0]))
             except ValueError:
                 page = 1
             filtered = [r for r in records if (not selected or r['status'] == selected)
                         and query.casefold() in ' '.join(
-                            [r['name'], r['inn'], *r['websites']]).casefold()]
+                            [r['name'], r['inn'], *r['websites'], r.get('phone', ''), r.get('email', '')]).casefold()]
             pages = max(1, (len(filtered) + 19) // 20)
             page = min(page, pages)
-            content = '<h1>Организации</h1>' + notice + warning
-            content += ('<form method="get" action="/organizations"><label>Поиск по названию, сайту, ИНН '
-                        '<input name="q" value="' + escape(query, quote=True) + '"></label> '
-                        '<label>Правовой статус <select name="status"><option value="">Все</option>')
+            content = '<h1>' + ('Упоминания в аудитах' if mentions else 'Лиды Parser v3') + '</h1>' + notice + warning
+            content += ('<form method="get" action="' + base + '"><label>Поиск по названию, сайту, ИНН, телефону, email '
+                        '<input name="q" value="' + escape(query, quote=True) + '"></label> ')
+            if statuses or selected:
+                content += '<label>' + status_title + ' <select name="status"><option value="">Все</option>'
             for status in sorted(set(statuses + ([selected] if selected else []))):
                 content += '<option value="' + escape(status, quote=True) + '"'
                 content += (' selected' if status == selected else '') + '>'
                 content += escape(status_label(status)) + '</option>'
-            content += '</select></label> <button type="submit">Найти</button></form>'
+            if statuses or selected:
+                content += '</select></label> '
+            content += '<button type="submit">Найти</button></form>'
             content += '<p>Найдено: ' + str(len(filtered)) + '</p>'
             if not filtered:
                 content += ('<p>Организаций пока нет.</p>' if not records
@@ -206,12 +222,15 @@ class ControlHandler(BaseHTTPRequestHandler):
             else:
                 content += ('<div style="overflow-x:auto"><table><thead><tr>'
                             '<th>Название</th><th>Сайт</th><th>ИНН</th>'
-                            '<th>Правовой статус</th></tr></thead><tbody>')
+                            '<th>Телефон</th><th>Email</th><th>Источник / агрегатор</th>'
+                            + ('<th>' + status_title + '</th>' if statuses else '') + '</tr></thead><tbody>')
                 for record in filtered[(page - 1) * 20:page * 20]:
-                    content += ('<tr><td><a href="/organizations/' + record['id'] + '">'
+                    content += ('<tr><td><a href="' + base + '/' + record['id'] + '">'
                                 + escape(record['name']) + '</a></td>')
                     for value in (', '.join(record['websites']) or '—',
-                                  record['inn'] or '—', status_label(record['status'])):
+                                  record['inn'] or '—', record.get('phone', '') or '—',
+                                  record.get('email', '') or '—', record.get('source_card', '') or '—',
+                                  *((status_label(record['status']) or '—',) if statuses else ())):
                         content += '<td>' + escape(value) + '</td>'
                     content += '</tr>'
                 content += '</tbody></table></div>'
@@ -219,7 +238,7 @@ class ControlHandler(BaseHTTPRequestHandler):
                         + str(page) + ' из ' + str(pages) + '</span>')
             for target, label in ((page - 1, 'Назад'), (page + 1, 'Далее')):
                 if 1 <= target <= pages:
-                    link = '/organizations?' + urlencode(
+                    link = base + '?' + urlencode(
                         {'q': query, 'status': selected, 'page': target})
                     content += '<a href="' + escape(link, quote=True) + '">' + label + '</a>'
             content += '</nav>'
@@ -259,7 +278,7 @@ class ControlHandler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/":
             self.respond(200, PAGE.encode("utf-8"), "text/html; charset=utf-8")
-        elif path == "/organizations" or path.startswith("/organizations/"):
+        elif path in {'/organizations', '/mentions'} or path.startswith(('/organizations/', '/mentions/')):
             self.organizations(path)
         elif path.startswith("/documents/"):
             self.document(path)
@@ -293,12 +312,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", type=Path, default=Path.cwd(),
                         help="Directory containing saved primary-audit results (default: cwd)")
+    parser.add_argument("--parser-dir", type=Path, default=DEFAULT_PARSER_DIR,
+                        help="Directory containing Parser v3 CSV/JSON exports")
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("port must be between 1 and 65535")
     with ThreadingHTTPServer(("127.0.0.1", args.port), ControlHandler) as server:
         server.results_dir = args.results_dir.absolute()
+        server.parser_dir = args.parser_dir.absolute()
         print(f"LexRadar Control Center: http://127.0.0.1:{args.port}", flush=True)
         try:
             server.serve_forever()

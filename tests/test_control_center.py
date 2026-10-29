@@ -30,7 +30,8 @@ class ControlCenterTest(unittest.TestCase):
     def request(self, path, binary=False):
         connection = MemoryConnection(path)
         ControlHandler(connection, ("127.0.0.1", 0),
-                       SimpleNamespace(results_dir=getattr(self, "root", Path.cwd())))
+                       SimpleNamespace(results_dir=getattr(self, "root", Path.cwd()),
+                                       parser_dir=getattr(self, "root", Path.cwd())))
         headers, body = bytes(connection.response).split(b"\r\n\r\n", 1)
         self.assertIn(f"Content-Length: {len(body)}".encode(), headers)
         return headers.decode("ascii"), body if binary else body.decode("utf-8")
@@ -63,7 +64,8 @@ class ControlCenterTest(unittest.TestCase):
 
 
 class OrganizationTest(unittest.TestCase):
-    request = ControlCenterTest.request
+    def request(self, path, binary=False):
+        return ControlCenterTest.request(self, path.replace('/organizations', '/mentions'), binary)
 
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -293,7 +295,7 @@ class OrganizationTest(unittest.TestCase):
         self.assertTrue(all(r['websites'] == [] for r in records))
         page = self.request('/organizations')[1]
         self.assertNotIn('kaluga-med.ru', page)
-        self.assertEqual(page.count('<td>—</td>'), 4)
+        self.assertEqual(page.count('<td>—</td>'), 16)
         for record in records:
             self.assertIn('<dt>Сайт</dt><dd>—</dd>',
                           self.request('/organizations/' + record['id'])[1])
