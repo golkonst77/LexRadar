@@ -7,3 +7,11 @@ build/
 dist/
 work/
 .env
+
+runs-036/
+
+# Private audit review exports (may contain personal data)
+runs-067/
+
+# Private experiment 069 evidence and model captures
+runs-069/

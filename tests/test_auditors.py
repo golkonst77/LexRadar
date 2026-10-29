@@ -573,7 +573,9 @@ def test_openrouter_payload_and_secret_safe_journal(dossier, config, tmp_path, m
         assert payload["max_tokens"] == 1000
         assert payload["provider"]["max_price"] == {"prompt": 1.0, "completion": 2.0}
         assert marker not in json.dumps(payload)
-    assert marker not in "".join(p.read_text() for p in (tmp_path / "live-mock").iterdir())
+    assert marker not in "".join(
+        p.read_text() for p in (tmp_path / "live-mock").rglob("*") if p.is_file()
+    )
 
 
 @pytest.mark.parametrize("status,retryable", [(429, True), (500, True), (401, False), (302, False)])

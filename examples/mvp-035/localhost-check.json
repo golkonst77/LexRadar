@@ -1,0 +1,5 @@
+{
+  "status": "blocked",
+  "error": "[Errno 1] Operation not permitted",
+  "type": "PermissionError"
+}

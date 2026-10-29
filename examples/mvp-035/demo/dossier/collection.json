@@ -1,0 +1,331 @@
+{
+  "origin": {
+    "kind": "collector",
+    "acquisition_method": "synthetic_local_fixture_no_http",
+    "declared_source": "https://demo.lexradar.example/",
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "collection_observation",
+    "started_at_role": "collector_run",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Collector timestamps are local observations, not server response dates",
+      "Local acquisition metadata does not authenticate publisher identity",
+      "Synthetic fixture: no public website or HTTP response observed"
+    ]
+  },
+  "schema_version": "0.2",
+  "target_url": "https://demo.lexradar.example/",
+  "started_at": "2026-10-14T14:25:53.415104Z",
+  "limits": {
+    "max_pages": 5,
+    "max_documents": 3,
+    "max_file_bytes": 5000000,
+    "max_total_bytes": 50000000,
+    "timeout_seconds": 8.0,
+    "max_redirects": 3,
+    "max_links_per_page": 200,
+    "max_pdf_pages": 100,
+    "max_pdf_page_chars": 100000,
+    "max_pdf_total_chars": 1000000
+  },
+  "pages": [
+    {
+      "origin": {
+        "kind": "collector",
+        "acquisition_method": "synthetic_local_fixture_no_http",
+        "declared_source": "https://demo.lexradar.example/",
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "collection_observation",
+        "started_at_role": "collector_run",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Collector timestamps are local observations, not server response dates",
+          "Local acquisition metadata does not authenticate publisher identity",
+          "Synthetic fixture: no public website or HTTP response observed"
+        ]
+      },
+      "reading": {
+        "original_saved": true,
+        "source_sha256": "812ddb8b3f1c5bc0ce6e907dd4f9b5e3ae9a99e29bc7443140eda7e2d1ebde4f",
+        "extraction_state": "complete",
+        "text_layer_extracted": true,
+        "text_truncated": false,
+        "original_chars": 173,
+        "supplied_chars": 173,
+        "page_count": 1,
+        "pages": [
+          {
+            "text_examination": "not_examined",
+            "page": 1,
+            "original_chars": 173,
+            "supplied_chars": 173,
+            "text_available": true,
+            "extraction_state": "complete",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": []
+          }
+        ],
+        "unread_page_ranges": [],
+        "max_page_chars": 100000,
+        "max_total_chars": 1000000,
+        "page_limit": 100,
+        "provenance": "reproduced",
+        "text_coverage_complete": true,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": [
+          "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+          "Extraction is not legal research"
+        ]
+      },
+      "requested_url": "https://demo.lexradar.example/",
+      "final_url": "https://demo.lexradar.example/",
+      "captured_at": "2026-10-14T14:25:55.416150Z",
+      "http_status": 200,
+      "title": "",
+      "text": "Синтетическая мастерская — демонстрационный сайт Изготовление мебели по индивидуальному заказу. Телефон Заказать звонок Политика обработки персональных данных Условия заказа",
+      "categories": [],
+      "document_links": [
+        "https://demo.lexradar.example/terms.pdf"
+      ],
+      "forms": [],
+      "evidence_id": "page-0001"
+    },
+    {
+      "origin": {
+        "kind": "collector",
+        "acquisition_method": "synthetic_local_fixture_no_http",
+        "declared_source": "https://demo.lexradar.example/policy.html",
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "collection_observation",
+        "started_at_role": "collector_run",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Collector timestamps are local observations, not server response dates",
+          "Local acquisition metadata does not authenticate publisher identity",
+          "Synthetic fixture: no public website or HTTP response observed"
+        ]
+      },
+      "reading": {
+        "original_saved": true,
+        "source_sha256": "c26cae5139c72fb541db8e1f490624e9c0995100a773e04642f9ba67b51ef704",
+        "extraction_state": "complete",
+        "text_layer_extracted": true,
+        "text_truncated": false,
+        "original_chars": 190,
+        "supplied_chars": 190,
+        "page_count": 1,
+        "pages": [
+          {
+            "text_examination": "not_examined",
+            "page": 1,
+            "original_chars": 190,
+            "supplied_chars": 190,
+            "text_available": true,
+            "extraction_state": "complete",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": []
+          }
+        ],
+        "unread_page_ranges": [],
+        "max_page_chars": 100000,
+        "max_total_chars": 1000000,
+        "page_limit": 100,
+        "provenance": "reproduced",
+        "text_coverage_complete": true,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": [
+          "Static UTF-8 HTML text; CSS visibility/layout and JavaScript not examined",
+          "Extraction is not legal research"
+        ]
+      },
+      "requested_url": "https://demo.lexradar.example/policy.html",
+      "final_url": "https://demo.lexradar.example/policy.html",
+      "captured_at": "2026-10-14T14:25:57.416263Z",
+      "http_status": 200,
+      "title": "",
+      "text": "Политика обработки персональных данных Демонстрационный документ. Цель обработки телефона — ответ на запрос посетителя. Оператор и сроки хранения требуют уточнения у владельца сайта. Главная",
+      "categories": [],
+      "document_links": [],
+      "forms": [],
+      "evidence_id": "page-0002"
+    }
+  ],
+  "documents": [
+    {
+      "origin": {
+        "kind": "collector",
+        "acquisition_method": "synthetic_local_fixture_no_http",
+        "declared_source": "https://demo.lexradar.example/terms.pdf",
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "collection_observation",
+        "started_at_role": "collector_run",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Collector timestamps are local observations, not server response dates",
+          "Local acquisition metadata does not authenticate publisher identity",
+          "Synthetic fixture: no public website or HTTP response observed"
+        ]
+      },
+      "reading": {
+        "original_saved": true,
+        "source_sha256": "092adecf71e0516faabcb77a043160c5f2db6ed82107c946061b3cbd84a4e304",
+        "extraction_state": "complete",
+        "text_layer_extracted": true,
+        "text_truncated": false,
+        "original_chars": 60,
+        "supplied_chars": 60,
+        "page_count": 1,
+        "pages": [
+          {
+            "text_examination": "not_examined",
+            "page": 1,
+            "original_chars": 60,
+            "supplied_chars": 60,
+            "text_available": true,
+            "extraction_state": "complete",
+            "truncated": false,
+            "visual_examined": false,
+            "limitations": []
+          }
+        ],
+        "unread_page_ranges": [],
+        "max_page_chars": 100000,
+        "max_total_chars": 1000000,
+        "page_limit": 100,
+        "provenance": "reproduced",
+        "text_coverage_complete": true,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": [
+          "Extraction is not visual inspection or legal research"
+        ]
+      },
+      "page_texts": {
+        "1": "Synthetic order terms. Scope and delivery require agreement."
+      },
+      "requested_url": "https://demo.lexradar.example/terms.pdf",
+      "final_url": "https://demo.lexradar.example/terms.pdf",
+      "http_status": 200,
+      "evidence_id": "document-0001",
+      "text": "Synthetic order terms. Scope and delivery require agreement.",
+      "extraction_status": "text",
+      "extraction_reason": null
+    }
+  ],
+  "entities": [],
+  "evidence": [
+    {
+      "id": "page-0001",
+      "source": "https://demo.lexradar.example/",
+      "captured_at": "2026-10-14T14:25:55.416150Z",
+      "observed_fact": "Partially collected artifacts retained; see collection_errors; no legal conclusion",
+      "available": true,
+      "artifact_path": "artifacts/page-0001.html",
+      "sha256": "812ddb8b3f1c5bc0ce6e907dd4f9b5e3ae9a99e29bc7443140eda7e2d1ebde4f",
+      "signal": "substantive",
+      "status": "partial",
+      "collection_errors": [
+        "screenshot: Static mode: visual evidence and dynamic behavior unavailable"
+      ],
+      "unavailable_reason": null,
+      "artifacts": [
+        {
+          "path": "artifacts/page-0001.html",
+          "sha256": "812ddb8b3f1c5bc0ce6e907dd4f9b5e3ae9a99e29bc7443140eda7e2d1ebde4f",
+          "size": 693,
+          "kind": "html",
+          "representation": "original_html",
+          "notice": null
+        },
+        {
+          "path": "artifacts/page-0001.txt",
+          "sha256": "7f969af2f636f271241eb65b1ec69f2d8675a89d5af4cac188cbe300eaecb611",
+          "size": 328,
+          "kind": "text",
+          "representation": "extracted_text",
+          "notice": null
+        }
+      ]
+    },
+    {
+      "id": "page-0002",
+      "source": "https://demo.lexradar.example/policy.html",
+      "captured_at": "2026-10-14T14:25:57.416263Z",
+      "observed_fact": "Partially collected artifacts retained; see collection_errors; no legal conclusion",
+      "available": true,
+      "artifact_path": "artifacts/page-0002.html",
+      "sha256": "c26cae5139c72fb541db8e1f490624e9c0995100a773e04642f9ba67b51ef704",
+      "signal": "substantive",
+      "status": "partial",
+      "collection_errors": [
+        "screenshot: Static mode: visual evidence and dynamic behavior unavailable"
+      ],
+      "unavailable_reason": null,
+      "artifacts": [
+        {
+          "path": "artifacts/page-0002.html",
+          "sha256": "c26cae5139c72fb541db8e1f490624e9c0995100a773e04642f9ba67b51ef704",
+          "size": 513,
+          "kind": "html",
+          "representation": "original_html",
+          "notice": null
+        },
+        {
+          "path": "artifacts/page-0002.txt",
+          "sha256": "c2d4f15aff136439fccb1eee1355629e9b02bd728adef23ab003a110eeb334b3",
+          "size": 355,
+          "kind": "text",
+          "representation": "extracted_text",
+          "notice": null
+        }
+      ]
+    },
+    {
+      "id": "document-0001",
+      "source": "https://demo.lexradar.example/terms.pdf",
+      "captured_at": "2026-10-14T14:25:59.416467Z",
+      "observed_fact": "Artifacts captured with individual representations; no legal conclusion",
+      "available": true,
+      "artifact_path": "artifacts/document-0001.pdf",
+      "sha256": "092adecf71e0516faabcb77a043160c5f2db6ed82107c946061b3cbd84a4e304",
+      "signal": "substantive",
+      "status": "complete",
+      "collection_errors": [],
+      "unavailable_reason": null,
+      "artifacts": [
+        {
+          "path": "artifacts/document-0001.pdf",
+          "sha256": "092adecf71e0516faabcb77a043160c5f2db6ed82107c946061b3cbd84a4e304",
+          "size": 720,
+          "kind": "pdf",
+          "representation": "original_pdf",
+          "notice": null
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "Static mode: no screenshots, scripts or dynamic behavior checked"
+  ],
+  "requires_independent_review": true
+}

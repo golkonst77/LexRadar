@@ -1,0 +1,12 @@
+{
+  "integrity": "passed",
+  "quotes": "passed",
+  "saved_packet_bytes": "identical",
+  "profile": "passed",
+  "isolated_site_budget": "passed",
+  "provider": "siliconflow/fp8",
+  "reserve_usd": "0.009720427",
+  "network": "prohibited by guards; no calls",
+  "approval_created": false,
+  "ledger_created": false
+}

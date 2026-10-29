@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 import unicodedata
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -12,6 +12,8 @@ from pydantic import AwareDatetime, Field
 
 from ..models import Model
 from .evidence import EvidencePacket
+
+MVP_NO_SCREENING_NOTICE = "MVP_NO_SCREENING: проверка передачи персональных данных отключена"
 
 LIMITATION = (
     "Heuristic screening cannot guarantee absence of personal or sensitive data; "
@@ -29,16 +31,25 @@ class PacketApproval(Model):
 
 PATTERNS = {
     "email": r"[\w.+-]+@[\w.-]+\.[a-zа-я]{2,}",
-    "phone_or_identifier": r"(?<!\d)(?:\+?\d[\s().-]*){10,}(?!\d)",
+    "phone_or_identifier": r"(?<!\w)(?:\+?\d[\s().-]*){10,}(?!\w)",
     "identity_or_health_context": (
         r"паспорт|снилс|дата\s+рождения|фио|фамилия|patient|diagnos|passport|"
         r"date.of.birth|medical.record|health|disease|pregnan|biometric|"
         r"диагноз|пациент|анамнез|результат.{0,20}анализ|медицинск.{0,20}карт|"
-        r"hiv|вич|беремен|инвалид|биометр|полис\s+омс"
+        r"\bhiv\b|\bвич\b|беремен|инвалид|биометр|полис\s+омс"
     ),
     "person_name": r"\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\b",
     "birth_date": r"\b\d{1,2}[./]\d{1,2}[./](?:19|20)\d{2}\b",
 }
+
+
+def _calendar_date(value: str) -> bool:
+    day, month, year = re.split(r"[./]", value)
+    try:
+        date(int(year), int(month), int(day))
+    except ValueError:
+        return False
+    return True
 
 
 def screen(packet: EvidencePacket) -> list[dict[str, str]]:
@@ -57,17 +68,31 @@ def screen(packet: EvidencePacket) -> list[dict[str, str]]:
             normalized = "".join(c for c in normalized if unicodedata.category(c) != "Cf")
             for category, pattern in PATTERNS.items():
                 flags = 0 if category == "person_name" else re.IGNORECASE
-                if re.search(pattern, normalized, flags):
+                matches = re.finditer(pattern, normalized, flags)
+                if category == "birth_date":
+                    # Impossible calendar dates are not birth dates. Keep every
+                    # valid date blocked, regardless of its surrounding wording.
+                    matches = (m for m in matches if _calendar_date(m[0]))
+                if next(matches, None) is not None:
                     issues.append({"path": path, "category": category})
 
-    visit(json.loads(packet.payload), "$")
+    wire = json.loads(packet.payload)
+    if wire.get("schema") == "compact-primary-v1":
+        # The generated field-name table is structural, not evidence. Screen every
+        # dictionary value too, including any unused entry in the outgoing wire.
+        wire = {key: value for key, value in wire.items() if key != "keys"}
+    visit(wire, "$")
     return issues
 
 
-def authorize(packet: EvidencePacket, approval_path: Path | None) -> PacketApproval:
+def authorize(
+    packet: EvidencePacket, approval_path: Path | None, *, mvp_no_screening: bool = False
+) -> PacketApproval:
     if hashlib.sha256(packet.payload.encode()).hexdigest() != packet.sha256:
         raise PermissionError("Packet snapshot hash mismatch")
-    if screen(packet):
+    if type(mvp_no_screening) is not bool:
+        raise ValueError("MVP_NO_SCREENING must be an explicit boolean")
+    if not mvp_no_screening and screen(packet):
         raise PermissionError(
             "Potential sensitive data: transfer blocked; review/redact and repeat"
         )
@@ -87,7 +112,7 @@ def authorize(packet: EvidencePacket, approval_path: Path | None) -> PacketAppro
     return approval
 
 
-def write_preflight(packet: EvidencePacket, output: Path) -> None:
+def write_preflight(packet: EvidencePacket, output: Path, *, approval_template=True) -> None:
     output.mkdir(parents=True, exist_ok=False)
     (output / "packet.json").write_text(packet.payload, encoding="utf-8")
     (output / "preflight.json").write_text(
@@ -102,6 +127,8 @@ def write_preflight(packet: EvidencePacket, output: Path) -> None:
         ),
         encoding="utf-8",
     )
+    if not approval_template:
+        return
     (output / "approval.json").write_text(
         json.dumps(
             {
