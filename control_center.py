@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, quote, urlencode, urlsplit
 from control_pages import Pages, external, link
 from control_catalog import Catalog
 from control_jobs import Jobs
-from control_leads import DEFAULT_PARSER_DIR
+from control_leads import DEFAULT_PARSER_DIR, website
 from control_results import audit_details, proposals, read_file, rows
 
 
@@ -30,12 +30,31 @@ input, select, button { font: inherit; padding: 6px; max-width: 100%; }
 th, td { text-align: left; padding: 10px; border-bottom: 1px solid #29364d; }
 table { width: 100%; border-collapse: collapse; }
 th, td { vertical-align: top; overflow-wrap: anywhere; }
-.organizations-table { min-width: 1600px; table-layout: auto; }
+.organizations-table { min-width: 900px; table-layout: fixed; font-size: 14px; }
+.organizations-table th, .organizations-table td { padding: 9px 10px; vertical-align: middle; }
 .organizations-table th { white-space: nowrap; }
 .organizations-table td { overflow-wrap: normal; word-break: normal; }
-.organizations-table .short-field { white-space: nowrap; }
-.organizations-table .source-column { min-width: 260px; }
-.organizations-table .status-column { min-width: 200px; white-space: nowrap; }
+.organizations-table .clip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.organizations-table .selection-column { width: 44px; }
+.organizations-table .name-column { width: auto; }
+.organizations-table .site-column { width: 15%; }
+.organizations-table .contacts-column { width: 22%; }
+.organizations-table .status-column { width: 165px; }
+.organizations-table .actions-column { width: 235px; }
+.organizations-table .row-actions { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.organizations-table button { padding: 4px 8px; font-size: 13px; }
+.qualification { display: inline-block; padding: 2px 7px; border-radius: 5px; background: #263247; color: #c9d4e5; white-space: nowrap; font-size: 12px; }
+.qualification.ready { background: #15352e; color: #9ae2c2; }
+.qualification.hold { background: #3b321d; color: #e8cd8c; }
+.qualification.reject { background: #3e2630; color: #e7adb7; }
+.job-note { display: block; font-size: 12px; }
+#analysis-selection { padding: 12px; border: 1px solid #6284b4; border-radius: 8px; background: #182337; }
+.analysis-secondary button { background: #263247; color: #c9d4e5; }
+.mentions-table { min-width: 1600px; table-layout: auto; }
+.mentions-table th, .mentions-table .short-field { white-space: nowrap; }
+.mentions-table td { overflow-wrap: normal; word-break: normal; }
+.mentions-table .source-column { min-width: 260px; }
+.mentions-table .status-column { min-width: 200px; white-space: nowrap; }
 .email-value { white-space: nowrap; }
 .email-sources { overflow-wrap: anywhere; }
 summary { cursor: pointer; }
@@ -307,7 +326,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 options = '<label>Следующие N необработанных <select name="count">'
                 for n in (10, 20, 50, 100, 200):
                     options += '<option' + (' selected' if n == 50 else '') + '>' + str(n) + '</option>'
-                content += self.analysis_form(options + '</select></label>', 'Анализировать следующие N')
+                content += '<div class="analysis-secondary">' + self.analysis_form(options + '</select></label>', 'Анализировать следующие N') + '</div>'
                 current = filtered[(page - 1) * 20:page * 20]
                 fields = '<label><input type="checkbox" name="all" value="' + ','.join(r['id'] for r in current) + '"> Выбрать все на текущей странице</label>'
                 content += self.analysis_form(fields, 'Анализировать выбранные', 'analysis-selection')
@@ -315,25 +334,52 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 content += ('<p>Организаций пока нет.</p>' if not records
                             else '<p>По запросу ничего не найдено.</p>')
             else:
-                content += ('<div class="table-scroll" tabindex="0" role="region" aria-label="Организации"><table class="organizations-table"><thead><tr>'
-                            + ('<th>Выбор / анализ</th>' if not mentions and jobs else '') + '<th>Название</th><th>Сайт</th><th>ИНН</th>'
-                            '<th>Телефон</th><th>Email</th><th class="source-column">Источник / агрегатор</th>'
-                            + ('<th class="status-column">' + status_title + '</th>' if statuses else '') + '</tr></thead><tbody>')
-                for record in filtered[(page - 1) * 20:page * 20]:
-                    content += '<tr>'
-                    if not mentions and jobs:
-                        content += '<td><input aria-label="Выбрать ' + escape(record['name'], quote=True) + '" type="checkbox" form="analysis-selection" name="lead" value="' + record['id'] + '">'
-                        content += '<button form="analysis-selection" name="single" value="' + record['id'] + '">Анализ</button><br>' + self.analysis_status(record, history) + '</td>'
-                    content += ('<td><a href="' + base + '/' + record['id'] + '">'
-                                + escape(record['name']) + '</a></td>')
-                    for column, value in enumerate((', '.join(record['websites']) or '—',
-                                  record['inn'] or '—', record.get('phone', '') or '—',
-                                  record.get('email', '') or '—', record.get('source_card', '') or '—',
-                                  *((status_label(record['status']) or '—',) if statuses else ()))):
-                        cell_class = ('', 'short-field', 'short-field', '', 'source-column', 'status-column')[column]
-                        content += '<td class="' + cell_class + '">' + (self.analysis_email(record, history) if column == 3 and jobs and not mentions else escape(value)) + '</td>'
-                    content += '</tr>'
-                content += '</tbody></table></div>'
+                if not mentions:
+                    content += ('<div class="table-scroll" tabindex="0" role="region" aria-label="Организации"><table class="organizations-table"><thead><tr>'
+                                '<th class="selection-column"><span title="Выбор организаций">✓</span></th>'
+                                '<th class="name-column">Организация</th><th class="site-column">Сайт</th>'
+                                '<th class="contacts-column">Контакты</th><th class="status-column">Статус</th>'
+                                '<th class="actions-column">Действия</th></tr></thead><tbody>')
+                    for record in filtered[(page - 1) * 20:page * 20]:
+                        details_url = base + '/' + record['id']
+                        badge, report = self.analysis_status(record, history, compact=True) if jobs else ('<span class="qualification">Не анализировался</span>', '')
+                        content += '<tr><td>'
+                        if jobs:
+                            content += '<input aria-label="Выбрать ' + escape(record['name'], quote=True) + '" type="checkbox" form="analysis-selection" name="lead" value="' + record['id'] + '">'
+                        content += '</td><td><a class="clip" title="' + escape(record['name'], quote=True) + '" href="' + details_url + '">' + escape(record['name']) + '</a></td><td>'
+                        for url in record['websites']:
+                            content += '<span class="clip" title="' + escape(url, quote=True) + '">' + (link(url, urlsplit(url).hostname or url) if website(url) else escape(url)) + '</span>'
+                        if not record['websites']:
+                            content += '—'
+                        content += '</td><td>'
+                        phone = record.get('phone') or '—'
+                        content += '<span class="clip" title="' + escape(phone, quote=True) + '">' + escape(phone) + '</span>'
+                        content += self.analysis_email(record, history, compact=True) if jobs else '<span class="clip" title="' + escape(record.get('email') or '—', quote=True) + '">' + escape(record.get('email') or '—') + '</span>'
+                        content += '</td><td>' + badge + '</td><td><div class="row-actions">'
+                        if jobs:
+                            content += '<button form="analysis-selection" name="single" value="' + record['id'] + '">Анализ</button>'
+                        content += report + link(details_url, 'Подробности') + '</div></td></tr>'
+                    content += '</tbody></table></div>'
+                else:
+                    content += ('<div class="table-scroll" tabindex="0" role="region" aria-label="Организации"><table class="mentions-table"><thead><tr>'
+                                + ('<th>Выбор / анализ</th>' if not mentions and jobs else '') + '<th>Название</th><th>Сайт</th><th>ИНН</th>'
+                                '<th>Телефон</th><th>Email</th><th class="source-column">Источник / агрегатор</th>'
+                                + ('<th class="status-column">' + status_title + '</th>' if statuses else '') + '</tr></thead><tbody>')
+                    for record in filtered[(page - 1) * 20:page * 20]:
+                        content += '<tr>'
+                        if not mentions and jobs:
+                            content += '<td><input aria-label="Выбрать ' + escape(record['name'], quote=True) + '" type="checkbox" form="analysis-selection" name="lead" value="' + record['id'] + '">'
+                            content += '<button form="analysis-selection" name="single" value="' + record['id'] + '">Анализ</button><br>' + self.analysis_status(record, history) + '</td>'
+                        content += ('<td><a href="' + base + '/' + record['id'] + '">'
+                                    + escape(record['name']) + '</a></td>')
+                        for column, value in enumerate((', '.join(record['websites']) or '—',
+                                      record['inn'] or '—', record.get('phone', '') or '—',
+                                      record.get('email', '') or '—', record.get('source_card', '') or '—',
+                                      *((status_label(record['status']) or '—',) if statuses else ()))):
+                            cell_class = ('', 'short-field', 'short-field', '', 'source-column', 'status-column')[column]
+                            content += '<td class="' + cell_class + '">' + (self.analysis_email(record, history) if column == 3 and jobs and not mentions else escape(value)) + '</td>'
+                        content += '</tr>'
+                    content += '</tbody></table></div>'
             content += ('<nav aria-label="Страницы организаций"><span>Страница '
                         + str(page) + ' из ' + str(pages) + '</span>')
             for target, label in ((page - 1, 'Назад'), (page + 1, 'Далее')):

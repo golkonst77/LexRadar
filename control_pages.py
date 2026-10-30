@@ -68,15 +68,15 @@ class Pages:
                 '<input type="hidden" name="csrf" value="' + esc(getattr(self.server, 'csrf_token', '')) + '">' + fields
                 + '<button>' + esc(label) + '</button></form>')
 
-    def analysis_status(self, record, history):
+    def analysis_status(self, record, history, compact=False):
         try:
             _, host = target(next(iter(record['websites']), ''))
         except ValueError:
-            return 'Нет допустимого сайта'
+            return ('<span class="qualification">Нет сайта</span>', '') if compact else 'Нет допустимого сайта'
         rows = analysis_rows(record, history)
         row = next((r for r in rows if r['status'] == 'succeeded'), rows[0] if rows else None)
         if not row:
-            return 'Не запускался для этой записи'
+            return ('<span class="qualification">Не анализировался</span>', '') if compact else 'Не запускался для этой записи'
         from control_enrichment import observation
         saved = observation(self.server.jobs.state_dir, row, host)
         content = link('/jobs/' + rows[0]['id'], 'Последнее задание: ' + job_status(rows[0]['status']))
@@ -92,12 +92,26 @@ class Pages:
             content += '<br>' + esc(saved['warning'])
         content += '</details>'
         reports = []
+        report_url = ''
         for name, relative in ARTIFACTS.items():
             try:
                 read_file(self.server.jobs.state_dir, row['id'] + '/analysis/' + relative, 8_000_000, prefix=5)
             except (OSError, ValueError):
                 continue
+            if name in {'report.md', 'proposal.pdf'} and (not report_url or name == 'report.md'):
+                report_url = '/analysis-files/' + row['id'] + '/' + name
             reports.append(link('/analysis-files/' + row['id'] + '/' + name, name))
+        if compact:
+            label = qualification or ('Нет квалификации' if row['status'] == 'succeeded' else job_status(row['status']))
+            tone = {'READY': 'ready', 'HOLD': 'hold', 'REJECT': 'reject'}.get(qualification, 'unknown')
+            title = 'Последнее задание: ' + job_status(rows[0]['status'])
+            title += '; движок: ' + (saved['status'] or 'Нет данных')
+            title += '; ' + (saved['warning'] or saved['reason'] or 'Нет подробностей')
+            badge = '<span class="qualification ' + tone + '" title="' + esc(title) + '">' + esc(label) + '</span>'
+            if rows[0]['status'] != 'succeeded' and qualification:
+                badge += '<small class="job-note">' + link('/jobs/' + rows[0]['id'], job_status(rows[0]['status'])) + '</small>'
+            report = link(report_url, 'Отчёт') if report_url else ''
+            return badge, report
         if reports:
             content += '<details><summary>Отчёты</summary>' + ' · '.join(reports) + '</details>'
         if len(rows) > 1:
@@ -106,8 +120,8 @@ class Pages:
             content += '</details>'
         return content
 
-    def analysis_email(self, record, history):
-        content = '<span class="email-value">' + esc(record.get('email') or '—') + '</span>'
+    def analysis_email(self, record, history, compact=False):
+        content = '<span class="email-value clip" title="' + esc(record.get('email') or '—') + '">' + esc(record.get('email') or '—') + '</span>'
         try:
             _, host = target(next(iter(record['websites']), ''))
         except ValueError:
@@ -120,8 +134,10 @@ class Pages:
                               for contact in observation(self.server.jobs.state_dir, r, host)['contacts']]}
         if saved['contacts']:
             if not record.get('email'):
-                content = '<span class="email-value">' + esc(saved['contacts'][0]['email']) + '</span>'
+                content = '<span class="email-value clip" title="' + esc(saved['contacts'][0]['email']) + '">' + esc(saved['contacts'][0]['email']) + '</span>'
                 content += '<br><small>Найден на сайте · не подтверждён</small>'
+            if compact:
+                return content.split('<br>', 1)[0]
             sources = list(dict.fromkeys(url for contact in saved['contacts'] for url in contact['sources']))
             content += '<details class="email-sources"><summary>Источники (' + str(len(sources)) + ')</summary>'
             content += '<small>Кандидаты, принадлежность не подтверждена</small>'
