@@ -135,9 +135,9 @@ class Pages:
     def home(self):
         data = self.index()
         jobs = self.server.jobs.list() if hasattr(self.server, 'jobs') else []
-        content = '<h1>Центр управления LexRadar</h1><p>Сохранённые данные читаются без изменения источников. Сбор запускается только после отдельного подтверждения в заданиях. Платный анализ и отправка отключены.</p><p><a href="/jobs">Собрать организации</a> · <a href="/organizations">Лиды</a> · <a href="/reports">Отчёты</a></p><div class="grid">'
+        content = '<h1>Обзор</h1><p class="lead">Соберите организации, проанализируйте их сайты и изучите результаты.</p><div class="grid"><article><h2>1. Сбор организаций</h2><p>Выберите отрасль и нужное количество организаций.</p><a class="cta" href="/collect">Собрать организации</a></article><article><h2>2. Анализ сайтов</h2><p>Выберите организации или следующие N сайтов.</p><a class="cta" href="/analysis">Перейти к анализу</a></article><article><h2>3. Результаты</h2><p>Контакты, квалификация, отчёты и PDF.</p><a class="cta" href="/organizations">Открыть результаты</a></article></div><div class="grid">'
         for title, value, url in (
-            ('Лиды Parser v3', len(data['leads']), '/organizations'),
+            ('Собранные организации', len(data['leads']), '/organizations'),
             ('Анализы', sum(r['kind'] == 'audit' for r in data['reports']), '/reports?kind=audit'),
             ('PDF', sum(r['kind'] == 'pdf' for r in data['reports']), '/reports?kind=pdf'),
             ('Задания', len(jobs), '/jobs')):
@@ -274,6 +274,32 @@ class Pages:
             from control_jobs import log_text
             self.respond(200, log_text(raw).encode(), 'text/plain; charset=utf-8')
 
+    def collect_page(self):
+        jobs = getattr(self.server, 'jobs', None)
+        if jobs is None:
+            self.html('<h1>Сбор организаций</h1><p>Очередь недоступна в этом режиме.</p>')
+            return
+        content = '<h1>Сбор организаций</h1><p class="lead">Найдите организации с сайтом и контактами, затем перейдите к анализу.</p><p>Вся Россия. MedAdvisor для медицинских клиник; Orgpage для остальных. N — пригодные уникальные сайты с телефоном либо email.</p><details><summary>Источники, ограничения и условия сбора</summary><p>До 1000, до 200 страниц и max(200, 10 × N) карточек; таймаут 4 часа. Цель может не быть достигнута. Скрининг главной страницы уже встроен в Parser; платных API и PDF нет.</p></details>'
+        try:
+            options = '<label>Отрасль <select name="industry">' + ''.join('<option value="' + esc(k) + '">' + esc(v) + '</option>' for k, v in jobs.parser.industries().items()) + '</select></label>'
+            options += '<label>Количество пригодных организаций (N) <input type="number" name="target" min="1" max="1000" value="10" required></label><label>Название запуска (необязательно) <input name="name" maxlength="100"></label>'
+            content += self.form('/collect/preview', 'Начать сбор', options).replace('Подтверждаю действие', 'Подтверждаю подготовку сетевого сбора; параметры проверю на следующем шаге')
+        except (OSError, ValueError, SyntaxError, KeyError, StopIteration):
+            content += '<p>Конфигурация Parser v3 недоступна.</p>'
+        errors = jobs.parser.diagnostic()
+        if errors:
+            content += '<p role="status">Запуск недоступен: ' + esc('; '.join(errors)) + '</p><button disabled>Запустить сбор</button>'
+        latest = next((row for row in jobs.list() if row['kind'] == 'parser-v3'), None)
+        content += '<article><h2>Последний сбор</h2>'
+        if latest:
+            content += self.job_table([latest])
+            if latest['status'] == 'succeeded':
+                content += '<p>' + link('/organizations?run=' + latest['id'], 'Открыть собранные организации') + '</p>'
+        else:
+            content += '<p>Сбор ещё не запускался из панели.</p>'
+        content += '</article><p><a href="/analysis">Перейти к анализу сайтов →</a> · <a href="/organizations">Все собранные организации</a></p>'
+        self.html(content)
+
     def jobs_page(self, path):
         jobs = getattr(self.server, 'jobs', None)
         if jobs is None:
@@ -282,18 +308,9 @@ class Pages:
         if path == '/jobs':
             content = '<h1>Задания</h1><p>Максимум один активный процесс. Локальные проверки: без сети, до 60 секунд. Сбор организаций: отдельное сетевое действие, до 4 часов.</p>'
             options = '<label>Тип <select name="kind">' + ''.join('<option value="' + k + '">' + v + '</option>' for k, v in TASKS.items()) + '</select></label> '
-            content += self.form('/jobs/preview', 'Предпросмотр команды', options)
+            content += '<details><summary>Технические проверки</summary>' + self.form('/jobs/preview', 'Предпросмотр команды', options) + '</details>'
             content += self.job_table(jobs.list())
-            content += '<h2>Собрать организации</h2><p>Вся Россия. MedAdvisor для медицинских клиник; Orgpage для остальных. N — пригодные уникальные сайты с телефоном либо email. До 1000, до 200 страниц и max(200, 10 × N) карточек; таймаут 4 часа. Цель может не быть достигнута. Скрининг главной страницы уже встроен в Parser; платных API и PDF нет.</p>'
-            try:
-                options = '<label>Отрасль <select name="industry">' + ''.join('<option value="' + esc(k) + '">' + esc(v) + '</option>' for k, v in jobs.parser.industries().items()) + '</select></label>'
-                options += '<label>N пригодных лидов <input type="number" name="target" min="1" max="1000" value="10" required></label><label>Название запуска <input name="name" maxlength="100"></label>'
-                content += self.form('/collect/preview', 'Проверить и показать команду', options)
-            except (OSError, ValueError, SyntaxError, KeyError, StopIteration):
-                content += '<p>Конфигурация Parser v3 недоступна.</p>'
-            errors = jobs.parser.diagnostic()
-            if errors:
-                content += '<p role="status">Запуск недоступен: ' + esc('; '.join(errors)) + '</p><button disabled>Запустить сбор</button>'
+            content += '<p><a class="cta" href="/collect">Сбор организаций →</a></p>'
 
         else:
             row = jobs.get(path.removeprefix('/jobs/'))
@@ -302,7 +319,7 @@ class Pages:
                 return
             content = '<h1>' + esc(('Собрать организации' if row['kind'] == 'parser-v3' else TASKS.get(row['kind'], {'analysis-batch': 'Пакет анализа', 'analysis-site': 'Анализ сайта'}.get(row['kind'], row['kind'])))) + '</h1><dl>'
             for label, key in (('Статус', 'status'), ('Создано UTC', 'created'), ('Начало UTC', 'started'), ('Окончание UTC', 'ended'), ('Причина / ограничение', 'error')):
-                content += '<dt>' + label + '</dt><dd>' + esc(job_status(row[key]) if key == 'status' and row['kind'].startswith('analysis-') else row[key] or '—') + '</dd>'
+                content += '<dt>' + label + '</dt><dd>' + esc(job_status(row[key]) if key == 'status' else row[key] or '—') + '</dd>'
             if row['kind'] == 'analysis-batch':
                 children = jobs.analysis_children(row['id'])
                 finished = sum(c['status'] not in {'pending', 'queued', 'running'} for c in children)
@@ -323,7 +340,7 @@ class Pages:
                 content += '<dt>Каталог</dt><dd>' + esc(jobs.state_dir / row['id']) + '</dd>'
                 if row['status'] == 'succeeded':
                     content += '<dd>' + link('/organizations?run=' + row['id'], 'Лиды этого запуска') + ' · ' + link('/exports/' + row['id'], 'Скачать CSV') + '</dd>'
-            content += '</dl><h2>stdout / stderr (до 64 КиБ)</h2><pre>' + esc(row['output']) + '</pre>'
+            content += '</dl><details><summary>Технический журнал · stdout / stderr (до 64 КиБ)</summary><pre>' + esc(row['output']) + '</pre></details>'
             if row['status'] in {'pending', 'queued', 'running'}:
                 self.refresh_seconds = 5
                 content += '<p>Статус и журнал обновляются каждые 5 секунд; процент завершения неизвестен.</p>'
@@ -508,13 +525,13 @@ class Pages:
             elif jobs and path == '/collect/preview':
                 token, preview, command = jobs.preview_parser(values.get('industry', [''])[0], values.get('target', [''])[0], values.get('name', [''])[0])
                 errors = jobs.parser.diagnostic(preview['params']['industry'])
-                content = '<h1>Предпросмотр сетевого сбора</h1><p>Название: ' + esc(preview['params']['name'] or 'Без названия') + '</p><pre>' + esc(shlex.join(command)) + '</pre>'
+                content = '<h1>Подтвердите сбор организаций</h1><p><a href="/collect">← Изменить параметры</a></p><p>Название: ' + esc(preview['params']['name'] or 'Без названия') + '</p><details><summary>Предпросмотр команды</summary><pre>' + esc(shlex.join(command)) + '</pre></details>'
                 content += '<p>Источник: ' + ('MedAdvisor' if preview['params']['industry'] == '1' else 'Orgpage') + '; вся Россия; N=' + str(preview['params']['target']) + ' пригодных уникальных сайтов. Каталог: ' + esc(jobs.state_dir / preview['id']) + '.</p>'
                 content += '<p>До 200 страниц, max(200, 10 × N) карточек и 4 часа. Цель не гарантирована. Parser допускает unknown/probable принадлежность бренду и подтверждённую защитную страницу сайта; это не доказательство юридической принадлежности. Строительство проверяет тематику и конечный домен. Контакты не проверяются звонком или письмом.</p>'
                 if errors:
                     content += '<p role="status">Запуск недоступен: ' + esc('; '.join(errors)) + '</p><button disabled>Запустить сбор</button>'
                 else:
-                    content += self.form('/collect', 'Запустить сетевой сбор', '<input type="hidden" name="preview" value="' + esc(token) + '"><p>Подтверждаю сетевой сбор с указанными ограничениями.</p>')
+                    content += self.form('/collect', 'Подтвердить и начать сбор', '<input type="hidden" name="preview" value="' + esc(token) + '"><p>Подтверждаю сетевой сбор с указанными ограничениями.</p>')
                 self.html(content)
                 return
             elif jobs and path == '/collect':

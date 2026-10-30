@@ -70,19 +70,40 @@ article { background: #141d2d; border: 1px solid #29364d; border-radius: 14px;
 .soon { color: #b4c5df; font-size: 13px; }
 .status { border-top: 1px solid #273248; padding-top: 24px; }
 footer { color: #8c9bb1; font-size: 13px; padding-bottom: 40px; }
+
+main, article, .grid > *, form, label { min-width: 0; }
+main { overflow-wrap: anywhere; }
+input, select { background: #0e1726; color: #e7edf7; border: 1px solid #43536d; border-radius: 8px; padding: 10px 12px; }
+label { display: flex; flex-direction: column; gap: 6px; color: #becbdf; }
+label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; }
+input[type="checkbox"] { accent-color: #83b5ff; width: 18px; height: 18px; flex-shrink: 0; }
+button, .cta { display: inline-block; background: #9cc5ff; color: #101b2d; border: 1px solid transparent; border-radius: 8px; padding: 10px 18px; font-weight: 650; text-decoration: none; }
+button:hover, .cta:hover { background: #c3dcff; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #a5c7ff; outline-offset: 3px; }
+nav a { text-decoration: none; padding: 6px 0; }
+nav a:hover { text-decoration: underline; }
+details { margin: 16px 0; border: 1px solid #29364d; border-radius: 8px; padding: 12px; }
+td details { max-width: 440px; }
+.table-scroll { border: 1px solid #29364d; border-radius: 10px; }
+th { background: #182337; }
+h2 { margin-top: 24px; }
+article h2 { margin-top: 0; }
+.grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+@media (max-width: 600px) { header, main, footer { padding: 16px; } main { padding-top: 24px; } nav { gap: 12px; } article { padding: 18px; } form > label { width: 100%; } }
 </style>
 </head>
 <body>
 <header>
 <div class="brand">Lex<span>Radar</span> / Control Center</div>
 <nav aria-label="Разделы центра управления">
-<a href="/">Обзор</a><a href="/organizations">Организации</a><a href="/reports">Отчёты</a>
-<a href="/jobs">Задания</a><a href="/crm">CRM preview</a><a href="/settings">Настройки</a>
+<a href="/">Обзор</a><a href="/collect">Сбор организаций</a><a href="/analysis">Анализ сайтов</a>
+<a href="/organizations">Результаты</a><a href="/settings">Настройки</a>
 </nav>
 </header>
 <main id="overview">
 </main>
-<footer>LexRadar Control Center · Локальный режим · Сеть — после подтверждения · Рассылка отключена</footer>
+<footer><nav aria-label="Дополнительные разделы"><a href="/jobs">Журнал заданий</a><a href="/reports">Отчёты и PDF</a><a href="/crm">CRM preview</a></nav><p>LexRadar Control Center · Локальный режим · Сеть — после подтверждения · Рассылка отключена</p></footer>
 </body>
 </html>
 """
@@ -184,6 +205,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
     def organizations(self, path):
         mentions = path.startswith('/mentions')
         base = '/mentions' if mentions else '/organizations'
+        listing = '/analysis' if urlsplit(self.path).path == '/analysis' else base
         status_title = 'Правовой статус' if mentions else 'Статус обработки'
         data = self.index()
         records = data['mentions' if mentions else 'leads']
@@ -193,8 +215,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
         warning = ('<p role="status">Часть файлов недоступна или имеет неподдерживаемый формат: '
                    + str(warnings) + '.</p>') if warnings else ''
         notice = ('<p>Упоминания организаций в аудитах; это не лиды Parser v3.</p>' if mentions else
-                  '<p>Лиды Parser v3. Контакты из экспорта; скрининг не является юридическим аудитом.</p>')
-        notice += '<p><a href="/organizations">Лиды Parser v3</a> · <a href="/mentions">Упоминания в аудитах</a></p>'
+                  '<p>Выберите организации для анализа или откройте карточку: контакты, квалификация, подробности и ссылки на отчёты. Скрининг не является юридическим аудитом.</p><p><a href="/collect">Собрать организации</a> · <a href="/analysis">Анализ сайтов</a> · <a href="/reports">Все отчёты и PDF</a></p>')
+        notice += '<p><a href="/organizations">Организации и контакты</a> · <a href="/mentions">Упоминания в аудитах</a></p>'
         if path != base:
             identifier = path.removeprefix(base + '/')
             record = next((r for r in records if identifier in r.get('aliases', [r['id']])), None)
@@ -220,9 +242,9 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 if label == status_title and not record['status']:
                     continue
                 content += '<dt>' + label + '</dt><dd>' + (external(value) if label in {'Сайт', 'Карточка источника / агрегатор'} else self.analysis_email(record, history) if label == 'Email' and jobs and not mentions else escape(value)) + '</dd>'
-            content += ('</dl><h2>Сохранённые сведения</h2>'
+            content += ('</dl><details><summary>Исходные технические сведения</summary>'
                         '<pre style="white-space:pre-wrap;overflow-wrap:anywhere">')
-            content += escape(json.dumps(record.get('members', [record['row']]), ensure_ascii=False, indent=2)) + '</pre>'
+            content += escape(json.dumps(record.get('members', [record['row']]), ensure_ascii=False, indent=2)) + '</pre></details>'
             if mentions:
                 content += saved_details(self.server.results_dir, record)
             else:
@@ -256,8 +278,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 filtered.sort(key=lambda r: (r['name'].casefold(), r['id']), reverse=True)
             pages = max(1, (len(filtered) + 19) // 20)
             page = min(page, pages)
-            content = '<h1>' + ('Упоминания в аудитах' if mentions else 'Лиды Parser v3') + '</h1>' + notice + warning
-            content += ('<form method="get" action="' + base + '"><label>Поиск по названию, сайту, ИНН, телефону, email '
+            content = '<h1>' + ('Упоминания в аудитах' if mentions else 'Анализ сайтов' if urlsplit(self.path).path == '/analysis' else 'Результаты') + '</h1>' + notice + warning
+            content += ('<form method="get" action="' + listing + '"><label>Поиск по названию, сайту, ИНН, телефону, email '
                         '<input name="q" value="' + escape(query, quote=True) + '"></label> ')
             if statuses or selected:
                 content += '<label>' + status_title + ' <select name="status"><option value="">Все</option>'
@@ -281,11 +303,11 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             content += '</select></label><button type="submit">Найти</button></form>'
             content += '<p>Найдено: ' + str(len(filtered)) + '</p>'
             if not mentions and jobs:
-                content += '<p><a href="/jobs">Задания и результаты →</a>. Выбор относится только к текущей странице; при переходе сбрасывается. Следующие N выбираются из всего доступного каталога независимо от фильтра.</p>'
+                content += '<p><a href="/jobs">Журнал анализа →</a>. Выбор относится только к текущей странице; при переходе сбрасывается. Следующие N выбираются из всего доступного каталога независимо от фильтра.</p>'
                 options = '<label>Следующие N необработанных <select name="count">'
                 for n in (10, 20, 50, 100, 200):
                     options += '<option' + (' selected' if n == 50 else '') + '>' + str(n) + '</option>'
-                content += self.analysis_form(options + '</select></label>', 'Предпросмотр следующих N')
+                content += self.analysis_form(options + '</select></label>', 'Анализировать следующие N')
                 current = filtered[(page - 1) * 20:page * 20]
                 fields = '<label><input type="checkbox" name="all" value="' + ','.join(r['id'] for r in current) + '"> Выбрать все на текущей странице</label>'
                 content += self.analysis_form(fields, 'Анализировать выбранные', 'analysis-selection')
@@ -316,7 +338,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                         + str(page) + ' из ' + str(pages) + '</span>')
             for target, label in ((page - 1, 'Назад'), (page + 1, 'Далее')):
                 if 1 <= target <= pages:
-                    page_link = base + '?' + urlencode(
+                    page_link = listing + '?' + urlencode(
                         {'q': query, 'status': selected, 'page': target, **({'run': run} if run else {}), **({'sort': sort} if sort != 'name' else {})})
                     content += '<a href="' + escape(page_link, quote=True) + '">' + label + '</a>'
             content += '</nav>'
@@ -354,6 +376,10 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/":
             self.home()
+        elif path == '/collect':
+            self.collect_page()
+        elif path == '/analysis':
+            self.organizations('/organizations')
         elif path == '/reports' or path.startswith('/reports/'):
             self.reports(path)
         elif path.startswith('/files/'):
