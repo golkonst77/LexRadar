@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -33,6 +34,50 @@ def website(value):
     except ValueError:
         pass
     return ''
+
+
+def merge_leads(records):
+    """Group official domains in memory; retain every original identity and field."""
+    from control_analysis import target
+    groups = {}
+    for record in records:
+        try:
+            hosts = {target(url)[1] for url in record['websites']}
+            if len(hosts) != 1:
+                raise ValueError()
+            host = hosts.pop()
+            if not all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', label)
+                       for label in host.split('.')):
+                raise ValueError()
+            key = 'domain-' + hashlib.sha256(host.encode()).hexdigest()
+        except ValueError:
+            key = record['id']
+        groups.setdefault(key, []).append(record)
+    merged = []
+    for key, members in groups.items():
+        members = sorted(members, key=lambda r: r['id'])
+        lead = dict(members[0], id=key, members=members)
+        lead['aliases'] = [key, *(r['id'] for r in members)]
+        for field in ('name', 'inn', 'phone', 'email', 'source_card', 'source', 'status'):
+            values = sorted({r.get(field, '') for r in members if r.get(field)})
+            lead[field] = ' · '.join(values)
+        # One official URL keeps analysis selection unambiguous; originals remain in members.
+        if key.startswith('domain-'):
+            lead['websites'] = sorted({u for r in members for u in r['websites']})[:1]
+        merged.append(lead)
+    return sorted(merged, key=lambda r: (r['name'].casefold(), r['id']))
+
+
+def analysis_rows(record, history):
+    from control_analysis import target
+    try:
+        host = target(next(iter(record['websites']), ''))[1]
+    except ValueError:
+        return []
+    aliases = set(record.get('aliases', [record['id']]))
+    rows = {row['id']: row for key, row in history.items()
+            if key[0] in aliases and key[1] == host}
+    return list(rows.values())
 
 
 def load_leads(root):
