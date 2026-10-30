@@ -27,6 +27,35 @@ def emails(text):
             yield value
 
 
+def commercial_decision(root, base, engine):
+    """Commercial readiness only; saved engine/legal release gates stay untouched."""
+    try:
+        review = json.loads(read_file(root, base / 'sites/row-000002/review.json', 1_000_000))
+        findings = review['findings']
+        if not isinstance(findings, list):
+            raise ValueError('Invalid findings')
+        if not findings:
+            return 'REJECT', 'no_usable_findings'
+        if any(not isinstance(f, dict) or f.get('confirmed') is not True
+               or f.get('manual_review') or not f.get('evidence')
+               or f.get('rule_id') not in {1, 2, 3, 5, 6, 7, 8} for f in findings):
+            return 'HOLD', 'finding_reliability_requires_review'
+        if engine['reason'] != 'manual_review_required_including_unverified_constant_block4':
+            return 'HOLD', engine['reason'] or 'engine_result_requires_review'
+        if (engine['status'] != 'SUCCESS' or not review.get('pdf_ready')
+                or review.get('pdf_error')):
+            return 'HOLD', 'proposal_generation_requires_review'
+        directory = base / 'sites/row-000002'
+        page = read_file(root, directory / 'proposal.html', 8_000_000).decode('utf-8-sig')
+        pdf = read_file(root, directory / 'proposal.pdf', 8_000_000, prefix=5)
+        if not pdf.startswith(b'%PDF-') or any(
+                f'data-rule="{f["rule_id"]}"' not in page for f in findings):
+            return 'HOLD', 'proposal_content_requires_review'
+        return 'READY', 'usable_findings_and_substantive_proposal'
+    except (OSError, ValueError, TypeError, KeyError, RecursionError):
+        return 'HOLD', 'saved_proposal_requires_review'
+
+
 def observation(root, job, host):
     base = Path(job['id']) / 'analysis'
     result = dict(contacts=[], status='', qualification='', reason='', warning='')
@@ -39,6 +68,8 @@ def observation(root, job, host):
             result[key] = (rows[0].get(key) or '')[:2000]
     except (OSError, ValueError, TypeError, csv.Error):
         result['warning'] = 'Итог отсутствует, повреждён или связь с сайтом неоднозначна.'
+    if not result['warning']:
+        result['qualification'], result['reason'] = commercial_decision(root, base, result)
     try:
         data = json.loads(read_file(root, base / COLLECTION, 8_000_000))
         if (not isinstance(data, dict) or data.get('schema_version') != '0.2'

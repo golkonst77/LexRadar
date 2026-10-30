@@ -161,6 +161,6 @@ class AnalysisJobs:
         with source.open('x', newline='', encoding='utf-8') as stream:
             writer = csv.writer(stream)
             writer.writerow(['url', 'company_name', 'email'])
-            writer.writerow([url, '', ''])
+            writer.writerow([url, params.get('name', ''), ''])
         return [str(PYTHON), '-B', str(Path(__file__).with_name('control_analysis_runner.py')),
                 str(source), str(directory / 'analysis')]

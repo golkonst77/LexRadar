@@ -1,5 +1,6 @@
 """Analysis integration uses a subprocess stub only; no DNS, crawling or paid calls."""
 import json
+from pathlib import Path
 import re
 import sqlite3
 import sys
@@ -210,28 +211,34 @@ class AnalysisTest(unittest.TestCase):
     def test_command_fixed_engine_and_no_synthetic_mode(self):
         directory = self.root / 'command'
         directory.mkdir()
-        params = dict(url='https://clinic.ru', domain='clinic.ru')
+        params = dict(url='https://clinic.ru', domain='clinic.ru', name='Клиника «А»')
         command = self.jobs.analysis_command(params, directory)
         self.assertTrue(command[2].endswith('control_analysis_runner.py'))
         self.assertEqual(command[-1], str(directory / 'analysis'))
         self.assertIn('https://clinic.ru/', (directory / 'input.csv').read_text())
+        self.assertIn('Клиника «А»', (directory / 'input.csv').read_text())
 
     def test_runner_calls_existing_prepare_with_safe_flags(self):
         from types import SimpleNamespace
         from unittest.mock import Mock
         import control_analysis_runner as runner
         run = Mock(return_value={'rows': [dict(status='SKIPPED', stages=['evidence_packet:SUCCESS'])]})
+        from tempfile import TemporaryDirectory
+        temporary = TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        source = Path(temporary.name) / 'input.csv'
+        source.write_text('url,company_name,email\nhttps://clinic.ru/,Клиника А,\n')
         original = sys.path[:]
         try:
-            with patch.dict(sys.modules, {'lexradar.mvp_batch': SimpleNamespace(run=run)}), patch.object(sys, 'argv', ['runner', '/tmp/input.csv', '/tmp/output']):
+            with patch.dict(sys.modules, {'lexradar.mvp_batch': SimpleNamespace(run=run, render_client=Mock())}), patch.object(sys, 'argv', ['runner', str(source), '/tmp/output']):
                 self.assertEqual(runner.main(), 0)
             args, kwargs = run.call_args
-            self.assertEqual(str(args[0]), '/tmp/input.csv')
+            self.assertEqual(str(args[0]), str(source))
             self.assertEqual(kwargs, dict(mode='prepare', max_sites=1, max_ai_calls=0,
                                          allow_site_collection=True, ignore_robots=False))
             for row in (dict(status='SKIPPED', stages=[]), dict(status='ERROR', stages=['evidence_packet:SUCCESS'])):
                 run.return_value = {'rows': [row]}
-                with patch.dict(sys.modules, {'lexradar.mvp_batch': SimpleNamespace(run=run)}), patch.object(sys, 'argv', ['runner', '/tmp/input.csv', '/tmp/output']):
+                with patch.dict(sys.modules, {'lexradar.mvp_batch': SimpleNamespace(run=run, render_client=Mock())}), patch.object(sys, 'argv', ['runner', str(source), '/tmp/output']):
                     self.assertEqual(runner.main(), 1)
         finally:
             sys.path[:] = original
