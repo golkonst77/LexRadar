@@ -51,7 +51,7 @@ class AnalysisJobs:
                 try:
                     host = target(params.get('url', ''))[1]
                     if host == params.get('domain'):
-                        result.setdefault((params.get('lead_id'), host), dict(row))
+                        result[(params.get('lead_id'), host, row['id'])] = dict(row)
                 except ValueError:
                     continue
             return result

@@ -30,16 +30,18 @@ input, select, button { font: inherit; padding: 6px; max-width: 100%; }
 th, td { text-align: left; padding: 10px; border-bottom: 1px solid #29364d; }
 table { width: 100%; border-collapse: collapse; }
 th, td { vertical-align: top; overflow-wrap: anywhere; }
-.organizations-table { min-width: 880px; table-layout: fixed; }
-.organizations-table th:first-child { width: 20%; }
-.organizations-table th:nth-child(2) { width: 18%; }
-.organizations-table th:nth-child(3) { width: 11%; }
-.organizations-table th:nth-child(4) { width: 16%; }
-.organizations-table th:nth-child(5) { width: 18%; }
-.organizations-table td:nth-child(4) { overflow-wrap: normal; }
+.organizations-table { min-width: 1600px; table-layout: auto; }
+.organizations-table th { white-space: nowrap; }
+.organizations-table td { overflow-wrap: normal; word-break: normal; }
+.organizations-table .short-field { white-space: nowrap; }
+.organizations-table .source-column { min-width: 260px; }
+.organizations-table .status-column { min-width: 200px; white-space: nowrap; }
+.email-value { white-space: nowrap; }
+.email-sources { overflow-wrap: anywhere; }
+summary { cursor: pointer; }
 small { color: #8c9bb1; }
 
-.table-scroll { overflow-x: auto; }
+.table-scroll { max-width: 100%; overflow-x: auto; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 600px; overflow: auto; }
 article + article { margin-top: 16px; }
 form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 20px 0; }
@@ -195,7 +197,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
         notice += '<p><a href="/organizations">Лиды Parser v3</a> · <a href="/mentions">Упоминания в аудитах</a></p>'
         if path != base:
             identifier = path.removeprefix(base + '/')
-            record = next((r for r in records if r['id'] == identifier), None)
+            record = next((r for r in records if identifier in r.get('aliases', [r['id']])), None)
             if record is None:
                 self.respond_json(404, {"error": "not_found"})
                 return
@@ -220,7 +222,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 content += '<dt>' + label + '</dt><dd>' + (external(value) if label in {'Сайт', 'Карточка источника / агрегатор'} else self.analysis_email(record, history) if label == 'Email' and jobs and not mentions else escape(value)) + '</dd>'
             content += ('</dl><h2>Сохранённые сведения</h2>'
                         '<pre style="white-space:pre-wrap;overflow-wrap:anywhere">')
-            content += escape(json.dumps(record['row'], ensure_ascii=False, indent=2)) + '</pre>'
+            content += escape(json.dumps(record.get('members', [record['row']]), ensure_ascii=False, indent=2)) + '</pre>'
             if mentions:
                 content += saved_details(self.server.results_dir, record)
             else:
@@ -239,12 +241,12 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             query = params.get('q', [''])[0].strip()
             selected = params.get('status', [''])[0]
             run = params.get('run', [''])[0]
-            statuses = sorted({r['status'] for r in records if r['status']})
+            statuses = sorted({m['status'] for r in records for m in r.get('members', [r]) if m['status']})
             try:
                 page = max(1, int(params.get('page', ['1'])[0]))
             except ValueError:
                 page = 1
-            filtered = [r for r in records if (not run or r.get('run_id') == run) and (not selected or r['status'] == selected)
+            filtered = [r for r in records if (not run or any(m.get('run_id') == run for m in r.get('members', [r]))) and (not selected or any(m['status'] == selected for m in r.get('members', [r])))
                         and query.casefold() in ' '.join(
                             [r['name'], r['inn'], *r['websites'], r.get('phone', ''), r.get('email', '')]).casefold()]
             sort = params.get('sort', ['name'])[0]
@@ -267,7 +269,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 content += '</select></label> '
             if not mentions:
                 content += '<label>Запуск <select name="run"><option value="">Все запуски и импорт</option>'
-                runs = {r.get('run_id'): r.get('run_name') for r in records if r.get('run_id')}
+                runs = {m['run_id']: m.get('run_name') for r in records for m in r.get('members', [r]) if m.get('run_id')}
                 for key, name in runs.items():
                     content += '<option value="' + key + '"' + (' selected' if run == key else '') + '>' + escape(name) + '</option>'
                 content += '</select></label>'
@@ -293,8 +295,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             else:
                 content += ('<div class="table-scroll" tabindex="0" role="region" aria-label="Организации"><table class="organizations-table"><thead><tr>'
                             + ('<th>Выбор / анализ</th>' if not mentions and jobs else '') + '<th>Название</th><th>Сайт</th><th>ИНН</th>'
-                            '<th>Телефон</th><th>Email</th><th>Источник / агрегатор</th>'
-                            + ('<th>' + status_title + '</th>' if statuses else '') + '</tr></thead><tbody>')
+                            '<th>Телефон</th><th>Email</th><th class="source-column">Источник / агрегатор</th>'
+                            + ('<th class="status-column">' + status_title + '</th>' if statuses else '') + '</tr></thead><tbody>')
                 for record in filtered[(page - 1) * 20:page * 20]:
                     content += '<tr>'
                     if not mentions and jobs:
@@ -306,7 +308,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                                   record['inn'] or '—', record.get('phone', '') or '—',
                                   record.get('email', '') or '—', record.get('source_card', '') or '—',
                                   *((status_label(record['status']) or '—',) if statuses else ()))):
-                        content += '<td>' + (self.analysis_email(record, history) if column == 3 and jobs and not mentions else escape(value)) + '</td>'
+                        cell_class = ('', 'short-field', 'short-field', '', 'source-column', 'status-column')[column]
+                        content += '<td class="' + cell_class + '">' + (self.analysis_email(record, history) if column == 3 and jobs and not mentions else escape(value)) + '</td>'
                     content += '</tr>'
                 content += '</tbody></table></div>'
             content += ('<nav aria-label="Страницы организаций"><span>Страница '

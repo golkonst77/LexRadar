@@ -11,7 +11,7 @@ from collections import Counter
 from control_catalog import Catalog, domain
 from control_jobs import TASKS
 from control_analysis import target, ARTIFACTS
-from control_leads import website
+from control_leads import website, merge_leads, analysis_rows
 from control_results import read_file
 
 
@@ -50,10 +50,10 @@ class Pages:
             leads, warnings = jobs.collected()
             if leads or warnings:
                 data = {**data, 'leads': data['leads'] + leads, 'warnings': data['warnings'] + warnings}
-                data['domain_counts'] = Counter(domain(url) for lead in data['leads'] for url in lead['websites'])
-                names = {domain(url): lead['name'] for lead in data['leads'] for url in lead['websites']
-                         if data['domain_counts'][domain(url)] == 1}
-                data['reports'] = [{**r, 'lead_name': names.get(domain(r['target']), '')} for r in data['reports']]
+        data = {**data, 'leads': merge_leads(data['leads'])}
+        data['domain_counts'] = Counter(domain(url) for lead in data['leads'] for url in lead['websites'])
+        names = {domain(url): lead['name'] for lead in data['leads'] for url in lead['websites']}
+        data['reports'] = [{**r, 'lead_name': names.get(domain(r['target']), '')} for r in data['reports']]
         return data
 
     def form(self, action, label, fields='', confirm=True):
@@ -73,47 +73,63 @@ class Pages:
             _, host = target(next(iter(record['websites']), ''))
         except ValueError:
             return 'Нет допустимого сайта'
-        row = history.get((record['id'], host))
+        rows = analysis_rows(record, history)
+        row = next((r for r in rows if r['status'] == 'succeeded'), rows[0] if rows else None)
         if not row:
-            return 'Не запускался для этой записи; результат другого лида не присваивается'
+            return 'Не запускался для этой записи'
         from control_enrichment import observation
         saved = observation(self.server.jobs.state_dir, row, host)
-        content = link('/jobs/' + row['id'], 'Задание: ' + job_status(row['status']))
-        content += '<br>Последний анализ UTC: ' + esc(row['ended'] or row['started'] or row['created'])
-        content += '<br>Статус движка: ' + esc(saved['status'] or 'Нет данных')
+        content = link('/jobs/' + rows[0]['id'], 'Последнее задание: ' + job_status(rows[0]['status']))
+        if row['id'] != rows[0]['id']:
+            content += '<br>' + link('/jobs/' + row['id'], 'Сохранённый успешный анализ')
         qualification = saved['qualification']
-        content += '<br>Qualification: ' + esc('Требует ручной проверки (HOLD)' if qualification == 'HOLD' else qualification or 'Нет данных')
+        content += '<br>Квалификация сайта: ' + esc('Требует ручной проверки' if qualification == 'HOLD' else qualification or 'Нет данных')
+        content += '<details><summary>Подробности анализа</summary>'
+        content += 'Сохранённый анализ UTC: ' + esc(row['ended'] or row['started'] or row['created'])
+        content += '<br>Статус движка: ' + esc(saved['status'] or 'Нет данных')
         content += '<br>Reason: ' + esc(saved['reason'] or 'Нет данных')
         if saved['warning']:
             content += '<br>' + esc(saved['warning'])
+        content += '</details>'
+        reports = []
         for name, relative in ARTIFACTS.items():
             try:
                 read_file(self.server.jobs.state_dir, row['id'] + '/analysis/' + relative, 8_000_000, prefix=5)
             except (OSError, ValueError):
                 continue
-            content += '<br>' + link('/analysis-files/' + row['id'] + '/' + name, name)
+            reports.append(link('/analysis-files/' + row['id'] + '/' + name, name))
+        if reports:
+            content += '<details><summary>Отчёты</summary>' + ' · '.join(reports) + '</details>'
+        if len(rows) > 1:
+            content += '<details><summary>История домена</summary>'
+            content += ' · '.join(link('/jobs/' + r['id'], r['created'] + ' — ' + job_status(r['status'])) for r in rows)
+            content += '</details>'
         return content
 
     def analysis_email(self, record, history):
-        content = esc(record.get('email') or '—')
+        content = '<span class="email-value">' + esc(record.get('email') or '—') + '</span>'
         try:
             _, host = target(next(iter(record['websites']), ''))
         except ValueError:
             return content
-        row = history.get((record['id'], host))
-        if not row:
+        rows = analysis_rows(record, history)
+        if not rows:
             return content
         from control_enrichment import observation
-        saved = observation(self.server.jobs.state_dir, row, host)
+        saved = {'contacts': [contact for r in rows
+                              for contact in observation(self.server.jobs.state_dir, r, host)['contacts']]}
         if saved['contacts']:
-            content += '<br>Email из анализа — кандидаты, принадлежность не подтверждена'
-            if record.get('email'):
-                content += '; исходный email сохранён: ' + esc(record['email'])
+            if not record.get('email'):
+                content = '<span class="email-value">' + esc(saved['contacts'][0]['email']) + '</span>'
+                content += '<br><small>Найден на сайте · не подтверждён</small>'
+            sources = list(dict.fromkeys(url for contact in saved['contacts'] for url in contact['sources']))
+            content += '<details class="email-sources"><summary>Источники (' + str(len(sources)) + ')</summary>'
+            content += '<small>Кандидаты, принадлежность не подтверждена</small>'
             for contact in saved['contacts']:
-                content += '<br>' + esc(contact['email']) + ' · источник: '
-                content += ' · '.join(external(url) for url in contact['sources'])
-        else:
-            content += '<br>Email из анализа: не найден'
+                content += '<div>' + esc(contact['email']) + '</div>'
+            for url in sources:
+                content += '<div>' + external(url) + '</div>'
+            content += '</details>'
         return content
 
     def home(self):
