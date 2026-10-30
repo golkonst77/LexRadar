@@ -87,9 +87,12 @@ with sync_playwright() as p:
         leads, warnings = load_leads(directory)
         usable = sum(bool(r['websites'] and (r['phone'] or r['email'])) for r in leads)
         result = {k: summary.get(k) for k in ('target_achieved', 'stop_reason', 'cards_reviewed', 'accepted', 'exported_total')}
-        domains = {urlsplit(r['websites'][0]).hostname.lower().removeprefix('www.').rstrip('.') for r in leads if r['websites']}
+        domains = {urlsplit(r['websites'][0]).hostname.lower().removeprefix('www.').rstrip('.').encode('idna').decode('ascii')
+                   for r in leads if r['websites']}
         result.update(usable=usable, unique_sites=len(domains), warnings=warnings)
-        if (warnings or len(leads) != target or len(domains) != target or usable != target or summary.get('target_achieved') is not True
-                or summary.get('exported_total') != usable):
+        if (warnings or any(r['source'] != 'parser.csv' for r in leads)
+                or len(leads) != target or len(domains) != target or usable != target
+                or summary.get('target_achieved') is not True
+                or type(summary.get('exported_total')) is not int or summary['exported_total'] != usable):
             return result, 'Цель не подтверждена: проверьте число пригодных и причину остановки'
         return result, ''

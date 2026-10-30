@@ -377,7 +377,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
         if getattr(self, "refresh_seconds", None):
             self.send_header("Refresh", str(self.refresh_seconds))
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Referrer-Policy", "same-origin")
         self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
         self.end_headers()
         self.wfile.write(body)

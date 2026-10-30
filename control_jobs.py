@@ -243,7 +243,7 @@ class Jobs:
                     self._update(identifier, result=json.dumps(result, ensure_ascii=False))
                     if error:
                         status = 'failed'
-        except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+        except (OSError, ValueError, KeyError, TypeError, RecursionError, subprocess.SubprocessError) as exc:
             status, error = 'failed', 'Не удалось выполнить задание: ' + type(exc).__name__
         finally:
             if process is not None:

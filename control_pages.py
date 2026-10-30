@@ -279,6 +279,8 @@ class Pages:
         host = self.headers.get('Host', '')
         if not host:
             return self.request_version == 'HTTP/1.0'
+        if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in host) or '?' in host or '#' in host:
+            return False
         try:
             parsed = urlsplit('http://' + host)
             return (parsed.hostname in {'localhost', '127.0.0.1'} and not parsed.username
@@ -287,13 +289,51 @@ class Pages:
         except ValueError:
             return False
 
+    def origin_rejection(self):
+        origins = self.headers.get_all('Origin', [])
+        if not origins:
+            return None  # Existing policy: CSRF and confirmation still required.
+        if len(origins) != 1:
+            return 'multiple_origin'
+        origin = origins[0]
+        # urlsplit strips some whitespace/control characters; reject before parsing.
+        if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in origin):
+            return 'malformed_origin'
+        try:
+            parsed = urlsplit(origin)
+            if (parsed.scheme not in {'http', 'https'} or not parsed.netloc
+                    or parsed.hostname not in {'localhost', '127.0.0.1'}
+                    or parsed.username is not None or parsed.password is not None
+                    or parsed.path or '?' in origin or '#' in origin
+                    or parsed.netloc.endswith(':')):
+                return 'malformed_or_nonlocal_origin'
+            port = parsed.port if parsed.port is not None else (80 if parsed.scheme == 'http' else 443)
+            host = urlsplit('http://' + self.headers.get('Host', ''))
+            host_port = host.port if host.port is not None else 80
+            if parsed.scheme != 'http':
+                return 'scheme_mismatch'
+            if parsed.hostname != host.hostname:
+                return 'hostname_mismatch'
+            if port != host_port:
+                return 'port_mismatch'
+        except ValueError:
+            return 'malformed_origin'
+        return None
+
+    def reject_post(self, status, error, reason):
+        # Only fixed reason codes and counts: no headers, URL, credentials or body.
+        self.log_message('POST rejected: error=%s reason=%s host_count=%d origin_count=%d',
+                         error, reason, len(self.headers.get_all('Host', [])),
+                         len(self.headers.get_all('Origin', [])))
+        self.respond_json(status, {'error': error})
+
     def do_POST(self):
         if not self.valid_local_request():
-            self.respond_json(403, {'error': 'local_host_required'})
+            self.reject_post(403, 'local_host_required', 'invalid_host')
             return
-        expected_origin = 'http://' + self.headers.get('Host', '')
-        if self.headers.get('Origin') not in (None, expected_origin):
-            self.respond_json(403, {'error': 'origin_rejected'})
+        reason = self.origin_rejection()
+        if reason:
+            self.reject_post(403, 'origin_rejected', reason)
             return
         try:
             length = int(self.headers.get('Content-Length', '0'))
@@ -307,11 +347,11 @@ class Pages:
                 raise ValueError('Incomplete body')
             values = parse_qs(raw.decode('utf-8'), strict_parsing=True, max_num_fields=12)
         except (ValueError, UnicodeError):
-            self.respond_json(400, {'error': 'invalid_form'})
+            self.reject_post(400, 'invalid_form', 'invalid_body_or_headers')
             return
         token = getattr(self.server, 'csrf_token', '')
         if not token or not hmac.compare_digest(values.get('csrf', [''])[0].encode('utf-8'), token.encode('utf-8')) or values.get('confirm') != ['yes']:
-            self.respond_json(403, {'error': 'confirmation_required'})
+            self.reject_post(403, 'confirmation_required', 'csrf_or_confirmation_invalid')
             return
         path = urlsplit(self.path).path
         jobs = getattr(self.server, 'jobs', None)

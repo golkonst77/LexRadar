@@ -26,7 +26,9 @@ def website(value):
     try:
         url = urlsplit(value)
         if (url.scheme in {'http', 'https'} and url.hostname and not url.username
-                and not url.password and not any(c.isspace() for c in value)):
+                and not url.password and url.hostname.removeprefix('www.').rstrip('.')
+                and (url.port is None or url.port > 0)
+                and not any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in value)):
             return value
     except ValueError:
         pass
