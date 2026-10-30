@@ -56,7 +56,7 @@ class AnalysisJobs:
                     continue
             return result
 
-    def preview_analysis(self, records, identifiers=None, count=None, completed=()):
+    def preview_analysis(self, records, identifiers=None, count=None, completed=(), retry_errors=False):
         if count is not None and count not in (10, 20, 50, 100, 200):
             raise ValueError('Недопустимый размер пакета')
         if identifiers is not None and (not identifiers or len(identifiers) > 200):
@@ -65,10 +65,16 @@ class AnalysisJobs:
         if identifiers is not None and not set(identifiers) <= known:
             raise ValueError('Каталог изменился; выберите организации заново')
         with self.lock:
+            if retry_errors:
+                from control_leads import analysis_rows
+                history = self.analysis_history()
+                records = [r for r in records if (rows := analysis_rows(r, history))
+                           and rows[0]['status'] in {'failed', 'cancelled'}]
             active = {json.loads(r['params'])['domain'] for r in self.db.execute(
                 "SELECT params FROM jobs WHERE kind='analysis-site' AND status IN ('pending','queued','running')")}
             done = set(completed) | {json.loads(r[0])['domain'] for r in self.db.execute(
                 "SELECT params FROM jobs WHERE kind='analysis-site' AND status='succeeded'")}
+            succeeded = {key[1] for key, row in self.analysis_history().items() if row['status'] == 'succeeded'} if retry_errors else set()
             sites, skipped, seen = [], [], set()
             for record in sorted(records, key=lambda r: (r['name'].casefold(), r['id'])):
                 if identifiers is not None and record['id'] not in identifiers:
@@ -83,6 +89,8 @@ class AnalysisJobs:
                     seen.add(host)
                     if host in active:
                         raise ValueError('Домен уже в очереди или выполняется')
+                    if host in succeeded:
+                        raise ValueError('Домен уже успешно проанализирован')
                     if count is not None and host in done:
                         raise ValueError('Анализ уже завершён')
                     sites.append(dict(name=record['name'], lead_id=record['id'], url=url, domain=host,
@@ -96,7 +104,7 @@ class AnalysisJobs:
                 raise ValueError('Слишком много предпросмотров')
             token = secrets.token_urlsafe(32)
             preview = dict(id=uuid.uuid4().hex, time=time.monotonic(), analysis=True,
-                           params=dict(sites=sites, skipped=skipped))
+                           params=dict(sites=sites, skipped=skipped), retry_errors=retry_errors)
             self.previews[token] = preview
             return token, preview
 
@@ -115,6 +123,10 @@ class AnalysisJobs:
                 "SELECT params FROM jobs WHERE kind='analysis-site' AND status IN ('pending','queued','running')")}
             if any(s['domain'] in active for s in sites):
                 raise ValueError('Домен уже поставлен в очередь; обновите предпросмотр')
+            if preview.get('retry_errors'):
+                succeeded = {key[1] for key, row in self.analysis_history().items() if row['status'] == 'succeeded'}
+                if any(s['domain'] in succeeded for s in sites):
+                    raise ValueError('Домен уже успешно проанализирован; обновите предпросмотр')
             if self.stopping.is_set() or self.db.execute('SELECT count(*) FROM jobs').fetchone()[0] + len(sites) + 1 > 1000:
                 raise ValueError('Сервер остановлен или журнал заполнен (1000)')
             if self.db.execute("SELECT count(*) FROM jobs WHERE status IN ('pending','queued','running')").fetchone()[0] + len(sites) > 200:

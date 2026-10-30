@@ -76,6 +76,15 @@ class Jobs(AnalysisJobs):
         self.db.execute("UPDATE jobs SET status='failed', ended=?, error='Прервано перезапуском; повторный запуск только вручную' WHERE status='running'", (now(),))
         self.db.execute("UPDATE jobs SET status='cancelled', ended=?, error='Очередь остановлена перезапуском' WHERE status IN ('queued','pending')", (now(),))
         self.db.commit()
+        from control_offers import publish, cleanup
+        self.db.execute('CREATE TABLE IF NOT EXISTS current_offers (domain TEXT PRIMARY KEY, job_id TEXT, hashes TEXT)')
+        self.db.commit()
+        for job in self.db.execute("SELECT * FROM jobs WHERE kind='analysis-site' AND status IN ('succeeded','failed','cancelled') ORDER BY rowid").fetchall():
+            try:
+                publish(self, dict(job), legacy=True)
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        cleanup(self)
         self.stopping = threading.Event()
         self.wake = threading.Event()
         self.thread = threading.Thread(target=self._work, daemon=True)
@@ -267,6 +276,13 @@ class Jobs(AnalysisJobs):
                 if self.get(identifier)['cancel'] or self.stopping.is_set():
                     status, error = 'cancelled', 'Отменено пользователем или остановкой сервера'
                 self._update(identifier, status=status, error=error, ended=now(), output=log_text(output))
+                if row['kind'] == 'analysis-site':
+                    from control_offers import publish, cleanup
+                    try:
+                        publish(self, self.get(identifier))
+                        cleanup(self)
+                    except (OSError, ValueError, KeyError, TypeError, sqlite3.Error):
+                        self._update(identifier, error=error or 'Не удалось обновить актуальное КП; прежняя версия сохранена')
 
     def _work(self):
         while not self.stopping.is_set():

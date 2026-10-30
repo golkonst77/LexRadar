@@ -56,6 +56,105 @@ class PrepareTests(unittest.TestCase):
     def run_prepare(self, confirm=True):
         return crm.run([self.row], self.root, self.journal, confirm=confirm, api=self.api)[0]
 
+    def web_prepare(self, drafts=False):
+        return crm.run([self.row], self.root, self.journal, confirm=True, api=self.api,
+                       accounts_only=not drafts, prepare_drafts=drafts)[0]
+
+    def test_web_saved_account_draft_repeat_and_changed_inputs(self):
+        self.api = FakeAPI()
+        self.row.update(company_name='ООО "Test"', email='test@test.invalid', recipient_verified=True)
+        account = self.web_prepare()['account_id']
+        self.api.records['Account'][account]['name'] = 'ООО «Test»'
+        first = self.web_prepare(True)
+        self.assertEqual(first['status'], 'DRAFT_VERIFIED')
+        self.assertEqual(first['account_id'], account)
+        count = len(self.api.calls)
+        self.assertEqual(self.web_prepare(True)['status'], 'DRAFT_VERIFIED')
+        self.assertFalse(any(m in ('POST', 'PUT') for m, _, _ in self.api.calls[count:]))
+        for change in ({'email': 'other@test.invalid'}, {'pdf_sha256': 'wrong'},
+                       {'company_name': 'Other'}, {'website': 'https://other.invalid'}):
+            with self.subTest(change=change):
+                original = dict(self.row)
+                self.row.update(change)
+                count = len(self.api.posts)
+                self.assertTrue(self.web_prepare(True)['status'].startswith('HOLD'))
+                self.assertEqual(len(self.api.posts), count)
+                self.row = original
+
+    def test_web_binding_failure_only_original_error_can_resume(self):
+        for error, expected in (('Account binding changed', 'DRAFT_VERIFIED'),
+                                ('Previous draft failure; reconcile journal before retry', 'HOLD')):
+            with self.subTest(error=error):
+                self.journal.unlink(missing_ok=True)
+                self.api = FakeAPI()
+                self.row.update(company_name='ООО "Test"', email='test@test.invalid', recipient_verified=True)
+                account = self.web_prepare()['account_id']
+                self.api.records['Account'][account]['name'] = 'ООО «Test»'
+                state = json.loads(self.journal.read_text())
+                entry = state[self.row['id']]
+                entry['steps'] = {}  # Legacy fixture: Account was adopted, not created here.
+                entry['draft_error'] = True
+                entry['result'].update(status='HOLD', errors=[{'error': error}])
+                state[self.row['id'] + ':draft'] = {
+                    'account_id': account, 'steps': {}, 'sha256': self.row['pdf_sha256'],
+                    'binding': {k: self.row[k] for k in ('company_name', 'website', 'email')}}
+                crm.espo.save(self.journal, state)
+                count = len(self.api.posts)
+                result = self.web_prepare(True)
+                self.assertEqual(result['status'], expected)
+                if expected == 'HOLD':
+                    self.assertEqual(len(self.api.posts), count)
+                    self.web_prepare()  # Reconfirming Account cannot bypass the old failure.
+                    self.assertEqual(self.web_prepare(True)['status'], 'HOLD')
+                    self.assertEqual(len(self.api.posts), count)
+
+    def test_web_legacy_interrupted_attempt_cannot_gain_resume_permission(self):
+        self.api = FakeAPI()
+        self.row.update(email='test@test.invalid', recipient_verified=True)
+        account = self.web_prepare()['account_id']
+        state = json.loads(self.journal.read_text())
+        state[self.row['id'] + ':draft'] = {
+            'account_id': account, 'steps': {}, 'sha256': self.row['pdf_sha256']}
+        crm.espo.save(self.journal, state)
+        count = len(self.api.posts)
+        self.assertEqual(self.web_prepare(True)['status'], 'HOLD')
+        saved = json.loads(self.journal.read_text())[self.row['id'] + ':draft']
+        self.assertNotIn('resume_protocol', saved)
+        self.assertEqual(len(self.api.posts), count)
+
+    def test_web_unknown_email_post_holds_then_recovers_without_duplicate(self):
+        self.api = FakeAPI()
+        self.row.update(email='test@test.invalid', recipient_verified=True)
+        self.web_prepare()
+        original = self.api.request
+        def request(method, route, payload=None):
+            response = original(method, route, payload)
+            if method == 'POST' and route == 'Email':
+                self.api.hide = True
+                raise crm.espo.Hold('Lost Email response')
+            return response
+        self.api.request = request
+        self.assertEqual(self.web_prepare(True)['status'], 'HOLD')
+        count = len(self.api.posts)
+        self.assertEqual(self.web_prepare(True)['status'], 'HOLD')
+        self.assertEqual(len(self.api.posts), count)
+        self.api.hide = False
+        self.assertEqual(self.web_prepare(True)['status'], 'DRAFT_VERIFIED')
+        self.assertEqual(len(self.api.posts), count)
+        self.assertEqual(len(self.api.records['Email']), 1)
+
+    def test_web_no_email_and_identity_conflict(self):
+        self.api = FakeAPI()
+        self.row['email'] = ''
+        self.web_prepare()
+        self.assertEqual(self.web_prepare(True)['status'], 'DOCUMENT_VERIFIED_NO_DRAFT')
+        self.assertEqual(self.web_prepare(True)['status'], 'DOCUMENT_VERIFIED_NO_DRAFT')
+        self.assertFalse(self.api.records['Email'])
+        count = len(self.api.posts)
+        with patch.object(crm, 'identify', side_effect=crm.IdentityHold('Multiple legal entities')):
+            self.assertEqual(self.web_prepare(True)['status'], 'HOLD_IDENTITY')
+        self.assertEqual(len(self.api.posts), count)
+
     def test_preview_never_contacts_crm(self):
         with patch.object(self.api, 'request', side_effect=AssertionError('network')):
             result = self.run_prepare(False)
@@ -64,6 +163,7 @@ class PrepareTests(unittest.TestCase):
         self.assertFalse(self.journal.exists())
 
     def test_repeat_no_duplicates_no_mail_and_unverified_email(self):
+        self.row['website'] = 'https://aclinic-krd.ru/'
         first = self.run_prepare()
         self.assertEqual(first['status'], 'PENDING_REVIEW')
         count = len(self.api.posts)

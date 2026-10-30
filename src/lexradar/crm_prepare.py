@@ -1,4 +1,4 @@
-"""CRM_PREPARE_ONLY: store review materials, never create mail entities."""
+"""Prepare review materials; explicit web continuation can prepare unscheduled drafts."""
 import argparse
 import base64
 import fcntl
@@ -264,8 +264,6 @@ class Prepare(espo.Exporter):
         candidates = self.api.find('Account', 'website', host, operator='contains')
         candidates = [c for c in candidates if espo.website_domain(c.get('website')) == host]
         candidates += self.api.find('Account', 'name', row['company_name'])
-        if host == 'aclinic-krd.ru':
-            candidates.append(self.api.get('Account', '6ae32c46426f8cdb3'))
         saved_id = entry.get('account_id') or entry.get('steps', {}).get('account', {}).get('id')
         if saved_id:
             candidates.append(self.api.get('Account', saved_id))
@@ -278,8 +276,6 @@ class Prepare(espo.Exporter):
                 raise IdentityHold('Account identity conflict; no duplicate or reassignment allowed')
             account_id = account['id']
         else:
-            if host == 'aclinic-krd.ru':
-                raise IdentityHold('Known manual Account missing; reconcile identity')
             if preview:
                 return None
             account_id = self.ensure(entry, 'account', 'Account', {
@@ -337,7 +333,7 @@ class Prepare(espo.Exporter):
         return {'document_id': document, 'attachment_id': attachment}
 
 
-def run(rows, root, journal, *, confirm=False, api=None, check_crm=False):
+def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accounts_only=False, prepare_drafts=False):
     results = []
     journal.parent.mkdir(parents=True, exist_ok=True)
     with journal.with_suffix('.lock').open('a') as lock:
@@ -375,6 +371,74 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False):
                         result['crm_identity_checked'] = True
                     result['status'] = 'PREVIEW'
                     continue
+                if (accounts_only or prepare_drafts) and 'draft_contact' in entry:
+                    if entry['draft_contact'] != row.get('email', ''):
+                        raise espo.Hold('Confirmed email changed; reconcile journal before retry')
+                if prepare_drafts:
+                    previous = entry.get('result', {})
+                    saved_draft = state.get(row['id'] + ':draft', {})
+                    saved_binding = saved_draft.get('binding', {})
+                    # Only the original pre-write binding failure proves where export stopped.
+                    binding_failure = (previous.get('status') == 'HOLD'
+                                       and previous.get('identity_verified') is True
+                                       and entry.get('account_id')
+                                       and previous.get('account_id') == entry.get('account_id')
+                                       and previous.get('errors') == [{'error': 'Account binding changed'}]
+                                       and saved_draft.get('account_id') == entry.get('account_id')
+                                       and entry.get('steps') == {}
+                                       and saved_draft.get('steps') == {}
+                                       and saved_draft.get('sha256') == items[0]['sha256']
+                                       and isinstance(saved_binding, dict)
+                                       and identity_name(saved_binding.get('company_name', ''))
+                                       == identity_name(result['identity']['company_name'])
+                                       and all(saved_binding.get(k) == row.get(k, '')
+                                               for k in ('website', 'email')))
+                    resumable = saved_draft.get('resume_protocol') == 1
+                    if entry.get('draft_error') and not (binding_failure or resumable):
+                        raise espo.Hold('Previous draft failure; outcome unknown. Сверьте Account, Document/PDF и Email в CRM с журналом; пустые steps не разрешают повтор POST. Не сбрасывайте draft_error.')
+                    if (saved_draft and not (resumable or binding_failure)
+                            and previous.get('status') not in ('DRAFT_VERIFIED', 'DOCUMENT_VERIFIED_NO_DRAFT')):
+                        raise espo.Hold('Legacy draft attempt has no durable recovery protocol; сверьте Document, Email и вложения в CRM, повтор POST заблокирован')
+                    if (previous.get('status') not in ('ACCOUNT_VERIFIED', 'DRAFT_VERIFIED', 'DOCUMENT_VERIFIED_NO_DRAFT') and not (binding_failure or resumable)) or not entry.get('account_id'):
+                        raise espo.Hold('ACCOUNT_VERIFIED required before preparing draft')
+                    if api is None:
+                        api = espo.API()
+                    definitions = espo.check_schema(api)
+                    worker = Prepare(api, journal, state, definitions)
+                    verified_row = {**row, 'company_name': result['identity']['company_name']}
+                    account = worker.account(verified_row, entry, '', preview=True)
+                    # The exporter requires the exact CRM spelling after our normalized identity check.
+                    account_record = api.get('Account', account)
+                    if (identity_name(account_record.get('name', '')) != identity_name(verified_row['company_name'])
+                            or espo.website_domain(account_record.get('website')) != binding['host']):
+                        raise IdentityHold('Account identity conflict; no duplicate or reassignment allowed')
+                    verified_row['company_name'] = account_record['name']
+                    result['account_id'] = account
+                    # Reuse the existing exporter and its durable steps in the same locked journal.
+                    draft_id = row['id'] + ':draft'
+                    draft = state.setdefault(draft_id, {'sha256': items[0]['sha256'], 'steps': {},
+                                                       'account_id': account})
+                    if draft.get('account_id') != account:
+                        raise espo.Hold('Draft Account binding changed')
+                    export_row = {**verified_row, 'id': draft_id, 'export_approved': True}
+                    espo.validate(export_row, root)
+                    saved_binding = draft.get('binding')
+                    export_binding = {k: export_row.get(k, '') for k in ('company_name', 'website', 'email')}
+                    if (binding_failure and saved_binding
+                            and identity_name(saved_binding.get('company_name', '')) == identity_name(export_binding['company_name'])
+                            and all(saved_binding.get(k) == export_binding[k] for k in ('website', 'email'))):
+                        draft['binding'] = export_binding
+                    material_step = 'material-' + digest(items[0]['path'].encode())
+                    existing_document = entry.get('steps', {}).get(material_step, {}).get('id')
+                    if existing_document:
+                        export_row['existing_document_id'] = existing_document
+                    template = espo.template_at(api, None)
+                    draft['resume_protocol'] = 1
+                    espo.save(journal, state)
+                    result.update(espo.Exporter(api, journal, state, definitions).export(
+                        export_row, items[0]['data'], items[0]['sha256'], template))
+                    entry.pop('draft_error', None)
+                    continue
                 if api is None:
                     api = espo.API()
                 definitions = api.request('GET', 'Metadata').get('entityDefs', {})
@@ -387,6 +451,10 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False):
                 marker = 'LexRadar-REVIEW-' + digest((row['id'] + key).encode())
                 account = worker.account({**row, 'company_name': result['identity']['company_name']}, entry, marker)
                 result['account_id'] = account
+                if accounts_only:
+                    entry.setdefault('draft_contact', row.get('email', ''))
+                    result['status'] = 'ACCOUNT_VERIFIED'
+                    continue
                 for item, outcome in zip(items, result['materials']):
                     if not item.get('pdf'):
                         outcome['storage'] = 'server_only'
@@ -439,6 +507,17 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False):
                 result['errors'].append({'error': 'Local/API failure; inspect journal before retry'})
             finally:
                 if confirm and isinstance(row, dict) and row.get('id') in state:
+                    if prepare_drafts:
+                        draft = state.get(row['id'] + ':draft', {})
+                        if draft.get('account_id'):
+                            result.setdefault('account_id', draft['account_id'])
+                        for step, field in (('document', 'document_id'), ('email', 'email_id')):
+                            saved_id = draft.get('steps', {}).get(step, {}).get('id')
+                            if saved_id:
+                                result.setdefault(field, saved_id)
+                        if result['errors']:
+                            state[row['id']]['draft_error'] = True
+                            state[row['id']].setdefault('draft_failure', result['errors'])
                     state[row['id']]['result'] = result
                     espo.save(journal, state)
                 results.append(result)

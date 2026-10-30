@@ -68,13 +68,17 @@ class Pages:
                 '<input type="hidden" name="csrf" value="' + esc(getattr(self.server, 'csrf_token', '')) + '">' + fields
                 + '<button>' + esc(label) + '</button></form>')
 
+    def analysis_errors(self, records, history):
+        return {r['id'] for r in records if (rows := analysis_rows(r, history))
+                and rows[0]['status'] in {'failed', 'cancelled'}}
+
     def analysis_status(self, record, history, compact=False):
         try:
             _, host = target(next(iter(record['websites']), ''))
         except ValueError:
             return ('<span class="qualification">Нет сайта</span>', '') if compact else 'Нет допустимого сайта'
         rows = analysis_rows(record, history)
-        row = next((r for r in rows if r['status'] == 'succeeded'), rows[0] if rows else None)
+        row = rows[0] if rows else None
         if not row:
             return ('<span class="qualification">Не анализировался</span>', '') if compact else 'Не запускался для этой записи'
         from control_enrichment import observation
@@ -94,6 +98,11 @@ class Pages:
         reports = []
         report_url = ''
         for name, relative in ARTIFACTS.items():
+            if name == 'proposal.pdf':
+                from control_offers import current_offers, verified
+                active = current_offers(self.server.jobs).get(host)
+                if not active or active['job_id'] != row['id'] or not verified(self.server.jobs, active):
+                    continue
             try:
                 read_file(self.server.jobs.state_dir, row['id'] + '/analysis/' + relative, 8_000_000, prefix=5)
             except (OSError, ValueError):
@@ -270,6 +279,13 @@ class Pages:
         if not row or row['kind'] != 'analysis-site' or parts[3] not in ARTIFACTS:
             self.respond_json(404, {'error': 'not_found'})
             return
+        if parts[3] == 'proposal.pdf':
+            from control_offers import current_offers, verified
+            host = json.loads(row['params']).get('domain')
+            active = current_offers(jobs).get(host)
+            if not active or active['job_id'] != row['id'] or not verified(jobs, active):
+                self.respond_json(404, {'error': 'proposal_unavailable'})
+                return
         try:
             raw = read_file(jobs.state_dir, row['id'] + '/analysis/' + ARTIFACTS[parts[3]], 8_000_000)
             if parts[3] == 'manifest.json':
@@ -521,7 +537,8 @@ class Pages:
                 if values.get('single'):
                     identifiers = values['single']
                 token, preview = jobs.preview_analysis(data['leads'], identifiers=None if count is not None else identifiers,
-                    count=count, completed={domain(r['target']) for r in data['reports'] if r['kind'] == 'audit'})
+                    count=count, completed={domain(r['target']) for r in data['reports'] if r['kind'] == 'audit'},
+                    retry_errors=values.get('retry_errors') == ['yes'])
                 content = '<h1>Предпросмотр анализа</h1><p><a href="/organizations">← Организации</a></p>'
                 content += '<p>Выбрано: ' + str(len(preview['params']['sites'])) + '. Последовательно, один процесс. До 180 секунд на сайт. Реальный предварительный анализ правил: 7 HTML, 2 документа, 16 запросов, 60 секунд сбора; robots.txt учитывается. Без AI, CRM и отправки писем. Контакты с URL-источником движок не экспортирует; исходные контакты сохраняются.</p>'
                 for site in preview['params']['sites']:

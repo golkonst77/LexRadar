@@ -1,0 +1,39 @@
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+work/
+.env
+
+runs-036/
+
+# Private audit review exports (may contain personal data)
+runs-067/
+
+# Private experiment 069 evidence and model captures
+runs-069/
+
+# Private pilot evidence and local recovery snapshots
+.private-pilots/
+
+# Local Control Center state, backups and private runtime artifacts
+.control-center-state*/
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.log
+*.jsonl
+*.lock
+*.bak
+*.backup
+*.tmp
+*.swp
+.env.*
+*.pem
+*.key
+# Client PDFs stay local; synthetic fixtures are added explicitly when needed.
+*.pdf

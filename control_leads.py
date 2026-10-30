@@ -74,9 +74,8 @@ def analysis_rows(record, history):
         host = target(next(iter(record['websites']), ''))[1]
     except ValueError:
         return []
-    aliases = set(record.get('aliases', [record['id']]))
     rows = {row['id']: row for key, row in history.items()
-            if key[0] in aliases and key[1] == host}
+            if key[1] == host}
     return list(rows.values())
 
 

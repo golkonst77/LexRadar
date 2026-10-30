@@ -81,6 +81,8 @@ class FakeAPI:
         eid = 'id' + str(len(self.posts) + 1)
         self.posts.append((route, copy.deepcopy(payload)))
         self.records[route][eid] = {**copy.deepcopy(payload), 'id': eid}
+        if route == 'Document':
+            self.records[route][eid]['fileName'] = self.records['Attachment'][payload['fileId']]['name']
         if route == self.lose:
             self.lose = None
             raise Hold('Lost response after commit')
@@ -157,6 +159,48 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(email['body'], 'Approved body')
         self.assertNotIn('messageId', email)
 
+    def test_export_without_attachment_metadata_permissions(self):
+        get, find = self.api.get, self.api.find
+        def denied_get(kind, eid):
+            if kind == 'Attachment':
+                raise AssertionError('Forbidden GET Attachment')
+            return get(kind, eid)
+        def denied_find(kind, *args, **kwargs):
+            if kind == 'Attachment':
+                raise AssertionError('Forbidden GET Attachment search')
+            return find(kind, *args, **kwargs)
+        self.api.get, self.api.find = denied_get, denied_find
+        first = self.export()[0]
+        self.assertEqual(first['status'], 'DRAFT_VERIFIED')
+        self.assertEqual(self.export()[0], first)
+
+    def test_pdf_download_uses_bytes_without_metadata_get(self):
+        api = API.__new__(API)
+        with patch.object(api, 'request', return_value=b'%PDF-fixture') as request:
+            self.assertEqual(api.file('file-id'), b'%PDF-fixture')
+            request.assert_called_once_with('GET', 'Attachment/file/file-id', binary=True)
+        with self.assertRaises(Hold):
+            api.file('../invalid')
+
+    def test_unreadable_pdf_never_verified(self):
+        def denied(eid):
+            raise Hold('PDF bytes unavailable')
+        self.api.file = denied
+        self.assertEqual(self.export()[0]['status'], 'HOLD')
+        self.assertFalse(self.api.records['Email'])
+        self.api.file = lambda eid: b'%PDF-different bytes'
+        result = self.export()[0]
+        self.assertEqual(result['status'], 'HOLD')
+        self.assertIn('SHA-256 mismatch', result['reason'])
+        self.assertFalse(self.api.records['Email'])
+
+    def test_unknown_attachment_upload_is_not_reposted(self):
+        self.api.lose = 'Attachment'
+        self.assertEqual(self.export()[0]['status'], 'HOLD')
+        count = len(self.api.posts)
+        self.assertEqual(self.export()[0]['status'], 'HOLD')
+        self.assertEqual(len(self.api.posts), count)
+
     def test_document_action_and_email_put_then_readback(self):
         result = self.export()[0]
         self.assertEqual(result['status'], 'DRAFT_VERIFIED')
@@ -188,6 +232,33 @@ class ExportTests(unittest.TestCase):
                 for _ in range(2):
                     self.assertEqual(self.export()[0]['status'], 'HOLD')
                 self.assertEqual(len(self.api.records['Email']), 1)
+
+    def test_attachment_action_lost_response_is_not_reposted(self):
+        original = self.api.request
+        def request(method, route, payload=None):
+            response = original(method, route, payload)
+            if route == 'Document/action/getAttachmentList':
+                raise Hold('Lost attachment action response')
+            return response
+        self.api.request = request
+        self.assertEqual(self.export()[0]['status'], 'HOLD')
+        count = len(self.api.calls)
+        self.assertEqual(self.export()[0]['status'], 'HOLD')
+        self.assertFalse(any(m in ('POST', 'PUT') for m, _, _ in self.api.calls[count:]))
+        self.assertEqual(len(self.api.records['Email']), 1)
+
+    def test_saved_action_attachment_reused_after_failed_put(self):
+        original = self.api.request
+        def request(method, route, payload=None):
+            if method == 'PUT' and route.startswith('Email/'):
+                raise Hold('PUT failed before response')
+            return original(method, route, payload)
+        self.api.request = request
+        self.assertEqual(self.export()[0]['status'], 'HOLD')
+        count = len(self.api.calls)
+        self.api.request = original
+        self.assertEqual(self.export()[0]['status'], 'DRAFT_VERIFIED')
+        self.assertFalse(any(m == 'POST' for m, _, _ in self.api.calls[count:]))
 
     def test_lost_attachment_put_response_reuses_completed_draft(self):
         original = self.api.request
@@ -248,71 +319,34 @@ class ExportTests(unittest.TestCase):
             parentType='Account', parentId=account, attachmentsNames={'email-pdf': 'proposal.pdf'})
         return email
 
-    def test_manual_ready_draft_reused_without_contact_updates(self):
-        email = self.manual_draft()
+    def test_manual_clinic_requires_explicit_document_binding(self):
+        self.manual_draft()
+        self.row.pop('phones')
         before = copy.deepcopy(self.api.records)
-        for _ in range(2):
-            result = self.export()[0]
-            self.assertEqual(result['status'], 'DRAFT_VERIFIED', result)
-            self.assertEqual(result['email_id'], email)
-            self.assertEqual(self.api.records, before)
-        self.assertFalse(any(method in ('POST', 'PUT') for method, _, _ in self.api.calls))
-        self.api.records['Email'][email]['body'] = ''
-        self.assertEqual(self.export()[0]['status'], 'DRAFT_VERIFIED')
-        self.assertEqual(self.api.records['Email'][email]['body'], 'Approved body')
-        self.assertEqual(len(self.api.records['Email']), 1)
+        original_request = self.api.request
 
-    def test_manual_body_repair_checks_guards_and_reads_back(self):
-        self.template.write_bytes(APPROVED_TEMPLATE.read_bytes())
-        approved_body = json.loads(self.template.read_text())['body']
-        for field, value in ((None, None), ('parentId', 'wrong'), ('to', 'wrong@example.invalid'),
-                             ('status', 'Sent'), ('isHtml', True), ('sendAt', '2030-01-01'),
-                             ('cc', 'extra@example.invalid'), ('bcc', 'extra@example.invalid'),
-                             ('attachmentsNames', {}), ('pdf', b'%PDF-wrong'),
-                             ('readback', None)):
-            with self.subTest(field=field):
-                self.journal.unlink(missing_ok=True)
-                self.api = FakeAPI()
-                email = self.manual_draft()
-                record = self.api.records['Email'][email]
-                record['body'] = 'Old manual body'
-                if field == 'pdf':
-                    self.api.records['Attachment']['email-pdf']['file'] = (
-                        'data:application/pdf;base64,' + base64.b64encode(value).decode())
-                elif field not in (None, 'readback'):
-                    record[field] = value
-                before = copy.deepcopy(self.api.records)
-                original_get = self.api.get
-                reads = []
-                def get(kind, eid):
-                    reads.append((kind, eid))
-                    return original_get(kind, eid)
-                self.api.get = get
-                original_request = self.api.request
-                def request(method, route, payload=None):
-                    response = original_request(method, route, payload)
-                    if method == 'PUT':
-                        reads.clear()
-                        if field == 'readback':
-                            self.api.records['Email'][email]['body'] = 'Server ignored update'
-                    return response
-                self.api.request = request
-                result = self.export()[0]
-                writes = [c for c in self.api.calls if c[0] in ('POST', 'PUT')]
-                if field in (None, 'readback'):
-                    self.assertEqual(writes, [('PUT', 'Email/' + email, {'body': approved_body})])
-                    self.assertIn(('Email', email), reads)
-                    self.assertEqual(result['status'], 'HOLD' if field else 'DRAFT_VERIFIED')
-                    before['Email'][email]['body'] = record['body']
-                    self.assertEqual(self.api.records, before)
-                    if field is None:
-                        count = len(self.api.calls)
-                        self.assertEqual(self.export()[0]['status'], 'DRAFT_VERIFIED')
-                        self.assertFalse(any(c[0] in ('POST', 'PUT') for c in self.api.calls[count:]))
-                else:
-                    self.assertEqual(result['status'], 'HOLD')
-                    self.assertEqual(writes, [])
-                    self.assertEqual(self.api.records, before)
+        def request(method, route, payload=None):
+            if method == 'GET' and route.endswith('/documents'):
+                return {'list': list(self.api.records['Document'].values()), 'total': 1}
+            return original_request(method, route, payload)
+
+        self.api.request = request
+        result = self.export()[0]
+        self.assertEqual(result['status'], 'HOLD')
+        self.assertIn('existing_document_id', result['reason'])
+        self.assertEqual(self.api.records, before)
+        self.assertFalse(self.api.posts)
+
+    def test_saved_clinic_draft_is_verified_without_body_repair(self):
+        self.row['website'] = 'https://aclinic-krd.ru/'
+        first = self.export()[0]
+        self.assertEqual(first['status'], 'DRAFT_VERIFIED')
+        before_posts = len(self.api.posts)
+        self.assertEqual(self.export()[0], first)
+        self.api.records['Email'][first['email_id']]['body'] = 'Changed body'
+        self.assertEqual(self.export()[0]['status'], 'HOLD')
+        self.assertEqual(len(self.api.posts), before_posts)
+        self.assertEqual(self.api.records['Email'][first['email_id']]['body'], 'Changed body')
 
     def test_api_safe_diagnostics(self):
         with patch.dict('os.environ', {'ESPO_API_KEY': 'secret-key'}):
@@ -364,7 +398,7 @@ class ExportTests(unittest.TestCase):
         self.assertFalse(self.api.posts)
 
     def test_lost_response_recovered_at_every_step(self):
-        for kind in ('Account', 'Attachment', 'Document', 'Email'):
+        for kind in ('Account', 'Document', 'Email'):
             with self.subTest(kind=kind):
                 self.journal.unlink(missing_ok=True)
                 self.api = FakeAPI()
@@ -455,7 +489,7 @@ class ExportTests(unittest.TestCase):
         self.assertIn('conflict', self.export()[0]['reason'])
         self.assertFalse(self.api.posts)
 
-    def test_manual_clinic_bare_domain_preserves_records_and_checks_id(self):
+    def test_clinic_bare_domain_uses_explicit_document_and_any_account_id(self):
         self.row.update(company_name='Клиника А', website='https://aclinic-krd.ru/',
                         email='')
         account_id = '6ae32c46426f8cdb3'
@@ -464,10 +498,11 @@ class ExportTests(unittest.TestCase):
         self.api.records['Account'][account_id] = dict(
             id=account_id, name=self.row['company_name'], website='aclinic-krd.ru')
         self.api.records['Document'][document_id] = dict(
-            id=document_id, fileId=file_id, accountsIds=[account_id])
+            id=document_id, fileId=file_id, fileName='proposal.pdf', accountsIds=[account_id])
         self.api.records['Attachment'][file_id] = dict(
             id=file_id, name='proposal.pdf', file='data:application/pdf;base64,' + base64.b64encode(
                 (self.root / 'proposal.pdf').read_bytes()).decode())
+        self.row['existing_document_id'] = document_id
         original = copy.deepcopy(self.api.records)
         for _ in range(2):
             result = self.export()[0]
@@ -479,7 +514,10 @@ class ExportTests(unittest.TestCase):
         account = self.api.records['Account'].pop(account_id)
         account['id'] = 'wrong'
         self.api.records['Account']['wrong'] = account
-        self.assertIn('Account ID mismatch', self.export()[0]['reason'])
+        self.api.records['Document'][document_id]['accountsIds'] = ['wrong']
+        result = self.export()[0]
+        self.assertEqual(result['status'], 'DOCUMENT_VERIFIED_NO_DRAFT')
+        self.assertEqual(result['account_id'], 'wrong')
         self.assertFalse(self.api.posts)
 
     def test_schema_and_placeholder_template_block_before_post(self):
@@ -541,18 +579,24 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(self.export()[0]['status'], 'DOCUMENT_VERIFIED_NO_DRAFT')
         self.assertFalse(self.api.records['Email'])
 
-    def test_adopt_manual_document_without_uploading_it_again(self):
+    def test_adopt_document_without_attachment_source_evidence_holds(self):
         first = self.export()[0]
         self.journal.unlink()
         self.row['existing_document_id'] = first['document_id']
         count = len(self.api.posts)
-        self.assertEqual(self.export()[0]['status'], 'DRAFT_VERIFIED')
+        result = self.export()[0]
+        self.assertEqual(result['status'], 'HOLD')
+        self.assertIn('source relation', result['reason'])
         self.assertEqual(len(self.api.posts), count)
 
-    def test_missing_manual_clinic_never_created(self):
+    def test_missing_clinic_created_normally_without_duplicates(self):
         self.row['website'] = 'https://aclinic-krd.ru/'
-        self.assertEqual(self.export()[0]['status'], 'HOLD')
-        self.assertFalse(self.api.posts)
+        result = self.export()[0]
+        self.assertEqual(result['status'], 'DRAFT_VERIFIED')
+        count = len(self.api.posts)
+        self.assertEqual(self.export()[0], result)
+        self.assertEqual(len(self.api.posts), count)
+        self.assertEqual(sum(kind == 'Account' for kind, _ in self.api.posts), 1)
 
     def test_default_approved_template_personalizes_only_subject(self):
         result = run([self.row], self.root, self.journal, api=self.api, confirm=True)[0]
@@ -566,13 +610,21 @@ class ExportTests(unittest.TestCase):
 
     def test_document_relation_must_be_read_back(self):
         original = self.api.request
-        def request(method, route, payload=None):
-            if route.endswith('/accounts'):
-                return {'list': []}
-            return original(method, route, payload)
-        self.api.request = request
-        self.assertEqual(self.export()[0]['status'], 'HOLD')
-        self.assertFalse(self.api.records['Email'])
+        for mode in ('missing', 'extra', 'incomplete'):
+            with self.subTest(mode=mode):
+                def request(method, route, payload=None):
+                    result = original(method, route, payload)
+                    if route.endswith('/accounts'):
+                        if mode == 'missing':
+                            return {'list': []}
+                        if mode == 'extra':
+                            result['list'].append({'id': 'other-account'})
+                        if mode == 'incomplete':
+                            result['total'] = len(result['list']) + 1
+                    return result
+                self.api.request = request
+                self.assertEqual(self.export()[0]['status'], 'HOLD')
+                self.assertFalse(self.api.records['Email'])
 
     def test_phone_fallback_and_neutral_segment(self):
         original = self.api.request

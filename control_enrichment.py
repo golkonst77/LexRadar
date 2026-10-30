@@ -1,5 +1,6 @@
 """Bounded observations from saved analysis only; never update source contacts."""
 import csv
+import hashlib
 import io
 import json
 import re
@@ -30,6 +31,8 @@ def emails(text):
 def commercial_decision(root, base, engine):
     """Commercial readiness only; saved engine/legal release gates stay untouched."""
     try:
+        if engine['status'] == 'ERROR':
+            return 'ERROR', engine['reason'] or 'analysis_error'
         review = json.loads(read_file(root, base / 'sites/row-000002/review.json', 1_000_000))
         findings = review['findings']
         if not isinstance(findings, list):
@@ -70,6 +73,20 @@ def observation(root, job, host):
         result['warning'] = 'Итог отсутствует, повреждён или связь с сайтом неоднозначна.'
     if not result['warning']:
         result['qualification'], result['reason'] = commercial_decision(root, base, result)
+        try:
+            review = json.loads(read_file(root, base / 'sites/row-000002/review.json', 1_000_000))
+            binding = review.get('control_center')
+            if binding and (not isinstance(binding, dict) or binding.get('job_id') != job['id'] or binding.get('domain') != host):
+                result.update(qualification='HOLD', reason='review_run_mismatch')
+            elif binding and binding.get('hashes') and result['qualification'] == 'READY':
+                if not isinstance(binding['hashes'], dict) or set(binding['hashes']) != {'pdf', 'html'} or any(hashlib.sha256(read_file(root, base / 'sites/row-000002' / ('proposal.' + ext), 8_000_000)).hexdigest() != sha
+                       for ext, sha in binding['hashes'].items()):
+                    result.update(qualification='HOLD', reason='proposal_hash_mismatch')
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+    if job['status'] != 'succeeded':
+        result.update(qualification='ERROR' if job['status'] in {'failed', 'cancelled'} else '',
+                      reason='analysis_' + job['status'])
     try:
         data = json.loads(read_file(root, base / COLLECTION, 8_000_000))
         if (not isinstance(data, dict) or data.get('schema_version') != '0.2'

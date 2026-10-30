@@ -282,13 +282,15 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             query = params.get('q', [''])[0].strip()
             selected = params.get('status', [''])[0]
             run = params.get('run', [''])[0]
+            errors_only = not mentions and params.get('analysis_errors') == ['yes']
+            error_ids = self.analysis_errors(records, history) if not mentions else set()
             statuses = sorted({m['status'] for r in records for m in r.get('members', [r]) if m['status']})
             try:
                 page = max(1, int(params.get('page', ['1'])[0]))
             except ValueError:
                 page = 1
             filtered = [r for r in records if (not run or any(m.get('run_id') == run for m in r.get('members', [r]))) and (not selected or any(m['status'] == selected for m in r.get('members', [r])))
-                        and query.casefold() in ' '.join(
+                        and (not errors_only or r['id'] in error_ids) and query.casefold() in ' '.join(
                             [r['name'], r['inn'], *r['websites'], r.get('phone', ''), r.get('email', '')]).casefold()]
             sort = params.get('sort', ['name'])[0]
             if sort == 'source':
@@ -320,6 +322,11 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             for key, label in (('name', 'Название А–Я'), ('name-desc', 'Название Я–А'), ('source', 'Источник')):
                 content += '<option value="' + key + '"' + (' selected' if sort == key else '') + '>' + label + '</option>'
             content += '</select></label><button type="submit">Найти</button></form>'
+            if not mentions and jobs:
+                content = content.replace('<button type="submit">Найти</button>',
+                    '<label><input type="checkbox" name="analysis_errors" value="yes"'
+                    + (' checked' if errors_only else '') + '> Ошибки анализа (' + str(len(error_ids))
+                    + ')</label> <button type="submit">Найти</button>', 1)
             content += '<p>Найдено: ' + str(len(filtered)) + '</p>'
             if not mentions and jobs:
                 content += '<p><a href="/jobs">Журнал анализа →</a>. Выбор относится только к текущей странице; при переходе сбрасывается. Следующие N выбираются из всего доступного каталога независимо от фильтра.</p>'
@@ -329,7 +336,9 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 content += '<div class="analysis-secondary">' + self.analysis_form(options + '</select></label>', 'Анализировать следующие N') + '</div>'
                 current = filtered[(page - 1) * 20:page * 20]
                 fields = '<label><input type="checkbox" name="all" value="' + ','.join(r['id'] for r in current) + '"> Выбрать все на текущей странице</label>'
-                content += self.analysis_form(fields, 'Анализировать выбранные', 'analysis-selection')
+                if errors_only:
+                    fields += '<input type="hidden" name="retry_errors" value="yes"><p>Число выбранных для повтора будет показано в предпросмотре перед подтверждением.</p>'
+                content += self.analysis_form(fields, 'Повторить анализ ошибок' if errors_only else 'Анализировать выбранные', 'analysis-selection')
             if not filtered:
                 content += ('<p>Организаций пока нет.</p>' if not records
                             else '<p>По запросу ничего не найдено.</p>')
@@ -385,7 +394,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             for target, label in ((page - 1, 'Назад'), (page + 1, 'Далее')):
                 if 1 <= target <= pages:
                     page_link = listing + '?' + urlencode(
-                        {'q': query, 'status': selected, 'page': target, **({'run': run} if run else {}), **({'sort': sort} if sort != 'name' else {})})
+                        {'q': query, 'status': selected, 'page': target, **({'analysis_errors': 'yes'} if errors_only else {}), **({'run': run} if run else {}), **({'sort': sort} if sort != 'name' else {})})
                     content += '<a href="' + escape(page_link, quote=True) + '">' + label + '</a>'
             content += '</nav>'
         self.respond(200, organization_page(content).encode('utf-8'), 'text/html; charset=utf-8')

@@ -77,7 +77,8 @@ class API:
         return result
 
     def file(self, eid):
-        self.get('Attachment', eid)
+        if not isinstance(eid, str) or not re.fullmatch(r'[A-Za-z0-9_-]+', eid):
+            raise Hold('Invalid CRM ID')
         return self.request('GET', 'Attachment/file/' + eid, binary=True)
 
     def find(self, kind, field, value, *, operator='equals'):
@@ -226,6 +227,21 @@ class Exporter:
     def ensure(self, entry, step, kind, payload, field='name'):
         steps = entry.setdefault('steps', {})
         saved = steps.get(step)
+        if kind == 'Attachment':
+            # Attachment metadata/search is forbidden; unknown uploads cannot be recovered blindly.
+            if saved:
+                if not saved.get('id'):
+                    raise Hold('Uncertain Attachment POST; reconcile before retry')
+                return saved['id']
+            steps[step] = {'pending': True}
+            save(self.journal, self.state)
+            response = self.api.request('POST', kind, payload)
+            eid = response.get('id')
+            if not isinstance(eid, str) or not re.fullmatch(r'[A-Za-z0-9_-]+', eid):
+                raise Hold('Invalid uploaded Attachment ID; reconcile before retry')
+            steps[step]['id'] = eid
+            save(self.journal, self.state)
+            return eid
         if saved and saved.get('id'):
             record = self.api.get(kind, saved['id'])
         else:
@@ -297,25 +313,13 @@ class Exporter:
                 account_id = account['id']
                 entry['account_website'] = account['website']
             else:
-                if host == 'aclinic-krd.ru':
-                    raise Hold('Known manual clinic Account not found; no duplicate will be created')
                 account_id = self.ensure(entry, 'account', 'Account',
                                          {'name': row['company_name'], 'website': row['website'],
                                           'description': marker, **self.contacts(row, {})}, 'description')
             entry['account_id'] = account_id
             save(self.journal, self.state)
-        if website_domain(row['website']) == 'aclinic-krd.ru' and account_id != '6ae32c46426f8cdb3':
-            raise Hold('Manual clinic Account ID mismatch')
         account = self.api.get('Account', account_id)
         patch = self.contacts(row, account)
-        # The proven manual clinic result is read-only for this exporter.
-        if account_id == '6ae32c46426f8cdb3':
-            numbers = phones(row)
-            if ((row.get('email') and account.get('emailAddress') != row['email'])
-                    or (numbers and re.sub(r'\D', '', account.get('phoneNumber') or '')
-                        != re.sub(r'\D', '', numbers[0]))):
-                raise Hold('Manual clinic primary contacts differ; reconcile explicitly, no update performed')
-            patch = {}
         if patch:
             self.api.request('PUT', 'Account/' + account_id, patch)
             verified = self.api.get('Account', account_id)
@@ -323,13 +327,10 @@ class Exporter:
                 raise Hold('Account contact verification mismatch')
         encoded = 'data:application/pdf;base64,' + base64.b64encode(data).decode()
         # Email attachments are obtained from Document/action/getAttachmentList below.
-        manual = website_domain(row['website']) == 'aclinic-krd.ru'
-        adopted = row.get('existing_document_id') or ('6ae32e009a0f5cc31' if manual else None)
+        adopted = row.get('existing_document_id')
         if adopted:
             document = self.api.get('Document', adopted)['id']
             document_file = self.api.get('Document', document).get('fileId')
-            if manual and (account_id != '6ae32c46426f8cdb3' or document_file != '6ae32da53033facf1'):
-                raise Hold('Manual clinic identity mismatch')
         else:
             existing = self.api.request('GET', 'Account/' + account_id + '/documents')
             if not isinstance(existing.get('list'), list) or existing.get('total', len(existing['list'])) > len(existing['list']):
@@ -344,8 +345,16 @@ class Exporter:
             document = self.ensure(entry, 'document', 'Document',
                                    {'name': marker, 'fileId': document_file,
                                     'publishDate': entry['publish_date'], 'accountsIds': [account_id]})
+        document_record = self.api.get('Document', document)
+        if document_record.get('fileId') != document_file or not document_record.get('fileName'):
+            raise Hold('Document PDF ID/name unavailable or changed')
+        pdf_name = document_record['fileName']
+        if not adopted and pdf_name != marker + '-document.pdf':
+            raise Hold('Document PDF name changed')
         links = self.api.request('GET', 'Document/' + document + '/accounts')
-        if account_id not in [r.get('id') for r in links.get('list', [])]:
+        if (not isinstance(links.get('list'), list)
+                or links.get('total', len(links['list'])) > len(links['list'])
+                or {r.get('id') for r in links['list']} != {account_id}):
             raise Hold('Document Account relation not verified')
         if hashlib.sha256(self.api.file(document_file)).hexdigest() != sha:
             raise Hold('Uploaded PDF SHA-256 mismatch')
@@ -357,34 +366,43 @@ class Exporter:
                     'name': template['name'].replace('{company_name}', row['company_name']) + ' [' + marker + ']',
                     'status': 'Draft', 'to': row['email'], 'from': SENDER,
                     'parentType': 'Account', 'parentId': account_id}
-        if manual:
-            # The control draft was created manually; adopt it without changing its subject.
-            email = '6ae3374166673d4cf'
-            result = self.api.get('Email', email)
-            expected['name'] = result.get('name')
-        else:
-            email = self.ensure(entry, 'email', 'Email', expected)
-            result = self.api.get('Email', email)
-        # Only the known manual draft may have its body reconciled after PDF verification.
-        self.verify_email({**result, 'body': expected['body']} if manual else result, expected)
-        pdf_name = self.api.get('Attachment', document_file).get('name')
+        email = self.ensure(entry, 'email', 'Email', expected)
+        result = self.api.get('Email', email)
+        self.verify_email(result, expected)
         names = result.get('attachmentsNames') or {}
         if not isinstance(names, dict) or not pdf_name:
             raise Hold('Email PDF attachment names unavailable')
+        action = entry['steps'].get('email_attachment')
+        if action and action.get('id'):
+            if (action.get('sourceId') != document_file or action.get('name') != pdf_name
+                    or action.get('document_id') != document or action.get('sha256') != sha):
+                raise Hold('Saved Email Attachment source/name evidence unavailable or changed')
         matching = [eid for eid, name in names.items() if name == pdf_name]
+        if matching and (not action or matching != [action.get('id')]
+                         or action['id'] not in (result.get('attachmentsIds') or [])):
+            raise Hold('Email attachment source relation not verified')
         if not matching:
-            if manual:
-                raise Hold('Manual clinic draft PDF missing; no update performed')
-            response = self.api.request('POST', 'Document/action/getAttachmentList',
-                                        {'id': document, 'field': 'attachments', 'parentType': 'Email'})
-            attachments = response.get('list') if isinstance(response, dict) else response
-            if not isinstance(attachments, list) or any(not isinstance(a, dict) for a in attachments):
-                raise Hold('Invalid Document/action/getAttachmentList response: expected attachment list')
-            selected = [a for a in attachments if a.get('sourceId') == document_file]
-            if (len(selected) != 1 or not isinstance(selected[0].get('id'), str)
-                    or not selected[0]['id'] or selected[0].get('name') != pdf_name):
-                raise Hold('Document/action/getAttachmentList: PDF sourceId/name missing or ambiguous')
-            email_file = selected[0]['id']
+            action = entry['steps'].get('email_attachment')
+            if action and action.get('id'):
+                email_file = action['id']
+            elif action:
+                raise Hold('Uncertain POST Document/action/getAttachmentList; сверить вложения Document и Email в CRM; повтор POST заблокирован')
+            else:
+                entry['steps']['email_attachment'] = {'pending': True}
+                save(self.journal, self.state)
+                response = self.api.request('POST', 'Document/action/getAttachmentList',
+                                            {'id': document, 'field': 'attachments', 'parentType': 'Email'})
+                attachments = response.get('list') if isinstance(response, dict) else response
+                if not isinstance(attachments, list) or any(not isinstance(a, dict) for a in attachments):
+                    raise Hold('Invalid Document/action/getAttachmentList response: expected attachment list')
+                selected = [a for a in attachments if a.get('sourceId') == document_file]
+                if (len(selected) != 1 or not isinstance(selected[0].get('id'), str)
+                        or not selected[0]['id'] or selected[0].get('name') != pdf_name):
+                    raise Hold('Document/action/getAttachmentList: PDF sourceId/name missing or ambiguous')
+                email_file = selected[0]['id']
+                entry['steps']['email_attachment'] = {'id': email_file, 'sourceId': document_file,
+                                                      'name': pdf_name, 'document_id': document, 'sha256': sha}
+                save(self.journal, self.state)
             if hashlib.sha256(self.api.file(email_file)).hexdigest() != sha:
                 raise Hold('Email PDF SHA-256 mismatch')
             self.api.request('PUT', 'Email/' + email,
@@ -392,23 +410,12 @@ class Exporter:
             result = self.api.get('Email', email)
             self.verify_email(result, expected)
             names = result.get('attachmentsNames') or {}
-            if not isinstance(names, dict) or names.get(email_file) != pdf_name:
+            if (not isinstance(names, dict) or names.get(email_file) != pdf_name
+                    or email_file not in (result.get('attachmentsIds') or [])):
                 raise Hold('Email PDF attachment not verified after PUT')
             matching = [email_file]
         if any(hashlib.sha256(self.api.file(eid)).hexdigest() != sha for eid in matching):
             raise Hold('Email PDF SHA-256 mismatch')
-        if manual and result.get('body') != expected['body']:
-            current = self.api.get('Email', email)
-            self.verify_email({**current, 'body': expected['body']}, expected)
-            if current.get('attachmentsNames') != names or current.get('attachmentsIds') != result.get('attachmentsIds'):
-                raise Hold('Manual clinic draft attachments changed; no update performed')
-            self.api.request('PUT', 'Email/' + email, {'body': expected['body']})
-            result = self.api.get('Email', email)
-            self.verify_email(result, expected)
-            if result.get('attachmentsNames') != names or result.get('attachmentsIds') != current.get('attachmentsIds'):
-                raise Hold('Manual clinic draft attachments changed after body PUT')
-            if any(hashlib.sha256(self.api.file(eid)).hexdigest() != sha for eid in matching):
-                raise Hold('Email PDF SHA-256 mismatch')
         entry['steps']['email'] = {'id': email}
         save(self.journal, self.state)
         return {'account_id': account_id, 'document_id': document, 'email_id': email,
