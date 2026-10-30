@@ -112,7 +112,7 @@ class Pages:
             reports.append(link('/analysis-files/' + row['id'] + '/' + name, name))
         if compact:
             label = qualification or ('Нет квалификации' if row['status'] == 'succeeded' else job_status(row['status']))
-            tone = {'READY': 'ready', 'HOLD': 'hold', 'REJECT': 'reject'}.get(qualification, 'unknown')
+            tone = {'READY': 'ready', 'HOLD': 'hold', 'REJECT': 'reject'}.get(qualification, 'error' if row['status'] in {'failed', 'cancelled'} else 'unknown')
             title = 'Последнее задание: ' + job_status(rows[0]['status'])
             title += '; движок: ' + (saved['status'] or 'Нет данных')
             title += '; ' + (saved['warning'] or saved['reason'] or 'Нет подробностей')
@@ -261,7 +261,7 @@ class Pages:
     def job_table(self, jobs):
         if not jobs:
             return '<p>Заданий пока нет.</p>'
-        content = '<div class="table-scroll"><table><tr><th>Задание</th><th>Статус</th><th>Создано UTC</th></tr>'
+        content = '<div class="table-scroll" tabindex="0" role="region" aria-label="Задания"><table><tr><th>Задание</th><th>Статус</th><th>Создано UTC</th></tr>'
         for job in jobs:
             progress = ''
             if job['kind'] == 'analysis-batch':

@@ -22,115 +22,145 @@ PAGE = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LexRadar — Центр управления</title>
 <style>
-:root { color-scheme: dark; font-family: system-ui, sans-serif; }
+:root { color-scheme: light; font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 16px; color: #111827; background: #F7F8FA; }
 * { box-sizing: border-box; }
-body { margin: 0; background: #0c111b; color: #e7edf7; line-height: 1.6; }
-a { color: #a5c7ff; text-underline-offset: 4px; }
-input, select, button { font: inherit; padding: 6px; max-width: 100%; }
-th, td { text-align: left; padding: 10px; border-bottom: 1px solid #29364d; }
-table { width: 100%; border-collapse: collapse; }
-th, td { vertical-align: top; overflow-wrap: anywhere; }
-.organizations-table { min-width: 900px; table-layout: fixed; font-size: 14px; }
-.organizations-table th, .organizations-table td { padding: 9px 10px; vertical-align: middle; }
-.organizations-table th { white-space: nowrap; }
-.organizations-table td { overflow-wrap: normal; word-break: normal; }
+body { margin: 0; line-height: 1.6; }
+a { color: #2563EB; text-underline-offset: 4px; }
+a:hover { color: #1D4ED8; }
+:focus-visible { outline: 3px solid #2563EB; outline-offset: 4px; }
+.skip-link { position: fixed; top: -100px; left: 16px; z-index: 10;
+  padding: 12px 16px; background: #fff; border: 1px solid #2563EB; border-radius: 12px; }
+.skip-link:focus { top: 16px; }
+header { position: fixed; inset: 0 auto 0 0; width: 248px; padding: 32px 16px;
+  background: #fff; border-right: 1px solid #E5E7EB; overflow-y: auto; }
+.brand { display: block; margin: 0 12px 32px; color: #111827; font-size: 24px;
+  line-height: 1.3; font-weight: 750; letter-spacing: -.5px; }
+.brand span { color: #2563EB; }
+.brand small { display: block; margin-top: 8px; font-size: 13px; font-weight: 500; letter-spacing: 0; }
+header nav { display: flex; flex-direction: column; gap: 8px; }
+header nav a { padding: 12px; border-radius: 12px; color: #374151;
+  text-decoration: none; font-size: 14px; font-weight: 550; border-left: 3px solid transparent; }
+header nav a:hover { background: #F7F8FA; color: #1D4ED8; }
+header nav a[aria-current="page"] { background: #EFF6FF; color: #1D4ED8; border-left-color: #2563EB; }
+main, footer { width: calc(100% - 248px); max-width: 1440px; margin-left: 248px; padding: 32px 40px; }
+main { min-height: calc(100vh - 100px); overflow-wrap: anywhere; }
+footer { padding-top: 16px; color: #6B7280; font-size: 13px; }
+footer p { border-top: 1px solid #E5E7EB; padding-top: 16px; }
+main, article, .grid > *, form, label { min-width: 0; }
+h1 { font-size: clamp(26px, 3vw, 36px); line-height: 1.25; letter-spacing: -.6px; margin: 8px 0 16px; }
+h2 { font-size: 20px; line-height: 1.4; margin: 28px 0 12px; }
+h3 { font-size: 17px; line-height: 1.5; }
+p { color: #4B5563; margin: 12px 0; }
+small, .soon, .job-note { color: #6B7280; font-size: 13px; }
+.lead { max-width: 800px; font-size: 17px; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 28px 0; }
+article, main > form, main > dl { background: #fff; border: 1px solid #E5E7EB;
+  border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px #11182706; }
+article + article { margin-top: 16px; }
+.grid article { margin: 0; display: flex; flex-direction: column; align-items: flex-start; }
+article h2 { margin-top: 0; }
+.grid article > .cta, .grid article > button { margin-top: auto; }
+.metric { display: block; font-size: 36px; line-height: 1.2; font-weight: 750; color: #111827; margin: 16px 0 8px; }
+.progress-card h1 { font-size: clamp(32px, 4vw, 44px); }
+.progress-card { margin: 24px 0; border-top: 3px solid #2563EB; }
+form { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin: 20px 0; }
+label { display: flex; flex-direction: column; gap: 8px; color: #374151; font-size: 14px; }
+label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; }
+input, select, button { font: inherit; max-width: 100%; }
+input, select { background: #fff; color: #111827; border: 1px solid #D1D5DB; border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+input[type="checkbox"] { accent-color: #2563EB; width: 20px; height: 20px; min-height: 20px; flex-shrink: 0; }
+button, .cta { display: inline-block; background: #2563EB; color: #fff; border: 1px solid #2563EB;
+  border-radius: 8px; padding: 10px 16px; min-height: 44px; font-weight: 600; text-decoration: none; cursor: pointer; }
+button:hover, .cta:hover { background: #1D4ED8; color: #fff; border-color: #1D4ED8; }
+button:disabled, input:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
+button:disabled:hover { background: #2563EB; border-color: #2563EB; }
+.analysis-secondary button, #analysis-selection button, details button, td button, td .cta, .grid article .cta {
+  background: #fff; color: #2563EB; border-color: #D1D5DB; }
+.analysis-secondary button:hover, #analysis-selection button:hover, details button:hover, td button:hover, td .cta:hover, .grid article .cta:hover { background: #EFF6FF; border-color: #2563EB; }
+main:has(> form) > p > .cta { background: #fff; color: #2563EB; border-color: #D1D5DB; }
+main:has(> form) > p > .cta:hover { background: #EFF6FF; border-color: #2563EB; }
+.grid article:first-child .cta { background: #2563EB; color: #fff; border-color: #2563EB; }
+.grid article:first-child .cta:hover { background: #1D4ED8; }
+form[action$="/cancel"] { border: 0; border-top: 1px solid #E5E7EB; padding: 20px 0 0; box-shadow: none; background: transparent; }
+form[action$="/cancel"] button { color: #DC2626; background: #fff; border-color: #FECACA; }
+form[action$="/cancel"] button:hover { background: #FEF2F2; border-color: #DC2626; }
+#analysis-selection { padding: 16px; border-color: #BFDBFE; background: #EFF6FF; }
+table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+th, td { text-align: left; padding: 16px; border-bottom: 1px solid #E5E7EB; vertical-align: top; overflow-wrap: anywhere; }
+th { background: #F9FAFB; color: #4B5563; font-weight: 600; }
+tbody tr:hover { background: #F9FAFB; }
+tbody tr:last-child td { border-bottom: 0; }
+.table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid #E5E7EB; border-radius: 12px; margin: 20px 0; }
+.table-scroll table { min-width: 720px; }
+.organizations-table { min-width: 980px; table-layout: fixed; }
+.organizations-table th, .organizations-table td { padding: 12px; vertical-align: middle; }
 .organizations-table .clip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.organizations-table .selection-column { width: 44px; }
+.organizations-table .selection-column { width: 48px; }
 .organizations-table .name-column { width: auto; }
 .organizations-table .site-column { width: 15%; }
 .organizations-table .contacts-column { width: 22%; }
 .organizations-table .status-column { width: 165px; }
 .organizations-table .actions-column { width: 235px; }
-.organizations-table .row-actions { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
-.organizations-table button { padding: 4px 8px; font-size: 13px; }
-.qualification { display: inline-block; padding: 2px 7px; border-radius: 5px; background: #263247; color: #c9d4e5; white-space: nowrap; font-size: 12px; }
-.qualification.ready { background: #15352e; color: #9ae2c2; }
-.qualification.hold { background: #3b321d; color: #e8cd8c; }
-.qualification.reject { background: #3e2630; color: #e7adb7; }
-.job-note { display: block; font-size: 12px; }
-#analysis-selection { padding: 12px; border: 1px solid #6284b4; border-radius: 8px; background: #182337; }
-.analysis-secondary button { background: #263247; color: #c9d4e5; }
-.mentions-table { min-width: 1600px; table-layout: auto; }
+.organizations-table .row-actions { display: flex; align-items: center; gap: 8px; }
+.organizations-table button { padding: 8px; font-size: 13px; }
+.mentions-table { min-width: 1600px; }
 .mentions-table th, .mentions-table .short-field { white-space: nowrap; }
-.mentions-table td { overflow-wrap: normal; word-break: normal; }
 .mentions-table .source-column { min-width: 260px; }
-.mentions-table .status-column { min-width: 200px; white-space: nowrap; }
-.email-value { white-space: nowrap; }
-.email-sources { overflow-wrap: anywhere; }
-summary { cursor: pointer; }
-small { color: #8c9bb1; }
-
-.table-scroll { max-width: 100%; overflow-x: auto; }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 600px; overflow: auto; }
-article + article { margin-top: 16px; }
-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 20px 0; }
-button { cursor: pointer; }
-@media (max-width: 600px) { main, header, footer { padding: 16px; } td, th { padding: 6px; } }
-dd { margin-bottom: 12px; overflow-wrap: anywhere; }
-a:focus-visible { outline: 2px solid #8dbbff; outline-offset: 5px; }
-header, main, footer { max-width: 1440px; margin: auto; padding: 24px; }
-header { display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 20px; border-bottom: 1px solid #273248; }
-.brand { font-size: 22px; font-weight: 750; letter-spacing: -.5px; }
-.brand span { color: #84b4ff; }
-nav { display: flex; gap: 20px; flex-wrap: wrap; }
-nav a { font-size: 14px; }
-main { padding-top: 56px; }
-h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.2; margin: 16px 0; }
-h2 { font-size: 20px; margin-top: 0; }
-p { color: #aab8cc; }
-.badge { display: inline-block; background: #15352e; color: #9ae2c2;
-  padding: 5px 12px; border-radius: 20px; font-size: 13px; }
-.lead { max-width: 680px; font-size: 18px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 18px; margin: 36px 0; }
-article { background: #141d2d; border: 1px solid #29364d; border-radius: 14px;
-  padding: 24px; scroll-margin-top: 24px; }
-.soon { color: #b4c5df; font-size: 13px; }
-.status { border-top: 1px solid #273248; padding-top: 24px; }
-footer { color: #8c9bb1; font-size: 13px; padding-bottom: 40px; }
-
-main, article, .grid > *, form, label { min-width: 0; }
-main { overflow-wrap: anywhere; }
-input, select { background: #0e1726; color: #e7edf7; border: 1px solid #43536d; border-radius: 8px; padding: 10px 12px; }
-label { display: flex; flex-direction: column; gap: 6px; color: #becbdf; }
-label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; }
-input[type="checkbox"] { accent-color: #83b5ff; width: 18px; height: 18px; flex-shrink: 0; }
-button, .cta { display: inline-block; background: #9cc5ff; color: #101b2d; border: 1px solid transparent; border-radius: 8px; padding: 10px 18px; font-weight: 650; text-decoration: none; }
-button:hover, .cta:hover { background: #c3dcff; }
-button:disabled { opacity: .5; cursor: not-allowed; }
-button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #a5c7ff; outline-offset: 3px; }
-nav a { text-decoration: none; padding: 6px 0; }
-nav a:hover { text-decoration: underline; }
-details { margin: 16px 0; border: 1px solid #29364d; border-radius: 8px; padding: 12px; }
+.mentions-table .status-column { min-width: 200px; }
+.email-value { overflow-wrap: anywhere; }
+.qualification, .badge { display: inline-block; padding: 4px 8px; border-radius: 8px; background: #F3F4F6; color: #374151; font-size: 13px; font-weight: 600; }
+.qualification.ready, .badge { background: #F0FDF4; color: #166534; border: 1px solid #16A34A; }
+.qualification.hold { background: #FFFBEB; color: #92400E; border: 1px solid #F59E0B; }
+.qualification.reject { background: #F3F4F6; color: #4B5563; border: 1px solid #D1D5DB; }
+.qualification.error { background: #FEF2F2; color: #991B1B; border: 1px solid #DC2626; }
+.job-note { display: block; }
+details { margin: 16px 0; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; background: #fff; }
+summary { cursor: pointer; font-weight: 550; color: #374151; }
 td details { max-width: 440px; }
-.table-scroll { border: 1px solid #29364d; border-radius: 10px; }
-th { background: #182337; }
-h2 { margin-top: 24px; }
-article h2 { margin-top: 0; }
-.grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
-@media (max-width: 600px) { header, main, footer { padding: 16px; } main { padding-top: 24px; } nav { gap: 12px; } article { padding: 18px; } form > label { width: 100%; } }
+pre { padding: 16px; background: #F7F8FA; border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 600px; overflow: auto; font-size: 13px; }
+dt { font-size: 14px; color: #6B7280; }
+dd { margin: 4px 0 16px; overflow-wrap: anywhere; }
+[role="status"], [role="alert"] { padding: 12px 16px; border-radius: 8px; background: #EFF6FF; color: #1E40AF; }
+[role="alert"] { background: #FEF2F2; color: #991B1B; }
+nav { display: flex; flex-wrap: wrap; gap: 16px; }
+@media (min-width: 1688px) { main, footer { margin-left: calc(248px + (100% - 1688px) / 2); } }
+@media (max-width: 1200px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } main, footer { padding: 28px; } }
+@media (max-width: 760px) {
+  header { position: static; width: 100%; padding: 16px; border-right: 0; border-bottom: 1px solid #E5E7EB; }
+  .brand { margin: 0 0 16px; font-size: 20px; }
+  .brand small { display: inline; margin-left: 8px; }
+  header nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  header nav a { padding: 8px; }
+  main, footer { width: 100%; margin-left: 0; padding: 24px 16px; }
+  main { min-height: 0; }
+  article, main > form, main > dl { padding: 20px; }
+  form > label { width: 100%; }
+}
+@media (max-width: 540px) { .grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#overview">Перейти к содержимому</a>
 <header>
-<div class="brand">Lex<span>Radar</span> / Control Center</div>
+<div class="brand">Lex<span>Radar</span><small>Control Center</small></div>
 <nav aria-label="Разделы центра управления">
-<a href="/">Обзор</a><a href="/collect">Сбор организаций</a><a href="/analysis">Анализ сайтов</a>
-<a href="/organizations">Результаты</a><a href="/settings">Настройки</a>
+<a href="/">Обзор</a><a href="/collect">Сбор организаций</a><a href="/analysis">Проверка сайтов</a>
+<a href="/reports">Готовые предложения</a><a href="/crm">Передача в CRM</a><a href="/settings">Служебное</a>
 </nav>
 </header>
-<main id="overview">
+<main id="overview" tabindex="-1">
 </main>
-<footer><nav aria-label="Дополнительные разделы"><a href="/jobs">Журнал заданий</a><a href="/reports">Отчёты и PDF</a><a href="/crm">CRM preview</a></nav><p>LexRadar Control Center · Локальный режим · Сеть — после подтверждения · Рассылка отключена</p></footer>
+<footer><p>LexRadar Control Center · Локальный режим · Сеть — после подтверждения · Рассылка отключена</p></footer>
 </body>
 </html>
 """
 
 
 def organization_page(content):
-    start, tail = PAGE.split('<main id="overview">', 1)
-    return start + '<main>' + content + '</main>' + tail.split('</main>', 1)[1]
+    start, tail = PAGE.split('<main id="overview" tabindex="-1">', 1)
+    return start + '<main id="overview" tabindex="-1">' + content + '</main>' + tail.split('</main>', 1)[1]
 
 
 def status_label(value):
@@ -471,6 +501,24 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                      "application/json; charset=utf-8")
 
     def respond(self, status, body, content_type):
+        if content_type.startswith('text/html'):
+            page = body.decode('utf-8')
+            marker = '<nav aria-label="Разделы центра управления">'
+            start = page.find(marker)
+            end = page.find('</nav>', start)
+            if start >= 0 and end >= 0:
+                path = urlsplit(self.path).path
+                section = next((route for route in ('/collect', '/analysis', '/proposals', '/crm')
+                                if path == route or path.startswith(route + '/')), None)
+                section = section or ('/' if path == '/' else '/service')
+                nav = page[start:end]
+                if path == '/reports' and 'href="/proposals"' not in nav:
+                    section = '/reports'
+                if section == '/service' and 'href="/service"' not in nav:
+                    section = '/settings'
+                nav = nav.replace('href="' + section + '"', 'href="' + section + '" aria-current="page"')
+                page = page[:start] + nav + page[end:]
+                body = page.encode('utf-8')
         self.send_response(status)
         self.write_response(body, content_type)
 

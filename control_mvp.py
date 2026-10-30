@@ -21,7 +21,7 @@ from control_enrichment import observation
 from control_results import read_file
 
 
-NAV = '''<a href="/">Главная</a><a href="/collect">Сбор организаций</a>
+NAV = '''<a href="/">Обзор</a><a href="/collect">Сбор организаций</a>
 <a href="/analysis">Проверка сайтов</a><a href="/proposals">Готовые предложения</a>
 <a href="/crm">Передача в CRM</a><a href="/service">Служебное</a>'''
 
@@ -92,12 +92,12 @@ class MVPHandler(ControlHandler):
             start = page.find('<nav aria-label="Разделы центра управления">')
             end = page.find('</nav>', start)
             if start >= 0 and end >= 0:
-                nav = '<a href="/service">Служебное</a>' if urlsplit(self.path).path == '/' else NAV
+                nav = NAV
                 page = page[:start] + '<nav aria-label="Разделы центра управления">' + nav + page[end:]
             start = page.find('<footer>')
             end = page.find('</footer>', start)
             if start >= 0 and end >= 0:
-                page = page[:start] + '<footer><a href="/service">Служебное</a><p>Локальный режим · Автоматическая рассылка отключена</p>' + page[end:]
+                page = page[:start] + '<footer><p>Локальный режим · Автоматическая рассылка отключена</p>' + page[end:]
             body = page.encode('utf-8')
         super().respond(status, body, content_type)
 
@@ -205,7 +205,7 @@ class MVPHandler(ControlHandler):
         if records:
             if errors_only or available:
                 content += self.analysis_form('<input type="hidden" name="retry_errors" value="' + ('yes' if errors_only else 'no') + '">', 'Проверить выбранные', 'analysis-selection')
-            content += '<div class="table-scroll"><table><thead><tr><th>Выбор</th><th>Организация</th><th>Сайт</th><th>Статус</th></tr></thead><tbody>'
+            content += '<div class="table-scroll" tabindex="0" role="region" aria-label="Список организаций"><table><thead><tr><th>Выбор</th><th>Организация</th><th>Сайт</th><th>Статус</th></tr></thead><tbody>'
             for record in records[:200]:
                 badge, report = self.analysis_status(record, history, compact=True)
                 if record['id'] in checked and not analysis_rows(record, history):
@@ -243,7 +243,7 @@ class MVPHandler(ControlHandler):
                 except sqlite3.Error:
                     pass
             title = 'Собираем организации' if active else 'Собрано ' + str(usable if usable is not None else '—') + ' из ' + str(params['target'])
-            content += '<article aria-live="polite"><h1>' + title + '</h1>'
+            content += '<article class="progress-card" aria-live="polite"><h1>' + title + '</h1>'
             if active:
                 content += '<p role="status"><span class="activity" aria-hidden="true"></span> Сбор выполняется</p>'
             content += '<p>Прошло: ' + elapsed + '</p>'
@@ -263,7 +263,7 @@ class MVPHandler(ControlHandler):
                     totals[saved['qualification'] or 'HOLD'] += 1
                 elif child['status'] in {'failed', 'cancelled'}:
                     totals['ERROR'] += 1
-            content += '<article aria-live="polite"><h1>Проверено ' + str(finished) + ' из ' + str(len(children)) + '</h1>'
+            content += '<article class="progress-card" aria-live="polite"><h1>Проверено ' + str(finished) + ' из ' + str(len(children)) + '</h1>'
             if active:
                 content += '<p role="status"><span class="activity" aria-hidden="true"></span> Проверяем сайты</p>'
             content += '<p>Прошло: ' + elapsed + '</p><p>Готово предложений: ' + str(totals['READY']) + ' · Без предложения: ' + str(totals['REJECT']) + ' · Требует внимания: ' + str(totals['HOLD']) + ' · Ошибок / остановлено: ' + str(totals['ERROR']) + '</p>'
@@ -308,13 +308,13 @@ class MVPHandler(ControlHandler):
             self.html(content + '<p>Готовых КП пока нет. ' + link('/analysis', 'Перейти к проверке сайтов') + '</p>')
             return
         content += '<form method="get" action="/crm/preview" id="crm-selection"><button>Передать выбранные в CRM →</button></form>'
-        content += '<div class="table-scroll"><table><thead><tr><th>CRM</th><th>Организация</th><th>Сайт</th><th>Контакт</th><th>Основание КП</th><th>Статус</th><th>Дата КП (UTC)</th><th>КП</th></tr></thead><tbody>'
+        content += '<div class="table-scroll" tabindex="0" role="region" aria-label="Список организаций"><table><thead><tr><th>CRM</th><th>Организация</th><th>Сайт</th><th>Контакт</th><th>Основание КП</th><th>Статус</th><th>Дата КП (UTC)</th><th>КП</th></tr></thead><tbody>'
         for offer in data['offers']:
             lead = offer['lead']
             contact = lead.get('email') or lead.get('phone') or (offer['saved']['contacts'][0]['email'] if offer['saved']['contacts'] else '')
             content += '<tr><td><input form="crm-selection" type="checkbox" name="lead" value="' + esc(lead['id']) + '" aria-label="Выбрать ' + esc(lead['name']) + '"' + ('' if contact else ' disabled') + '></td>'
             content += '<td>' + link('/organizations/' + lead['id'], lead['name']) + '</td><td>' + link(lead['websites'][0], target(lead['websites'][0])[1]) + '</td><td>' + esc(contact or 'Не указан') + '</td>'
-            content += '<td>' + '<br>'.join(esc(b) for b in offer['basis']) + '</td><td>READY' + (('<br>Последний анализ: ' + esc(offer['latest_status'])) if offer['latest_status'] != 'READY' else '') + '</td><td>' + esc(offer['job']['ended'] or offer['job']['created']) + '</td><td><a class="cta" href="/proposal-files/' + offer['job']['id'] + '/pdf">Открыть КП</a>'
+            content += '<td>' + '<br>'.join(esc(b) for b in offer['basis']) + '</td><td><span class="qualification ready">READY</span>' + (('<br>Последний анализ: ' + esc(offer['latest_status'])) if offer['latest_status'] != 'READY' else '') + '</td><td>' + esc(offer['job']['ended'] or offer['job']['created']) + '</td><td><a class="cta" href="/proposal-files/' + offer['job']['id'] + '/pdf">Открыть КП</a>'
             content += '<br>' + link('/proposal-files/' + offer['job']['id'] + '/html', 'HTML') + '</td></tr>'
         self.html(content + '</tbody></table></div><p>' + link('/analysis', '← Проверка сайтов') + ' · ' + link('/crm', '4. Передать в CRM →') + '</p>')
 
@@ -449,13 +449,13 @@ class MVPHandler(ControlHandler):
             ('3. Готовые предложения', 'Готовых КП: ' + str(counts['READY']), '/proposals', counts['READY'] > 0),
             ('4. Передать в CRM', 'Подходящих READY с контактом: ' + str(counts['crm_ready']) + '. Передача ещё не проверена.', '/crm', counts['crm_ready'] > 0),
         ):
-            content += '<article><h2>' + label + '</h2><p>' + description + '</p>'
+            content += '<article><h2>' + label + '</h2><strong class="metric">' + str({'/collect': len(data['leads']), '/analysis': counts['checked'], '/proposals': counts['READY'], '/crm': counts['crm_ready']}[url]) + '</strong><p>' + description + '</p>'
             content += ('<a class="cta" href="' + url + '">' + label + '</a>' if enabled else '<button disabled>' + label + '</button><p>Пока нет подходящих данных предыдущего шага.</p>')
             content += '</article>'
         self.html(content + '</div><p><a href="/service">Служебное</a></p>')
 
     def service(self):
-        content = '<h1>Служебное</h1>'
+        content = '<h1>Служебное</h1><p class="lead">Задания, диагностика и сохранённые технические материалы.</p>'
         for url, title in (('/jobs', 'Журнал заданий и прогресс'), ('/settings', 'Настройки и диагностика'),
                            ('/reports', 'Все технические отчёты и PDF'), ('/organizations', 'Организации и контакты'),
                            ('/mentions', 'Упоминания в аудитах'), ('/analysis?analysis_errors=yes', 'Ошибки анализа')):
