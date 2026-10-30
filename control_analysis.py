@@ -18,6 +18,8 @@ ARTIFACTS = {'manifest.json': 'manifest.json', 'report.md': 'report.md', 'result
 
 
 def target(value):
+    if not isinstance(value, str):
+        raise ValueError('Нет допустимого публичного официального сайта')
     try:
         u = urlsplit(value)
         host = (u.hostname or '').rstrip('.').encode('idna').decode().lower()
@@ -46,7 +48,12 @@ class AnalysisJobs:
             result = {}
             for row in rows:
                 params = json.loads(row['params'])
-                result.setdefault(params['domain'], dict(row))
+                try:
+                    host = target(params.get('url', ''))[1]
+                    if host == params.get('domain'):
+                        result.setdefault((params.get('lead_id'), host), dict(row))
+                except ValueError:
+                    continue
             return result
 
     def preview_analysis(self, records, identifiers=None, count=None, completed=()):

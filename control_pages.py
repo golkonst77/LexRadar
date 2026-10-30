@@ -73,10 +73,48 @@ class Pages:
             _, host = target(next(iter(record['websites']), ''))
         except ValueError:
             return 'Нет допустимого сайта'
-        row = history.get(host)
+        row = history.get((record['id'], host))
         if not row:
-            return 'Не запускался'
-        return link('/jobs/' + row['id'], job_status(row['status']) + ' · ' + (row['ended'] or row['started'] or row['created']))
+            return 'Не запускался для этой записи; результат другого лида не присваивается'
+        from control_enrichment import observation
+        saved = observation(self.server.jobs.state_dir, row, host)
+        content = link('/jobs/' + row['id'], 'Задание: ' + job_status(row['status']))
+        content += '<br>Последний анализ UTC: ' + esc(row['ended'] or row['started'] or row['created'])
+        content += '<br>Статус движка: ' + esc(saved['status'] or 'Нет данных')
+        qualification = saved['qualification']
+        content += '<br>Qualification: ' + esc('Требует ручной проверки (HOLD)' if qualification == 'HOLD' else qualification or 'Нет данных')
+        content += '<br>Reason: ' + esc(saved['reason'] or 'Нет данных')
+        if saved['warning']:
+            content += '<br>' + esc(saved['warning'])
+        for name, relative in ARTIFACTS.items():
+            try:
+                read_file(self.server.jobs.state_dir, row['id'] + '/analysis/' + relative, 8_000_000, prefix=5)
+            except (OSError, ValueError):
+                continue
+            content += '<br>' + link('/analysis-files/' + row['id'] + '/' + name, name)
+        return content
+
+    def analysis_email(self, record, history):
+        content = esc(record.get('email') or '—')
+        try:
+            _, host = target(next(iter(record['websites']), ''))
+        except ValueError:
+            return content
+        row = history.get((record['id'], host))
+        if not row:
+            return content
+        from control_enrichment import observation
+        saved = observation(self.server.jobs.state_dir, row, host)
+        if saved['contacts']:
+            content += '<br>Email из анализа — кандидаты, принадлежность не подтверждена'
+            if record.get('email'):
+                content += '; исходный email сохранён: ' + esc(record['email'])
+            for contact in saved['contacts']:
+                content += '<br>' + esc(contact['email']) + ' · источник: '
+                content += ' · '.join(external(url) for url in contact['sources'])
+        else:
+            content += '<br>Email из анализа: не найден'
+        return content
 
     def home(self):
         data = self.index()

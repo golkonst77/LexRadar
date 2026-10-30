@@ -217,7 +217,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             ):
                 if label == status_title and not record['status']:
                     continue
-                content += '<dt>' + label + '</dt><dd>' + (external(value) if label in {'Сайт', 'Карточка источника / агрегатор'} else escape(value)) + '</dd>'
+                content += '<dt>' + label + '</dt><dd>' + (external(value) if label in {'Сайт', 'Карточка источника / агрегатор'} else self.analysis_email(record, history) if label == 'Email' and jobs and not mentions else escape(value)) + '</dd>'
             content += ('</dl><h2>Сохранённые сведения</h2>'
                         '<pre style="white-space:pre-wrap;overflow-wrap:anywhere">')
             content += escape(json.dumps(record['row'], ensure_ascii=False, indent=2)) + '</pre>'
@@ -302,11 +302,11 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                         content += '<button form="analysis-selection" name="single" value="' + record['id'] + '">Анализ</button><br>' + self.analysis_status(record, history) + '</td>'
                     content += ('<td><a href="' + base + '/' + record['id'] + '">'
                                 + escape(record['name']) + '</a></td>')
-                    for value in (', '.join(record['websites']) or '—',
+                    for column, value in enumerate((', '.join(record['websites']) or '—',
                                   record['inn'] or '—', record.get('phone', '') or '—',
                                   record.get('email', '') or '—', record.get('source_card', '') or '—',
-                                  *((status_label(record['status']) or '—',) if statuses else ())):
-                        content += '<td>' + escape(value) + '</td>'
+                                  *((status_label(record['status']) or '—',) if statuses else ()))):
+                        content += '<td>' + (self.analysis_email(record, history) if column == 3 and jobs and not mentions else escape(value)) + '</td>'
                     content += '</tr>'
                 content += '</tbody></table></div>'
             content += ('<nav aria-label="Страницы организаций"><span>Страница '
