@@ -153,8 +153,8 @@ class Catalog:
             self.checked = time.monotonic()
             return self.data
 
-    def linked(self, lead):
-        data = self.snapshot()
+    def linked(self, lead, data=None):
+        data = self.snapshot() if data is None else data
         host = domain(next(iter(lead['websites']), ''))
         if not host or data['domain_counts'][host] != 1:
             return []

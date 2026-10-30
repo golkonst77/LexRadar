@@ -203,7 +203,7 @@ class OrganizationTest(unittest.TestCase):
             self.assertEqual(body, pdf.read_bytes())
         pdf.unlink()
         self.assertIn('404 Not Found', self.request(url)[0])
-        self.assertIn('Готовых PDF-коммерческих предложений',
+        self.assertIn('Сохранённых PDF',
                       self.request('/organizations/' + records[0]['id'])[1])
 
     def test_document_containment_and_empty_states(self):

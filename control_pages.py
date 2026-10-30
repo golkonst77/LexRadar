@@ -7,7 +7,8 @@ from html import escape
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from control_catalog import Catalog
+from collections import Counter
+from control_catalog import Catalog, domain
 from control_jobs import TASKS
 from control_leads import website
 from control_results import read_file
@@ -25,6 +26,11 @@ def external(value):
     return ('<a rel="noreferrer" href="' + esc(value) + '">' + esc(value) + '</a>') if website(value) else esc(value)
 
 
+def report_title(record):
+    subject = record['lead_name'] or record['target'] or Path(record['source']).parent.name
+    return ('Анализ сайта' if record['kind'] == 'audit' else 'Сохранённый PDF') + ' — ' + subject
+
+
 class Pages:
     def catalog(self):
         if not hasattr(self.server, 'catalog'):
@@ -32,19 +38,29 @@ class Pages:
         return self.server.catalog
 
     def index(self):
-        return self.catalog().snapshot()
+        data = self.catalog().snapshot()
+        jobs = getattr(self.server, 'jobs', None)
+        if jobs:
+            leads, warnings = jobs.collected()
+            if leads or warnings:
+                data = {**data, 'leads': data['leads'] + leads, 'warnings': data['warnings'] + warnings}
+                data['domain_counts'] = Counter(domain(url) for lead in data['leads'] for url in lead['websites'])
+                names = {domain(url): lead['name'] for lead in data['leads'] for url in lead['websites']
+                         if data['domain_counts'][domain(url)] == 1}
+                data['reports'] = [{**r, 'lead_name': names.get(domain(r['target']), '')} for r in data['reports']]
+        return data
 
     def form(self, action, label, fields=''):
         token = getattr(self.server, 'csrf_token', '')
         return ('<form method="post" action="' + esc(action) + '">'
                 '<input type="hidden" name="csrf" value="' + esc(token) + '">' + fields
-                + '<label><input type="checkbox" name="confirm" value="yes" required> Подтверждаю локальное действие</label> '
+                + '<label><input type="checkbox" name="confirm" value="yes" required> Подтверждаю действие</label> '
                 '<button type="submit">' + esc(label) + '</button></form>')
 
     def home(self):
         data = self.index()
         jobs = self.server.jobs.list() if hasattr(self.server, 'jobs') else []
-        content = '<h1>Центр управления LexRadar</h1><p>Сохранённые данные читаются без изменения источников. Сетевой сбор, платный анализ и отправка отключены.</p><div class="grid">'
+        content = '<h1>Центр управления LexRadar</h1><p>Сохранённые данные читаются без изменения источников. Сбор запускается только после отдельного подтверждения в заданиях. Платный анализ и отправка отключены.</p><p><a href="/jobs">Собрать организации</a> · <a href="/organizations">Лиды</a> · <a href="/reports">Отчёты</a></p><div class="grid">'
         for title, value, url in (
             ('Лиды Parser v3', len(data['leads']), '/organizations'),
             ('Анализы', sum(r['kind'] == 'audit' for r in data['reports']), '/reports?kind=audit'),
@@ -53,9 +69,12 @@ class Pages:
             content += '<article><h2>' + link(url, title) + '</h2><strong>' + str(value) + '</strong></article>'
         content += '</div><p>Индекс: ' + esc(data['indexed_at']) + '; предупреждений: ' + str(data['warnings']) + '.</p>'
         content += '<h2>Последние задания</h2>' + self.job_table(jobs[:5])
+        for job in jobs[:5]:
+            if job['error']:
+                content += '<p role="status">' + link('/jobs/' + job['id'], job['status']) + ': ' + esc(job['error']) + '</p>'
         content += '<h2>Последние сохранённые материалы</h2>'
         for r in sorted(data['reports'], key=lambda r: r['date'], reverse=True)[:5]:
-            content += '<p>' + link('/reports/' + r['id'], r['source']) + ' · ' + esc(r['date']) + '</p>'
+            content += '<p>' + link('/reports/' + r['id'], report_title(r)) + ' · ' + esc(r['date']) + '</p>'
         self.html(content)
 
     def reports(self, path):
@@ -66,7 +85,7 @@ class Pages:
             if not record:
                 self.respond_json(404, {'error': 'not_found'})
                 return
-            content = '<h1>Сохранённый результат</h1><p>' + esc(record['source']) + '</p><p>Дата изменения файла: ' + esc(record['date']) + '</p>'
+            content = '<h1>' + esc(report_title(record)) + '</h1><p><small>' + esc(record['source']) + '</small>' + '</p><p>Дата изменения файла: ' + esc(record['date']) + '</p>'
             content += '<p>Готово к просмотру · требуется проверка. Связь по сайту не подтверждает юридическое лицо или разрешение отправки.</p>'
             content += '<p>' + link('/files/' + record['id'], 'Открыть PDF' if record['kind'] == 'pdf' else 'Исходный JSON') + ' · '
             content += link('/files/' + record['id'] + '?download=1', 'Скачать') + '</p>'
@@ -95,7 +114,7 @@ class Pages:
                    and (not since or r['date'][:10] >= since) and (not until or r['date'][:10] <= until)
                    and query.casefold() in (r['source'] + ' ' + r['target'] + ' ' + r['lead_name']).casefold()]
         records.sort(key=lambda r: (r['date'], r['source']), reverse=True)
-        content = '<h1>Отчёты и PDF</h1><p>Только сохранённые материалы. Дата — изменение файла, не дата юридической проверки.</p>'
+        content = '<h1>Отчёты и PDF</h1><p>Разделы: анализы сайта и сохранённые PDF. Утверждённые КП отдельно не установлены: имя proposal.pdf не доказывает одобрение. Прочие файлы досье не публикуются.</p><p>Только сохранённые материалы. Дата — изменение файла, не дата юридической проверки.</p>'
         content += '<form><label>Организация / домен / путь <input name="q" value="' + esc(query) + '"></label> <label>Тип <select name="kind"><option value="">Все</option>'
         for key, label in (('audit', 'Анализ'), ('pdf', 'PDF')):
             content += '<option value="' + key + '"' + (' selected' if kind == key else '') + '>' + label + '</option>'
@@ -106,7 +125,7 @@ class Pages:
         except ValueError:
             page = 1
         for r in records[(page - 1)*20:page*20]:
-            content += '<article><h2>' + link('/reports/' + r['id'], r['source']) + '</h2><p>' + esc(r['kind']) + ' · ' + esc(r['lead_name']) + ' · ' + esc(r['date']) + ' · ' + external(r['target']) + '</p></article>'
+            content += '<article><h2>' + link('/reports/' + r['id'], report_title(r)) + '</h2><p>' + esc('Сохранённый PDF · утверждение КП не подтверждено' if r['kind'] == 'pdf' else 'Анализ сайта') + ' · ' + esc(r['lead_name']) + ' · ' + esc(r['date']) + ' · ' + external(r['target']) + '</p><p><small>' + esc(r['source']) + '</small></p></article>'
         if not records:
             content += '<p>Сохранённых материалов по этому запросу нет.</p>'
         content += '<nav aria-label="Страницы отчётов"><span>Страница ' + str(page) + '</span>'
@@ -144,7 +163,7 @@ class Pages:
             return '<p>Заданий пока нет.</p>'
         content = '<div class="table-scroll"><table><tr><th>Задание</th><th>Статус</th><th>Создано UTC</th></tr>'
         for job in jobs:
-            content += '<tr><td>' + link('/jobs/' + job['id'], TASKS.get(job['kind'], job['kind'])) + '</td><td>' + esc(job['status']) + '</td><td>' + esc(job['created']) + '</td></tr>'
+            content += '<tr><td>' + link('/jobs/' + job['id'], ('Собрать организации' if job['kind'] == 'parser-v3' else TASKS.get(job['kind'], job['kind']))) + '</td><td>' + esc(job['status']) + '</td><td>' + esc(job['created']) + '</td></tr>'
         return content + '</table></div>'
 
     def jobs_page(self, path):
@@ -153,21 +172,38 @@ class Pages:
             self.html('<h1>Задания</h1><p>Очередь недоступна в этом режиме.</p>')
             return
         if path == '/jobs':
-            content = '<h1>Локальные задания</h1><p>Максимум одно активное задание; таймаут 60 секунд. Только чтение существующих файлов, без сети. Обновите страницу для нового статуса.</p>'
+            content = '<h1>Задания</h1><p>Максимум один активный процесс. Локальные проверки: без сети, до 60 секунд. Сбор организаций: отдельное сетевое действие, до 4 часов.</p>'
             options = '<label>Тип <select name="kind">' + ''.join('<option value="' + k + '">' + v + '</option>' for k, v in TASKS.items()) + '</select></label> '
             content += self.form('/jobs/preview', 'Предпросмотр команды', options)
             content += self.job_table(jobs.list())
-            content += '<h2>Сетевой сбор и анализ</h2><p>Запуск недоступен. MedAdvisor для медицинских организаций, Orgpage для остальных; вся Россия, без регионального ограничения. N — число пригодных контактов с официальным сайтом и телефоном или email. CLI и ограничения боевого запуска требуют отдельной проверки.</p>'
+            content += '<h2>Собрать организации</h2><p>Вся Россия. MedAdvisor для медицинских клиник; Orgpage для остальных. N — пригодные уникальные сайты с телефоном либо email. До 1000, до 200 страниц и max(200, 10 × N) карточек; таймаут 4 часа. Цель может не быть достигнута. Скрининг главной страницы уже встроен в Parser; платных API и PDF нет.</p>'
+            try:
+                options = '<label>Отрасль <select name="industry">' + ''.join('<option value="' + esc(k) + '">' + esc(v) + '</option>' for k, v in jobs.parser.industries().items()) + '</select></label>'
+                options += '<label>N пригодных лидов <input type="number" name="target" min="1" max="1000" value="10" required></label><label>Название запуска <input name="name" maxlength="100"></label>'
+                content += self.form('/collect/preview', 'Проверить и показать команду', options)
+            except (OSError, ValueError, SyntaxError, KeyError, StopIteration):
+                content += '<p>Конфигурация Parser v3 недоступна.</p>'
+            errors = jobs.parser.diagnostic()
+            if errors:
+                content += '<p role="status">Запуск недоступен: ' + esc('; '.join(errors)) + '</p><button disabled>Запустить сбор</button>'
+
         else:
             row = jobs.get(path.removeprefix('/jobs/'))
             if not row:
                 self.respond_json(404, {'error': 'not_found'})
                 return
-            content = '<h1>' + esc(TASKS.get(row['kind'], row['kind'])) + '</h1><dl>'
+            content = '<h1>' + esc(('Собрать организации' if row['kind'] == 'parser-v3' else TASKS.get(row['kind'], row['kind']))) + '</h1><dl>'
             for label, key in (('Статус', 'status'), ('Создано UTC', 'created'), ('Начало UTC', 'started'), ('Окончание UTC', 'ended'), ('Причина / ограничение', 'error')):
                 content += '<dt>' + label + '</dt><dd>' + esc(row[key] or '—') + '</dd>'
+            if row['kind'] == 'parser-v3':
+                content += '<dt>Параметры запуска</dt><dd>' + esc(row['params']) + '</dd><dt>Результат</dt><dd>' + esc(row['result']) + '</dd>'
+                content += '<dt>Каталог</dt><dd>' + esc(jobs.state_dir / row['id']) + '</dd>'
+                if row['status'] == 'succeeded':
+                    content += '<dd>' + link('/organizations?run=' + row['id'], 'Лиды этого запуска') + ' · ' + link('/exports/' + row['id'], 'Скачать CSV') + '</dd>'
             content += '</dl><h2>stdout / stderr (до 64 КиБ)</h2><pre>' + esc(row['output']) + '</pre>'
             if row['status'] in {'queued', 'running'}:
+                self.refresh_seconds = 5
+                content += '<p>Статус и журнал обновляются каждые 5 секунд; процент завершения неизвестен.</p>'
                 content += self.form('/jobs/' + row['id'] + '/cancel', 'Отменить')
         self.html(content)
 
@@ -177,7 +213,23 @@ class Pages:
         for label, path in (('Результаты: только чтение', self.server.results_dir), ('Parser v3: только чтение', self.server.parser_dir),
                             ('Состояние панели', getattr(self.server, 'state_dir', 'не подключено'))):
             content += '<dt>' + label + '</dt><dd>' + esc(path) + ' · ' + ('доступен' if Path(path).is_dir() else 'недоступен') + '</dd>'
-        content += '</dl><p>Bind: 127.0.0.1. Основной проект не изменяется. Сеть, CRM API, письма и генерация PDF отключены.</p>'
+        jobs = getattr(self.server, 'jobs', None)
+        if jobs:
+            import os
+            content += '<dt>Исходники CLI (только чтение)</dt><dd>' + esc(jobs.parser.source) + '</dd>'
+            content += '<dt>Python Parser</dt><dd>' + esc(jobs.parser.python) + '</dd><dt>Chromium cache (только чтение)</dt><dd>' + esc(jobs.parser.browsers) + '</dd>'
+            content += '<dt>Запись состояния</dt><dd>' + ('доступна' if os.access(jobs.state_dir, os.W_OK | os.X_OK) else 'недоступна') + '</dd>'
+            try:
+                industries = jobs.parser.industries()
+            except (OSError, ValueError):
+                industries = {'1': 'Parser v3'}
+            checked = {}
+            for industry, name in industries.items():
+                source = 'medical' if industry == '1' else 'orgpage'
+                if source not in checked:
+                    checked[source] = jobs.parser.diagnostic(industry)
+                content += '<dt>' + esc(name) + '</dt><dd>' + esc('; '.join(checked[source]) or 'Локальные зависимости доступны; сеть и доступ источника не проверены') + '</dd>'
+        content += '</dl><p>Bind: 127.0.0.1. Основной проект не изменяется. Просмотр не обращается к сайтам. Сетевой сбор — только подтверждённое задание; CRM API, письма и генерация PDF отключены.</p>'
         content += '<p>Индекс: ' + esc(data['indexed_at']) + '; предупреждений: ' + str(data['warnings']) + '. Проверка изменений не чаще раза в 5 секунд.</p>'
         content += self.form('/refresh', 'Перечитать индекс')
         self.html(content)
@@ -198,6 +250,28 @@ class Pages:
         content += '<p>Показано ' + str(min(200, len(records))) + ' из ' + str(len(records)) + '.</p><h2>Кандидаты Parser v3: не отправлено панелью</h2>'
         content += '<p>Кандидатов: ' + str(len(data['leads'])) + '. ' + link('/organizations', 'Открыть контакты и источники') + '. Наличие контакта не означает готовность КП или разрешение отправки.</p>'
         self.html(content)
+
+    def export(self, identifier):
+        jobs = getattr(self.server, 'jobs', None)
+        row = jobs.get(identifier) if jobs else None
+        if not row or row['kind'] != 'parser-v3' or row['status'] != 'succeeded':
+            self.respond_json(404, {'error': 'not_found'})
+            return
+        try:
+            import csv
+            import io
+            raw = read_file(jobs.state_dir, identifier + '/parser.csv', 8_000_000)
+            reader = csv.reader(io.StringIO(raw.decode('utf-8-sig')), delimiter=';', strict=True)
+            output = io.StringIO()
+            writer = csv.writer(output, delimiter=';')
+            for cells in reader:
+                writer.writerow(["'" + c if c.lstrip().startswith(('=', '+', '-', '@')) else c for c in cells])
+        except (OSError, ValueError, csv.Error):
+            self.respond_json(404, {'error': 'export_unavailable'})
+            return
+        self.send_response(200)
+        self.send_header('Content-Disposition', 'attachment; filename="parser.csv"')
+        self.write_response(output.getvalue().encode('utf-8-sig'), 'text/csv; charset=utf-8')
 
     def valid_local_request(self):
         if len(self.headers.get_all('Host', [])) > 1:
@@ -245,6 +319,20 @@ class Pages:
             if path == '/refresh':
                 self.catalog().snapshot(force=True)
                 destination = '/settings'
+            elif jobs and path == '/collect/preview':
+                token, preview, command = jobs.preview_parser(values.get('industry', [''])[0], values.get('target', [''])[0], values.get('name', [''])[0])
+                errors = jobs.parser.diagnostic(preview['params']['industry'])
+                content = '<h1>Предпросмотр сетевого сбора</h1><p>Название: ' + esc(preview['params']['name'] or 'Без названия') + '</p><pre>' + esc(shlex.join(command)) + '</pre>'
+                content += '<p>Источник: ' + ('MedAdvisor' if preview['params']['industry'] == '1' else 'Orgpage') + '; вся Россия; N=' + str(preview['params']['target']) + ' пригодных уникальных сайтов. Каталог: ' + esc(jobs.state_dir / preview['id']) + '.</p>'
+                content += '<p>До 200 страниц, max(200, 10 × N) карточек и 4 часа. Цель не гарантирована. Parser допускает unknown/probable принадлежность бренду и подтверждённую защитную страницу сайта; это не доказательство юридической принадлежности. Строительство проверяет тематику и конечный домен. Контакты не проверяются звонком или письмом.</p>'
+                if errors:
+                    content += '<p role="status">Запуск недоступен: ' + esc('; '.join(errors)) + '</p><button disabled>Запустить сбор</button>'
+                else:
+                    content += self.form('/collect', 'Запустить сетевой сбор', '<input type="hidden" name="preview" value="' + esc(token) + '"><p>Подтверждаю сетевой сбор с указанными ограничениями.</p>')
+                self.html(content)
+                return
+            elif jobs and path == '/collect':
+                destination = '/jobs/' + jobs.submit_parser(values.get('preview', [''])[0])
             elif jobs and path in {'/jobs/preview', '/jobs'}:
                 kind = values.get('kind', [''])[0]
                 command = jobs.command(kind)

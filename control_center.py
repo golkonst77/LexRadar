@@ -1,4 +1,4 @@
-"""Local LexRadar Control Center: read-only sources and fixed offline checks."""
+"""Local LexRadar Control Center: read-only sources and explicitly confirmed tasks."""
 
 import argparse
 import json
@@ -28,7 +28,17 @@ body { margin: 0; background: #0c111b; color: #e7edf7; line-height: 1.6; }
 a { color: #a5c7ff; text-underline-offset: 4px; }
 input, select, button { font: inherit; padding: 6px; max-width: 100%; }
 th, td { text-align: left; padding: 10px; border-bottom: 1px solid #29364d; }
-table { width: 100%; }
+table { width: 100%; border-collapse: collapse; }
+th, td { vertical-align: top; overflow-wrap: anywhere; }
+.organizations-table { min-width: 880px; table-layout: fixed; }
+.organizations-table th:first-child { width: 20%; }
+.organizations-table th:nth-child(2) { width: 18%; }
+.organizations-table th:nth-child(3) { width: 11%; }
+.organizations-table th:nth-child(4) { width: 16%; }
+.organizations-table th:nth-child(5) { width: 18%; }
+.organizations-table td:nth-child(4) { overflow-wrap: normal; }
+small { color: #8c9bb1; }
+
 .table-scroll { overflow-x: auto; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 600px; overflow: auto; }
 article + article { margin-top: 16px; }
@@ -37,7 +47,7 @@ button { cursor: pointer; }
 @media (max-width: 600px) { main, header, footer { padding: 16px; } td, th { padding: 6px; } }
 dd { margin-bottom: 12px; overflow-wrap: anywhere; }
 a:focus-visible { outline: 2px solid #8dbbff; outline-offset: 5px; }
-header, main, footer { max-width: 1100px; margin: auto; padding: 24px; }
+header, main, footer { max-width: 1440px; margin: auto; padding: 24px; }
 header { display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: 20px; border-bottom: 1px solid #273248; }
 .brand { font-size: 22px; font-weight: 750; letter-spacing: -.5px; }
@@ -144,10 +154,10 @@ def saved_details(root, record):
         for check in checks:
             content += ('<p>' + escape(str(check.get('question', ''))) + ' — '
                         + escape(str(check.get('state', 'not_performed'))) + '</p>')
-    content += '<h2>Готовые PDF-коммерческие предложения</h2>'
+    content += '<h2>Сохранённые PDF · утверждение КП не подтверждено</h2>'
     documents = proposals(root, record)
     if not documents:
-        content += '<p>Готовых PDF-коммерческих предложений для этого результата нет.</p>'
+        content += '<p>Сохранённых PDF для этого результата нет.</p>'
     for document in documents:
         link = '/documents/' + record['id'] + '/' + document['id']
         content += ('<p>' + escape(document['name']) + ' · <a href="' + link
@@ -194,6 +204,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 ('Сайт', ', '.join(record['websites']) or '—'),
                 (status_title, status_label(record['status'])),
                 ('Источник', record['source']),
+                ('Запуск', record.get('run_name', 'Исторический импорт; запуск панели неизвестен')),
                 ('Запись в файле', record.get('record_number', str(record['row'].get('id', '')))),
                 ('Телефон', record.get('phone', '') or '—'),
                 ('Email', record.get('email', '') or '—'),
@@ -208,7 +219,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             if mentions:
                 content += saved_details(self.server.results_dir, record)
             else:
-                related = self.catalog().linked(record)
+                related = self.catalog().linked(record, data)
                 content += '<h2>Анализы сайта и PDF</h2>'
                 content += '<p>Связь только по нормализованному домену; юридическое лицо и адресат PDF требуют проверки.</p>'
                 if not related:
@@ -222,12 +233,13 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             params = parse_qs(urlsplit(self.path).query)
             query = params.get('q', [''])[0].strip()
             selected = params.get('status', [''])[0]
+            run = params.get('run', [''])[0]
             statuses = sorted({r['status'] for r in records if r['status']})
             try:
                 page = max(1, int(params.get('page', ['1'])[0]))
             except ValueError:
                 page = 1
-            filtered = [r for r in records if (not selected or r['status'] == selected)
+            filtered = [r for r in records if (not run or r.get('run_id') == run) and (not selected or r['status'] == selected)
                         and query.casefold() in ' '.join(
                             [r['name'], r['inn'], *r['websites'], r.get('phone', ''), r.get('email', '')]).casefold()]
             sort = params.get('sort', ['name'])[0]
@@ -248,6 +260,14 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 content += escape(status_label(status)) + '</option>'
             if statuses or selected:
                 content += '</select></label> '
+            if not mentions:
+                content += '<label>Запуск <select name="run"><option value="">Все запуски и импорт</option>'
+                runs = {r.get('run_id'): r.get('run_name') for r in records if r.get('run_id')}
+                for key, name in runs.items():
+                    content += '<option value="' + key + '"' + (' selected' if run == key else '') + '>' + escape(name) + '</option>'
+                content += '</select></label>'
+                if run in runs:
+                    content += link('/exports/' + run, 'Скачать CSV запуска')
             content += '<label>Сортировка <select name="sort">'
             for key, label in (('name', 'Название А–Я'), ('name-desc', 'Название Я–А'), ('source', 'Источник')):
                 content += '<option value="' + key + '"' + (' selected' if sort == key else '') + '>' + label + '</option>'
@@ -257,7 +277,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 content += ('<p>Организаций пока нет.</p>' if not records
                             else '<p>По запросу ничего не найдено.</p>')
             else:
-                content += ('<div style="overflow-x:auto"><table><thead><tr>'
+                content += ('<div class="table-scroll" tabindex="0" role="region" aria-label="Организации"><table class="organizations-table"><thead><tr>'
                             '<th>Название</th><th>Сайт</th><th>ИНН</th>'
                             '<th>Телефон</th><th>Email</th><th>Источник / агрегатор</th>'
                             + ('<th>' + status_title + '</th>' if statuses else '') + '</tr></thead><tbody>')
@@ -276,7 +296,7 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             for target, label in ((page - 1, 'Назад'), (page + 1, 'Далее')):
                 if 1 <= target <= pages:
                     page_link = base + '?' + urlencode(
-                        {'q': query, 'status': selected, 'page': target, **({'sort': sort} if sort != 'name' else {})})
+                        {'q': query, 'status': selected, 'page': target, **({'run': run} if run else {}), **({'sort': sort} if sort != 'name' else {})})
                     content += '<a href="' + escape(page_link, quote=True) + '">' + label + '</a>'
             content += '</nav>'
         self.respond(200, organization_page(content).encode('utf-8'), 'text/html; charset=utf-8')
@@ -319,6 +339,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             self.file(path)
         elif path == '/jobs' or path.startswith('/jobs/'):
             self.jobs_page(path)
+        elif path.startswith('/exports/'):
+            self.export(path.removeprefix('/exports/'))
         elif path == '/settings':
             self.settings()
         elif path == '/crm':
@@ -352,6 +374,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        if getattr(self, "refresh_seconds", None):
+            self.send_header("Refresh", str(self.refresh_seconds))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")

@@ -1,6 +1,10 @@
-"""One durable local worker. Only fixed offline commands, no shell or network CLI."""
+"""One durable worker for fixed local checks and explicitly confirmed Parser v3."""
 import fcntl
 import os
+import json
+import signal
+import secrets
+import re
 from pathlib import Path
 import selectors
 import sqlite3
@@ -10,6 +14,8 @@ import threading
 import time
 import uuid
 from datetime import datetime, timezone
+from control_parser import Parser, PARSER_TIMEOUT
+from control_leads import load_leads
 
 TASKS = {'inspect-import': 'Проверить существующий импорт',
          'offline-results': 'Проверить индекс сохранённых результатов'}
@@ -18,11 +24,21 @@ TIMEOUT = 60
 
 
 def log_text(raw):
-    return raw.decode('utf-8', errors='replace').encode('utf-8')[:LOG_LIMIT].decode('utf-8', errors='ignore')
+    value = raw.decode('utf-8', errors='replace')
+    value = re.sub(r'(?i)(authorization|api[_-]?key|token|cookies?|password|secret)([\s\"\']*[:=]\s*)[^\r\n]*', r'\1\2[скрыто]', value)
+    value = re.sub(r'(https?://)[^/\s:@]+:[^/\s@]+@', r'\1[скрыто]@', value)
+    return value.encode('utf-8')[:LOG_LIMIT].decode('utf-8', errors='ignore')
 
 
 def now():
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
+
+
+def kill_group(process):
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 class Jobs:
@@ -43,6 +59,8 @@ class Jobs:
             self.owner.close()
             raise ValueError('Another Control Center owns this job directory') from None
         self.parser_dir, self.results_dir = Path(parser_dir).absolute(), Path(results_dir).absolute()
+        self.parser = Parser()
+        self.previews = {}
         self.lock = threading.RLock()
         self.db = sqlite3.connect(self.state_dir / 'jobs.sqlite3', check_same_thread=False)
         os.chmod(self.state_dir / 'jobs.sqlite3', 0o600)
@@ -50,6 +68,10 @@ class Jobs:
         self.db.execute('''CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY, kind TEXT, status TEXT, created TEXT, started TEXT,
             ended TEXT, output TEXT DEFAULT '', error TEXT DEFAULT '', cancel INTEGER DEFAULT 0)''')
+        columns = {r[1] for r in self.db.execute('PRAGMA table_info(jobs)')}
+        for name in ('params', 'result'):
+            if name not in columns:
+                self.db.execute('ALTER TABLE jobs ADD COLUMN ' + name + " TEXT DEFAULT '{}'")
         self.db.execute("UPDATE jobs SET status='failed', ended=?, error='Прервано перезапуском; повторный запуск только вручную' WHERE status='running'", (now(),))
         self.db.execute("UPDATE jobs SET status='cancelled', ended=?, error='Очередь остановлена перезапуском' WHERE status='queued'", (now(),))
         self.db.commit()
@@ -64,6 +86,58 @@ class Jobs:
         return [sys.executable, '-E', '-s', str(Path(__file__).with_name('control_worker.py').absolute()),
                 kind, '--parser-dir', str(self.parser_dir), '--results-dir', str(self.results_dir)]
 
+    def preview_parser(self, industry, target, name=''):
+        params = self.parser.validate(industry, target, name)
+        with self.lock:
+            self.previews = {k: v for k, v in self.previews.items() if time.monotonic() - v['time'] < 900}
+            if len(self.previews) >= 100:
+                raise ValueError('Слишком много предпросмотров; повторите через 15 минут')
+            token = secrets.token_urlsafe(32)
+            preview = dict(params=params, id=uuid.uuid4().hex, time=time.monotonic())
+            self.previews[token] = preview
+            return token, preview, self.parser.command(params, self.state_dir / preview['id'])
+
+    def submit_parser(self, token):
+        with self.lock:
+            preview = self.previews.get(token)
+            if not preview or time.monotonic() - preview['time'] >= 900:
+                raise ValueError('Предпросмотр истёк или уже использован')
+            errors = self.parser.diagnostic(preview['params']['industry'])
+            if errors:
+                raise ValueError('; '.join(errors))
+            identifier = self.submit('parser-v3', preview)
+            del self.previews[token]
+            return identifier
+
+    def collected(self):
+        records, warnings, remaining, runs = [], 0, 32_000_000, 0
+        for job in self.list():
+            if job['kind'] != 'parser-v3' or job['status'] != 'succeeded':
+                continue
+            # shortcut: index at most 64 successful runs / 32 MB; archive old runs before growing beyond this.
+            runs += 1
+            try:
+                size = (self.state_dir / job['id'] / 'parser.csv').lstat().st_size
+            except OSError:
+                warnings += 1
+                continue
+            if runs > 64 or size > remaining:
+                warnings += 1
+                break
+            remaining -= size
+            leads, count = load_leads(self.state_dir / job['id'])
+            warnings += count
+            params = json.loads(self.get(job['id'])['params'])
+            for lead in leads:
+                lead['id'] = job['id'] + '-' + lead['id']
+                lead['run_id'] = job['id']
+                lead['run_name'] = params.get('name') or job['id']
+            records.extend(leads[:max(0, 20000 - len(records))])
+            if len(records) >= 20000:
+                warnings += 1
+                break
+        return records, warnings
+
     def list(self):
         with self.lock:
             return [dict(r) for r in self.db.execute('SELECT id,kind,status,created,started,ended,error,cancel FROM jobs ORDER BY created DESC, rowid DESC')]
@@ -73,8 +147,12 @@ class Jobs:
             row = self.db.execute('SELECT * FROM jobs WHERE id=?', (identifier,)).fetchone()
             return dict(row) if row else None
 
-    def submit(self, kind):
-        self.command(kind)
+    def submit(self, kind, preview=None):
+        if kind == 'parser-v3':
+            if preview is None:
+                raise ValueError('Нужен подтверждённый предпросмотр')
+        else:
+            self.command(kind)
         with self.lock:
             if self.stopping.is_set():
                 raise ValueError('Сервер останавливается')
@@ -82,9 +160,11 @@ class Jobs:
                 raise ValueError('Достигнут лимит журнала: 1000 заданий')
             if self.db.execute("SELECT count(*) FROM jobs WHERE status IN ('queued','running')").fetchone()[0] >= 100:
                 raise ValueError('Очередь заполнена')
-            identifier = uuid.uuid4().hex
+            identifier = preview['id'] if preview else uuid.uuid4().hex
             self.db.execute('INSERT INTO jobs(id,kind,status,created) VALUES(?,?,?,?)',
                             (identifier, kind, 'queued', now()))
+            if preview:
+                self.db.execute('UPDATE jobs SET params=? WHERE id=?', (json.dumps(preview['params'], ensure_ascii=False), identifier))
             self.db.commit()
         self.wake.set()
         return identifier
@@ -116,22 +196,33 @@ class Jobs:
         try:
             directory = self.state_dir / identifier
             directory.mkdir(mode=0o700)
-            process = subprocess.Popen(self.command(row['kind']), cwd=directory,
+            params = json.loads(row['params'])
+            if row['kind'] == 'parser-v3' and self.parser.diagnostic(params['industry']):
+                raise ValueError('Parser v3 недоступен; смотрите диагностику')
+            command = self.parser.command(params, directory) if row['kind'] == 'parser-v3' else self.command(row['kind'])
+            if row['kind'] == 'parser-v3':
+                command = [sys.executable, '-B', str(Path(__file__).with_name('control_parser_runner.py').absolute()), *command]
+            if self.stopping.is_set() or self.get(identifier)['cancel']:
+                return
+            process = subprocess.Popen(command, cwd=directory, start_new_session=True,
                                        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                       env={'PATH': os.defpath, 'LANG': 'C.UTF-8', 'PYTHONIOENCODING': 'utf-8'})
-            deadline = time.monotonic() + TIMEOUT
+                                       env={'PATH': os.defpath, 'LANG': 'C.UTF-8', 'PYTHONIOENCODING': 'utf-8',
+                                            'HOME': str(directory), 'TMPDIR': str(directory),
+                                            'PLAYWRIGHT_BROWSERS_PATH': str(self.parser.browsers),
+                                            **({k: os.environ[k] for k in ('DISPLAY', 'XAUTHORITY') if k in os.environ} if row['kind'] == 'parser-v3' else {})})
+            deadline = time.monotonic() + (PARSER_TIMEOUT if row['kind'] == 'parser-v3' else TIMEOUT)
             with selectors.DefaultSelector() as selector:
                 selector.register(process.stdout, selectors.EVENT_READ, b'[stdout] ')
                 selector.register(process.stderr, selectors.EVENT_READ, b'[stderr] ')
                 while selector.get_map() or process.poll() is None:
                     if self.stopping.is_set() or self.get(identifier)['cancel']:
                         status, error = 'cancelled', 'Отменено пользователем или остановкой сервера'
-                        if process.poll() is None:
-                            process.kill()
+                        kill_group(process)
                     elif time.monotonic() >= deadline:
                         error = 'Превышен лимит времени'
-                        if process.poll() is None:
-                            process.kill()
+                        kill_group(process)
+                    if process.poll() is not None:
+                        kill_group(process)
                     for key, _ in selector.select(0.1):
                         chunk = os.read(key.fileobj.fileno(), 4096)
                         if not chunk:
@@ -147,12 +238,16 @@ class Jobs:
             if not error:
                 status = 'succeeded' if code == 0 else 'failed'
                 error = '' if code == 0 else f'Код завершения: {code}'
-        except (OSError, ValueError, subprocess.SubprocessError) as exc:
-            error = 'Не удалось выполнить локальное задание: ' + type(exc).__name__
+                if code == 0 and row['kind'] == 'parser-v3':
+                    result, error = self.parser.result(directory, params['target'])
+                    self._update(identifier, result=json.dumps(result, ensure_ascii=False))
+                    if error:
+                        status = 'failed'
+        except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+            status, error = 'failed', 'Не удалось выполнить задание: ' + type(exc).__name__
         finally:
             if process is not None:
-                if process.poll() is None:
-                    process.kill()
+                kill_group(process)
                 process.wait()
                 for stream in (process.stdout, process.stderr):
                     if stream:
