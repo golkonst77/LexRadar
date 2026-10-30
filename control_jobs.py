@@ -16,6 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from control_parser import Parser, PARSER_TIMEOUT
 from control_leads import load_leads
+from control_analysis import AnalysisJobs, ANALYSIS_TIMEOUT
 
 TASKS = {'inspect-import': 'Проверить существующий импорт',
          'offline-results': 'Проверить индекс сохранённых результатов'}
@@ -41,7 +42,7 @@ def kill_group(process):
         pass
 
 
-class Jobs:
+class Jobs(AnalysisJobs):
     def __init__(self, state_dir, parser_dir, results_dir):
         self.state_dir = Path(state_dir).absolute()
         if any(p.is_symlink() for p in (self.state_dir, *self.state_dir.parents)):
@@ -73,7 +74,7 @@ class Jobs:
             if name not in columns:
                 self.db.execute('ALTER TABLE jobs ADD COLUMN ' + name + " TEXT DEFAULT '{}'")
         self.db.execute("UPDATE jobs SET status='failed', ended=?, error='Прервано перезапуском; повторный запуск только вручную' WHERE status='running'", (now(),))
-        self.db.execute("UPDATE jobs SET status='cancelled', ended=?, error='Очередь остановлена перезапуском' WHERE status='queued'", (now(),))
+        self.db.execute("UPDATE jobs SET status='cancelled', ended=?, error='Очередь остановлена перезапуском' WHERE status IN ('queued','pending')", (now(),))
         self.db.commit()
         self.stopping = threading.Event()
         self.wake = threading.Event()
@@ -100,7 +101,7 @@ class Jobs:
     def submit_parser(self, token):
         with self.lock:
             preview = self.previews.get(token)
-            if not preview or time.monotonic() - preview['time'] >= 900:
+            if not preview or preview.get('analysis') or time.monotonic() - preview['time'] >= 900:
                 raise ValueError('Предпросмотр истёк или уже использован')
             errors = self.parser.diagnostic(preview['params']['industry'])
             if errors:
@@ -174,7 +175,11 @@ class Jobs:
             row = self.get(identifier)
             if not row:
                 raise ValueError('Задание не найдено')
-            if row['status'] == 'queued':
+            if row['kind'] == 'analysis-batch':
+                for child in self.analysis_children(identifier):
+                    if child['status'] in {'pending', 'running'}:
+                        self.cancel(child['id'])
+            if row['status'] in {'queued', 'pending'}:
                 self.db.execute("UPDATE jobs SET status='cancelled',cancel=1,ended=? WHERE id=?", (now(), identifier))
             elif row['status'] == 'running':
                 self.db.execute('UPDATE jobs SET cancel=1 WHERE id=?', (identifier,))
@@ -188,6 +193,9 @@ class Jobs:
             self.db.commit()
 
     def _run(self, row):
+        if row['kind'] == 'analysis-batch':
+            self.run_analysis_batch(row)
+            return
         identifier = row['id']
         process = None
         output = bytearray()
@@ -199,7 +207,8 @@ class Jobs:
             params = json.loads(row['params'])
             if row['kind'] == 'parser-v3' and self.parser.diagnostic(params['industry']):
                 raise ValueError('Parser v3 недоступен; смотрите диагностику')
-            command = self.parser.command(params, directory) if row['kind'] == 'parser-v3' else self.command(row['kind'])
+            command = (self.analysis_command(params, directory) if row['kind'] == 'analysis-site' else
+                       self.parser.command(params, directory) if row['kind'] == 'parser-v3' else self.command(row['kind']))
             if row['kind'] == 'parser-v3':
                 command = [sys.executable, '-B', str(Path(__file__).with_name('control_parser_runner.py').absolute()), *command]
             if self.stopping.is_set() or self.get(identifier)['cancel']:
@@ -210,7 +219,7 @@ class Jobs:
                                             'HOME': str(directory), 'TMPDIR': str(directory),
                                             'PLAYWRIGHT_BROWSERS_PATH': str(self.parser.browsers),
                                             **({k: os.environ[k] for k in ('DISPLAY', 'XAUTHORITY') if k in os.environ} if row['kind'] == 'parser-v3' else {})})
-            deadline = time.monotonic() + (PARSER_TIMEOUT if row['kind'] == 'parser-v3' else TIMEOUT)
+            deadline = time.monotonic() + (ANALYSIS_TIMEOUT if row['kind'] == 'analysis-site' else PARSER_TIMEOUT if row['kind'] == 'parser-v3' else TIMEOUT)
             with selectors.DefaultSelector() as selector:
                 selector.register(process.stdout, selectors.EVENT_READ, b'[stdout] ')
                 selector.register(process.stderr, selectors.EVENT_READ, b'[stderr] ')
@@ -276,7 +285,7 @@ class Jobs:
         self.wake.set()
         self.thread.join()
         with self.lock:
-            self.db.execute("UPDATE jobs SET status='cancelled',ended=?,error='Сервер остановлен' WHERE status='queued'", (now(),))
+            self.db.execute("UPDATE jobs SET status='cancelled',ended=?,error='Сервер остановлен' WHERE status IN ('queued','pending')", (now(),))
             self.db.commit()
             self.db.close()
         self.owner.close()

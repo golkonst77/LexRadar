@@ -80,7 +80,7 @@ footer { color: #8c9bb1; font-size: 13px; padding-bottom: 40px; }
 </header>
 <main id="overview">
 </main>
-<footer>LexRadar Control Center · Локальный режим · Анализ и рассылка не запускаются</footer>
+<footer>LexRadar Control Center · Локальный режим · Сеть — после подтверждения · Рассылка отключена</footer>
 </body>
 </html>
 """
@@ -185,6 +185,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
         status_title = 'Правовой статус' if mentions else 'Статус обработки'
         data = self.index()
         records = data['mentions' if mentions else 'leads']
+        jobs = getattr(self.server, 'jobs', None)
+        history = jobs.analysis_history() if jobs and not mentions else {}
         warnings = data['warnings']
         warning = ('<p role="status">Часть файлов недоступна или имеет неподдерживаемый формат: '
                    + str(warnings) + '.</p>') if warnings else ''
@@ -198,6 +200,9 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 self.respond_json(404, {"error": "not_found"})
                 return
             content = '<a href="' + base + '">← Организации</a><h1>' + escape(record['name']) + '</h1>'
+            if not mentions and jobs:
+                content += self.analysis_form('<input type="hidden" name="lead" value="' + escape(record['id']) + '">')
+                content += '<p>Последний анализ: ' + self.analysis_status(record, history) + '</p>'
             content += notice + warning + '<dl>'
             for label, value in (
                 ('ИНН', record['inn'] or 'Не указан'),
@@ -273,16 +278,29 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
                 content += '<option value="' + key + '"' + (' selected' if sort == key else '') + '>' + label + '</option>'
             content += '</select></label><button type="submit">Найти</button></form>'
             content += '<p>Найдено: ' + str(len(filtered)) + '</p>'
+            if not mentions and jobs:
+                content += '<p><a href="/jobs">Задания и результаты →</a>. Выбор относится только к текущей странице; при переходе сбрасывается. Следующие N выбираются из всего доступного каталога независимо от фильтра.</p>'
+                options = '<label>Следующие N необработанных <select name="count">'
+                for n in (10, 20, 50, 100, 200):
+                    options += '<option' + (' selected' if n == 50 else '') + '>' + str(n) + '</option>'
+                content += self.analysis_form(options + '</select></label>', 'Предпросмотр следующих N')
+                current = filtered[(page - 1) * 20:page * 20]
+                fields = '<label><input type="checkbox" name="all" value="' + ','.join(r['id'] for r in current) + '"> Выбрать все на текущей странице</label>'
+                content += self.analysis_form(fields, 'Анализировать выбранные', 'analysis-selection')
             if not filtered:
                 content += ('<p>Организаций пока нет.</p>' if not records
                             else '<p>По запросу ничего не найдено.</p>')
             else:
                 content += ('<div class="table-scroll" tabindex="0" role="region" aria-label="Организации"><table class="organizations-table"><thead><tr>'
-                            '<th>Название</th><th>Сайт</th><th>ИНН</th>'
+                            + ('<th>Выбор / анализ</th>' if not mentions and jobs else '') + '<th>Название</th><th>Сайт</th><th>ИНН</th>'
                             '<th>Телефон</th><th>Email</th><th>Источник / агрегатор</th>'
                             + ('<th>' + status_title + '</th>' if statuses else '') + '</tr></thead><tbody>')
                 for record in filtered[(page - 1) * 20:page * 20]:
-                    content += ('<tr><td><a href="' + base + '/' + record['id'] + '">'
+                    content += '<tr>'
+                    if not mentions and jobs:
+                        content += '<td><input aria-label="Выбрать ' + escape(record['name'], quote=True) + '" type="checkbox" form="analysis-selection" name="lead" value="' + record['id'] + '">'
+                        content += '<button form="analysis-selection" name="single" value="' + record['id'] + '">Анализ</button><br>' + self.analysis_status(record, history) + '</td>'
+                    content += ('<td><a href="' + base + '/' + record['id'] + '">'
                                 + escape(record['name']) + '</a></td>')
                     for value in (', '.join(record['websites']) or '—',
                                   record['inn'] or '—', record.get('phone', '') or '—',
@@ -339,6 +357,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             self.file(path)
         elif path == '/jobs' or path.startswith('/jobs/'):
             self.jobs_page(path)
+        elif path.startswith('/analysis-files/'):
+            self.analysis_file(path)
         elif path.startswith('/exports/'):
             self.export(path.removeprefix('/exports/'))
         elif path == '/settings':
@@ -355,8 +375,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             self.respond_json(200, {
                 "service": "LexRadar Control Center",
                 "status": "ok",
-                "mode": "read_only",
-                "analysis_enabled": False,
+                "mode": "confirmed_tasks" if hasattr(self.server, "jobs") else "read_only",
+                "analysis_enabled": hasattr(self.server, "jobs"),
                 "mailing_enabled": False,
             })
         else:

@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from collections import Counter
 from control_catalog import Catalog, domain
 from control_jobs import TASKS
+from control_analysis import target, ARTIFACTS
 from control_leads import website
 from control_results import read_file
 
@@ -24,6 +25,11 @@ def link(url, title):
 
 def external(value):
     return ('<a rel="noreferrer" href="' + esc(value) + '">' + esc(value) + '</a>') if website(value) else esc(value)
+
+
+def job_status(value):
+    return {'pending': 'Ожидает', 'queued': 'Ожидает', 'running': 'Выполняется',
+            'succeeded': 'Успешно', 'failed': 'Ошибка / прервано', 'cancelled': 'Отменено'}.get(value, value)
 
 
 def report_title(record):
@@ -50,12 +56,27 @@ class Pages:
                 data['reports'] = [{**r, 'lead_name': names.get(domain(r['target']), '')} for r in data['reports']]
         return data
 
-    def form(self, action, label, fields=''):
+    def form(self, action, label, fields='', confirm=True):
         token = getattr(self.server, 'csrf_token', '')
         return ('<form method="post" action="' + esc(action) + '">'
                 '<input type="hidden" name="csrf" value="' + esc(token) + '">' + fields
-                + '<label><input type="checkbox" name="confirm" value="yes" required> Подтверждаю действие</label> '
-                '<button type="submit">' + esc(label) + '</button></form>')
+                + ('<label><input type="checkbox" name="confirm" value="yes" required> Подтверждаю действие</label> ' if confirm else '<input type="hidden" name="confirm" value="yes">')
+                + '<button type="submit">' + esc(label) + '</button></form>')
+
+    def analysis_form(self, fields, label='Анализ', identifier=''):
+        return ('<form method="post" action="/analysis/preview"' + (' id="' + esc(identifier) + '"' if identifier else '') + '>'
+                '<input type="hidden" name="csrf" value="' + esc(getattr(self.server, 'csrf_token', '')) + '">' + fields
+                + '<button>' + esc(label) + '</button></form>')
+
+    def analysis_status(self, record, history):
+        try:
+            _, host = target(next(iter(record['websites']), ''))
+        except ValueError:
+            return 'Нет допустимого сайта'
+        row = history.get(host)
+        if not row:
+            return 'Не запускался'
+        return link('/jobs/' + row['id'], job_status(row['status']) + ' · ' + (row['ended'] or row['started'] or row['created']))
 
     def home(self):
         data = self.index()
@@ -163,8 +184,41 @@ class Pages:
             return '<p>Заданий пока нет.</p>'
         content = '<div class="table-scroll"><table><tr><th>Задание</th><th>Статус</th><th>Создано UTC</th></tr>'
         for job in jobs:
-            content += '<tr><td>' + link('/jobs/' + job['id'], ('Собрать организации' if job['kind'] == 'parser-v3' else TASKS.get(job['kind'], job['kind']))) + '</td><td>' + esc(job['status']) + '</td><td>' + esc(job['created']) + '</td></tr>'
+            progress = ''
+            if job['kind'] == 'analysis-batch':
+                children = self.server.jobs.analysis_children(job['id'])
+                progress = ' · ' + str(sum(c['status'] not in {'pending', 'queued', 'running'} for c in children)) + '/' + str(len(children))
+            elif job['kind'] == 'analysis-site':
+                progress = ' · ' + json.loads(self.server.jobs.get(job['id'])['params'])['domain']
+            content += '<tr><td>' + link('/jobs/' + job['id'], ('Собрать организации' if job['kind'] == 'parser-v3' else TASKS.get(job['kind'], {'analysis-batch': 'Пакет анализа', 'analysis-site': 'Анализ сайта'}.get(job['kind'], job['kind'])))) + '</td><td>' + esc(job_status(job['status']) + progress) + '</td><td>' + esc(job['created']) + '</td></tr>'
         return content + '</table></div>'
+
+    def analysis_file(self, path):
+        parts = path.split('/')
+        jobs = getattr(self.server, 'jobs', None)
+        row = jobs.get(parts[2]) if jobs and len(parts) == 4 else None
+        if not row or row['kind'] != 'analysis-site' or parts[3] not in ARTIFACTS:
+            self.respond_json(404, {'error': 'not_found'})
+            return
+        try:
+            raw = read_file(jobs.state_dir, row['id'] + '/analysis/' + ARTIFACTS[parts[3]], 8_000_000)
+            if parts[3] == 'manifest.json':
+                data = json.loads(raw)
+                # Paths, input values and collection bodies remain local to the state directory.
+                raw = json.dumps({'summary': data.get('summary'), 'rows': [
+                    {k: r[k] for k in ('status', 'reason', 'stages', 'qualification') if k in r}
+                    for r in data.get('rows', [])]}, ensure_ascii=False, indent=2).encode()
+        except (OSError, ValueError):
+            self.respond_json(404, {'error': 'file_unavailable'})
+            return
+        if parts[3] == 'proposal.pdf':
+            if not raw.startswith(b'%PDF-'):
+                self.respond_json(404, {'error': 'invalid_pdf'})
+                return
+            self.respond(200, raw, 'application/pdf')
+        else:
+            from control_jobs import log_text
+            self.respond(200, log_text(raw).encode(), 'text/plain; charset=utf-8')
 
     def jobs_page(self, path):
         jobs = getattr(self.server, 'jobs', None)
@@ -192,20 +246,35 @@ class Pages:
             if not row:
                 self.respond_json(404, {'error': 'not_found'})
                 return
-            content = '<h1>' + esc(('Собрать организации' if row['kind'] == 'parser-v3' else TASKS.get(row['kind'], row['kind']))) + '</h1><dl>'
+            content = '<h1>' + esc(('Собрать организации' if row['kind'] == 'parser-v3' else TASKS.get(row['kind'], {'analysis-batch': 'Пакет анализа', 'analysis-site': 'Анализ сайта'}.get(row['kind'], row['kind'])))) + '</h1><dl>'
             for label, key in (('Статус', 'status'), ('Создано UTC', 'created'), ('Начало UTC', 'started'), ('Окончание UTC', 'ended'), ('Причина / ограничение', 'error')):
-                content += '<dt>' + label + '</dt><dd>' + esc(row[key] or '—') + '</dd>'
+                content += '<dt>' + label + '</dt><dd>' + esc(job_status(row[key]) if key == 'status' and row['kind'].startswith('analysis-') else row[key] or '—') + '</dd>'
+            if row['kind'] == 'analysis-batch':
+                children = jobs.analysis_children(row['id'])
+                finished = sum(c['status'] not in {'pending', 'queued', 'running'} for c in children)
+                content += '<dt>Прогресс</dt><dd>' + str(finished) + '/' + str(len(children)) + '</dd>'
+                for child in children:
+                    params = json.loads(child['params'])
+                    content += '<dd>' + link('/jobs/' + child['id'], params['name'] + ' · ' + params['domain']) + ' · ' + esc(job_status(child['status'])) + '</dd>'
+            if row['kind'] == 'analysis-site':
+                params = json.loads(row['params'])
+                content += '<dd>' + link('/jobs/' + params['parent'], 'Пакет') + ' · ' + link('/organizations/' + params['lead_id'], 'Организация') + '</dd>'
+                content += '<dt>Сайт</dt><dd>' + esc(params['url']) + '</dd><dt>Режим</dt><dd>Реальный предварительный анализ правил; не платный AI-аудит. КП требует ручной проверки.</dd>'
+                content += '<dt>Артефакты</dt><dd>' + esc(jobs.state_dir / row['id'] / 'analysis') + '</dd>'
+                for name, relative in ARTIFACTS.items():
+                    if (jobs.state_dir / row['id'] / 'analysis' / relative).is_file():
+                        content += '<dd>' + link('/analysis-files/' + row['id'] + '/' + name, name) + '</dd>'
             if row['kind'] == 'parser-v3':
                 content += '<dt>Параметры запуска</dt><dd>' + esc(row['params']) + '</dd><dt>Результат</dt><dd>' + esc(row['result']) + '</dd>'
                 content += '<dt>Каталог</dt><dd>' + esc(jobs.state_dir / row['id']) + '</dd>'
                 if row['status'] == 'succeeded':
                     content += '<dd>' + link('/organizations?run=' + row['id'], 'Лиды этого запуска') + ' · ' + link('/exports/' + row['id'], 'Скачать CSV') + '</dd>'
             content += '</dl><h2>stdout / stderr (до 64 КиБ)</h2><pre>' + esc(row['output']) + '</pre>'
-            if row['status'] in {'queued', 'running'}:
+            if row['status'] in {'pending', 'queued', 'running'}:
                 self.refresh_seconds = 5
                 content += '<p>Статус и журнал обновляются каждые 5 секунд; процент завершения неизвестен.</p>'
-                content += self.form('/jobs/' + row['id'] + '/cancel', 'Отменить')
-        self.html(content)
+                content += self.form('/jobs/' + row['id'] + '/cancel', 'Отменить', confirm=not row['kind'].startswith('analysis-'))
+        self.html('<p><a href="/organizations">← Организации</a> · <a href="/jobs">Задания</a></p>' + content)
 
     def settings(self):
         data = self.index()
@@ -345,18 +414,41 @@ class Pages:
             raw = self.rfile.read(length)
             if len(raw) != length:
                 raise ValueError('Incomplete body')
-            values = parse_qs(raw.decode('utf-8'), strict_parsing=True, max_num_fields=12)
+            values = parse_qs(raw.decode('utf-8'), strict_parsing=True, max_num_fields=220)
         except (ValueError, UnicodeError):
             self.reject_post(400, 'invalid_form', 'invalid_body_or_headers')
             return
+        path = urlsplit(self.path).path
         token = getattr(self.server, 'csrf_token', '')
-        if not token or not hmac.compare_digest(values.get('csrf', [''])[0].encode('utf-8'), token.encode('utf-8')) or values.get('confirm') != ['yes']:
+        if not token or not hmac.compare_digest(values.get('csrf', [''])[0].encode('utf-8'), token.encode('utf-8')) or (path != '/analysis/preview' and values.get('confirm') != ['yes']):
             self.reject_post(403, 'confirmation_required', 'csrf_or_confirmation_invalid')
             return
-        path = urlsplit(self.path).path
         jobs = getattr(self.server, 'jobs', None)
         try:
-            if path == '/refresh':
+            if jobs and path == '/analysis/preview':
+                data = self.index()
+                count = int(values['count'][0]) if values.get('count') else None
+                identifiers = values.get('lead', [])
+                if values.get('all'):
+                    identifiers = values['all'][0].split(',')
+                if values.get('single'):
+                    identifiers = values['single']
+                token, preview = jobs.preview_analysis(data['leads'], identifiers=None if count is not None else identifiers,
+                    count=count, completed={domain(r['target']) for r in data['reports'] if r['kind'] == 'audit'})
+                content = '<h1>Предпросмотр анализа</h1><p><a href="/organizations">← Организации</a></p>'
+                content += '<p>Выбрано: ' + str(len(preview['params']['sites'])) + '. Последовательно, один процесс. До 180 секунд на сайт. Реальный предварительный анализ правил: 7 HTML, 2 документа, 16 запросов, 60 секунд сбора; robots.txt учитывается. Без AI, CRM и отправки писем. Контакты с URL-источником движок не экспортирует; исходные контакты сохраняются.</p>'
+                for site in preview['params']['sites']:
+                    content += '<p>' + esc(site['name']) + ': ' + esc(site['url']) + (' · Повторный анализ' if site['repeat'] else '') + '</p>'
+                content += '<h2>Пропуски: ' + str(len(preview['params']['skipped'])) + '</h2>'
+                for reason in preview['params']['skipped']:
+                    content += '<p>' + esc(reason) + '</p>'
+                if preview['params']['sites']:
+                    content += self.form('/analysis', 'Запустить анализ', '<input type="hidden" name="preview" value="' + esc(token) + '">')
+                self.html(content)
+                return
+            elif jobs and path == '/analysis':
+                destination = '/jobs/' + jobs.submit_analysis(values.get('preview', [''])[0])
+            elif path == '/refresh':
                 self.catalog().snapshot(force=True)
                 destination = '/settings'
             elif jobs and path == '/collect/preview':
