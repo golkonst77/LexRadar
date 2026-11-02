@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 
 from collections import Counter
 from control_catalog import Catalog, domain
-from control_jobs import TASKS
+from control_jobs import TASKS, log_text
 from control_analysis import target, ARTIFACTS
 from control_leads import website, merge_leads, analysis_rows
 from control_results import read_file
@@ -30,6 +30,24 @@ def external(value):
 def job_status(value):
     return {'pending': 'Ожидает', 'queued': 'Ожидает', 'running': 'Выполняется',
             'succeeded': 'Успешно', 'failed': 'Ошибка / прервано', 'cancelled': 'Отменено'}.get(value, value)
+
+
+def crm_status(value):
+    return {
+        'ACCOUNT_VERIFIED': 'Контрагент проверен; PDF и черновик — отдельный этап',
+        'DRAFT_VERIFIED': 'PDF и черновик проверены; письмо не отправлено',
+        'HOLD_IDENTITY': 'Идентичность не подтверждена; требуется сверка',
+        'DOCUMENT_VERIFIED_NO_DRAFT': 'PDF проверен; черновик не создан — нет подтверждённого email',
+        'HOLD': 'Подготовка остановлена; требуется сверка журнала',
+        'PENDING_REVIEW': 'Материалы подготовлены; требуется проверка',
+    }.get(value, 'Сохранённый результат требует проверки') + ' (' + value + ')'
+
+
+def crm_entity_links(row):
+    return ' · '.join(link('http://192.168.233.105/#' + entity + '/view/' + str(row[key]),
+                           'Открыть ' + entity + ' для сверки')
+                      for entity, key in (('Account', 'account_id'), ('Document', 'document_id'), ('Email', 'email_id'))
+                      if row.get(key))
 
 
 def report_title(record):
@@ -351,7 +369,7 @@ class Pages:
                 return
             content = '<h1>' + esc(('Собрать организации' if row['kind'] == 'parser-v3' else TASKS.get(row['kind'], {'analysis-batch': 'Пакет анализа', 'analysis-site': 'Анализ сайта'}.get(row['kind'], row['kind'])))) + '</h1><dl>'
             for label, key in (('Статус', 'status'), ('Создано UTC', 'created'), ('Начало UTC', 'started'), ('Окончание UTC', 'ended'), ('Причина / ограничение', 'error')):
-                content += '<dt>' + label + '</dt><dd>' + esc(job_status(row[key]) if key == 'status' else row[key] or '—') + '</dd>'
+                content += '<dt>' + label + '</dt><dd>' + esc(job_status(row[key]) if key == 'status' else log_text((row[key] or '—').encode())) + '</dd>'
             if row['kind'] == 'analysis-batch':
                 children = jobs.analysis_children(row['id'])
                 finished = sum(c['status'] not in {'pending', 'queued', 'running'} for c in children)
@@ -372,7 +390,7 @@ class Pages:
                 content += '<dt>Каталог</dt><dd>' + esc(jobs.state_dir / row['id']) + '</dd>'
                 if row['status'] == 'succeeded':
                     content += '<dd>' + link('/organizations?run=' + row['id'], 'Лиды этого запуска') + ' · ' + link('/exports/' + row['id'], 'Скачать CSV') + '</dd>'
-            content += '</dl><details><summary>Технический журнал · stdout / stderr (до 64 КиБ)</summary><pre>' + esc(row['output']) + '</pre></details>'
+            content += '</dl><details><summary>Технический журнал · stdout / stderr (до 64 КиБ)</summary><pre>' + esc(log_text(row['output'].encode())) + '</pre></details>'
             if row['status'] in {'pending', 'queued', 'running'}:
                 self.refresh_seconds = 5
                 content += '<p>Статус и журнал обновляются каждые 5 секунд; процент завершения неизвестен.</p>'
@@ -417,7 +435,8 @@ class Pages:
             content += '<article><h2>' + esc(row.get('company_name') or row.get('website') or 'Запись подготовки') + '</h2>'
             for key in ('id', 'status', 'website', 'account_id', 'document_id', 'source', 'date'):
                 if row.get(key):
-                    content += '<p>' + key + ': ' + esc(row[key]) + '</p>'
+                    content += '<p>' + key + ': ' + esc(crm_status(row[key]) if key == 'status' else row[key]) + '</p>'
+            content += '<p>' + crm_entity_links(row) + '</p>'
             content += '<p>Отправка этой панелью: не выполнялась. Требуется проверка.</p></article>'
         content += '<p>Показано ' + str(min(200, len(records))) + ' из ' + str(len(records)) + '.</p><h2>Кандидаты Parser v3: не отправлено панелью</h2>'
         content += '<p>Кандидатов: ' + str(len(data['leads'])) + '. ' + link('/organizations', 'Открыть контакты и источники') + '. Наличие контакта не означает готовность КП или разрешение отправки.</p>'

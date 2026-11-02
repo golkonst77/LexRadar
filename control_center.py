@@ -68,6 +68,8 @@ form { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin: 20px
 label { display: flex; flex-direction: column; gap: 8px; color: #374151; font-size: 14px; }
 label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; }
 input, select, button { font: inherit; max-width: 100%; }
+button, .cta { white-space: normal; overflow-wrap: anywhere; }
+header nav a { min-width: 0; overflow-wrap: anywhere; }
 input, select { background: #fff; color: #111827; border: 1px solid #D1D5DB; border-radius: 8px; padding: 10px 12px; min-height: 44px; }
 input[type="checkbox"] { accent-color: #2563EB; width: 20px; height: 20px; min-height: 20px; flex-shrink: 0; }
 button, .cta { display: inline-block; background: #2563EB; color: #fff; border: 1px solid #2563EB;

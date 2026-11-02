@@ -16,7 +16,7 @@ from control_catalog import Catalog, domain
 from control_jobs import Jobs
 from control_leads import DEFAULT_PARSER_DIR, analysis_rows, merge_leads
 from control_analysis import target
-from control_pages import esc, link
+from control_pages import esc, link, crm_status, crm_entity_links
 from control_enrichment import observation
 from control_results import read_file
 
@@ -24,6 +24,59 @@ from control_results import read_file
 NAV = '''<a href="/">Обзор</a><a href="/collect">Сбор организаций</a>
 <a href="/analysis">Проверка сайтов</a><a href="/proposals">Готовые предложения</a>
 <a href="/crm">Передача в CRM</a><a href="/service">Служебное</a>'''
+
+
+def analysis_summary(records, history, completed=()):
+    """Read-only partition; the queue remains the authority for submission."""
+    counts = Counter()
+    hosts = set()
+    for record in records:
+        for member in record.get('members', [record]):
+            counts['collected'] += 1
+            try:
+                domains = {target(url)[1] for url in member['websites']}
+                if len(domains) != 1:
+                    raise ValueError()
+            except ValueError:
+                counts['invalid'] += 1
+                continue
+            host = next(iter(domains))
+            if host in hosts:
+                counts['duplicates'] += 1
+            hosts.add(host)
+    active = {key[1] for key, row in history.items()
+              if row['status'] in {'pending', 'queued', 'running'}}
+    excluded = set(completed) | {key[1] for key in history}
+    counts['unique'] = len(hosts)
+    counts['active'] = len(hosts & active)
+    counts['checked'] = len((hosts & excluded) - active)
+    counts['available'] = len(hosts - excluded)
+    available = set()
+    seen = set(excluded)
+    for record in sorted(records, key=lambda r: (r['name'].casefold(), r['id'])):
+        try:
+            domains = {target(url)[1] for url in record['websites']}
+        except ValueError:
+            continue
+        if len(domains) == 1 and not domains & seen:
+            available.add(record['id'])
+            seen.update(domains)
+    return counts, available
+
+
+def analysis_summary_html(counts):
+    content = '<article><h2>Почему организаций больше, чем заданий</h2><dl>'
+    for key, label in (('collected', 'Собрано строк организаций в выбранном списке'),
+                       ('invalid', 'Сайт отсутствует, недопустим или указаны разные домены'),
+                       ('duplicates', 'Повторяющиеся домены: лишние строки'),
+                       ('unique', 'Уникальных допустимых доменов'),
+                       ('active', 'В очереди / работе'),
+                       ('checked', 'Уже проверялись ранее или есть сохранённый аудит'),
+                       ('available', 'Новых сайтов доступно к запуску')):
+        content += '<dt>' + label + '</dt><dd><strong>' + str(counts[key]) + '</strong></dd>'
+    content += '</dl><p>' + str(counts['collected']) + ' = ' + str(counts['invalid']) + ' без однозначного сайта + ' + str(counts['duplicates']) + ' повторов + ' + str(counts['unique']) + ' уникальных доменов.</p>'
+    content += '<p>' + str(counts['unique']) + ' = ' + str(counts['active']) + ' активных + ' + str(counts['checked']) + ' ранее проверявшихся + ' + str(counts['available']) + ' новых.</p>'
+    return content + '<p>Приоритет: сначала недопустимые адреса, затем повторы; для уникального домена — активное задание, затем любая прежняя попытка (включая ошибку или отмену) / аудит, затем новый сайт. Каждая строка и каждый домен учтены один раз. «Проверить все новые» берёт до 200; выбранная часть может быть меньше. Перед подтверждением состав проверяется повторно.</p></article>'
 
 
 class MVPJobs(Jobs):
@@ -170,29 +223,17 @@ class MVPHandler(ControlHandler):
         errors_only = params.get('analysis_errors') == ['yes']
         errors = self.analysis_errors(data['leads'], history)
         completed = {domain(r['target']) for r in data['reports'] if r['kind'] == 'audit'}
-        checked, active, available = set(), set(), set()
-        for record in data['leads']:
-            try:
-                hosts = {target(url)[1] for url in record['websites']}
-            except ValueError:
-                continue
-            if len(hosts) != 1:
-                continue
-            host = next(iter(hosts))
-            attempts = analysis_rows(record, history)
-            if host in completed or any(r['status'] in {'succeeded', 'failed', 'cancelled'} for r in attempts):
-                checked.add(record['id'])
-            if any(r['status'] in {'pending', 'queued', 'running'} for r in attempts):
-                active.add(record['id'])
-            if not attempts and host not in completed:
-                available.add(record['id'])
+        summary, available = analysis_summary(data['leads'], history, completed)
+        checked = {r['id'] for r in data['leads'] if analysis_rows(r, history)
+                   or any(domain(url) in completed for url in r['websites'])}
         content = '<h1>' + ('Ошибки анализа' if errors_only else '2. Проверить сайты') + '</h1>'
         if run:
             content += '<p>Организации запуска: ' + esc(run) + '</p>'
-        content += '<p>Новых (ещё не проверенных): ' + str(len(data['leads']) - len(checked)) + ' · Уже проверено: ' + str(len(checked)) + ' · Доступно для анализа: ' + str(len(available)) + ' · В очереди / работе: ' + str(len(active)) + '</p>'
-        if not available and data['leads']:
-            content += '<p role="status">' + ('Все сайты этого списка уже проверены.' if len(checked) == len(data['leads']) else 'Новых доступных сайтов нет. Есть сайты в очереди или без допустимого адреса.') + '</p>'
-        content += '<p>Собрано: ' + str(len(data['leads'])) + ' · READY: ' + str(counts['READY'])
+        content += '<p>Область: ' + ('выбранный запуск сбора; история проверок — по всей базе.' if run else 'вся доступная база и исторический импорт.') + '</p>'
+        if data.get('warnings'):
+            content += '<p role="status">Часть исходных файлов недоступна. Расчёт относится только к загруженным строкам; это не полный итог сбора.</p>'
+        content += analysis_summary_html(summary)
+        content += '<p>Строк после объединения по домену: ' + str(len(data['leads'])) + ' · READY: ' + str(counts['READY'])
         content += ' · REJECT: ' + str(counts['REJECT']) + ' · HOLD: ' + str(counts['HOLD']) + '</p>'
         content += '<p>' + link('/analysis', 'Вся база организаций') + ' · ' + link('/analysis?' + urlencode(dict(analysis_errors='yes', **({'run': run} if run else {}))), 'Ошибки анализа (' + str(len(errors)) + ')') + '</p>'
         if not errors_only and available:
@@ -217,7 +258,7 @@ class MVPHandler(ControlHandler):
         else:
             content += '<p>' + ('Ошибок для повтора нет.' if errors_only else 'Сначала соберите организации.') + '</p>'
         content += '<p><a class="cta" href="/proposals">Посмотреть готовые предложения →</a></p><p>' + link('/collect', '← Собрать организации') + ' · ' + link('/jobs', 'Прогресс заданий') + '</p>'
-        if counts['active']:
+        if summary['active']:
             self.refresh_seconds = 5
         self.html(content)
 
@@ -267,10 +308,11 @@ class MVPHandler(ControlHandler):
             if active:
                 content += '<p role="status"><span class="activity" aria-hidden="true"></span> Проверяем сайты</p>'
             content += '<p>Прошло: ' + elapsed + '</p><p>Готово предложений: ' + str(totals['READY']) + ' · Без предложения: ' + str(totals['REJECT']) + ' · Требует внимания: ' + str(totals['HOLD']) + ' · Ошибок / остановлено: ' + str(totals['ERROR']) + '</p>'
+            running = [json.loads(c['params'])['domain'] for c in children if c['status'] == 'running']
+            content += '<p>' + ('Сейчас проверяются сайты этого задания: ' if len(running) > 1 else 'Сейчас проверяется сайт этого задания: ') + esc(', '.join(running) or ('нет; ожидаем очередь или завершение' if active else 'нет; задание завершено')) + '</p>'
+            content += '<p>READY — готово КП · REJECT — без КП · HOLD — требует внимания · ERROR — ошибка / остановлено. Итоги относятся только к этому заданию.</p>'
             for child in children:
                 info = json.loads(child['params'])
-                if child['status'] == 'running':
-                    content += '<p>Текущий сайт: ' + esc(info['domain']) + '</p>'
                 if child['error']:
                     content += '<p role="status">' + esc(info['domain']) + ': ошибка проверки. Подробности в «Служебном».</p>'
             content += '<p><a class="cta" href="/proposals">Посмотреть готовые предложения →</a></p>'
@@ -291,6 +333,14 @@ class MVPHandler(ControlHandler):
                 end = content.find('</article>', start)
                 if start >= 0 and end >= 0:
                     content = content[:start] + self.execution_progress(jobs.get(latest['id'])) + '<details><summary>Служебное</summary>' + content[start:end + 10] + '</details>' + content[end + 10:]
+        elif status == 200 and path == '/crm':
+            content = '<p>' + link('/proposals', 'Выбрать READY и открыть предпросмотр передачи →') + '</p>' + content
+        elif status == 200 and path == '/analysis/preview':
+            data = self.index()
+            history = jobs.analysis_history() if jobs else {}
+            summary, _ = analysis_summary(data['leads'], history, {domain(r['target']) for r in data['reports'] if r['kind'] == 'audit'})
+            run = parse_qs(urlsplit(self.path).query).get('run', [''])[0]
+            content = '<p>' + link('/analysis' + ('?' + urlencode({'run': run}) if run else ''), '← Вернуться к выбранному списку сайтов') + '</p>' + analysis_summary_html(summary) + content
         elif status == 200 and path.startswith('/jobs/') and jobs:
             row = jobs.get(path.removeprefix('/jobs/'))
             if row and row['kind'] in {'parser-v3', 'analysis-batch', 'analysis-site'}:
@@ -303,13 +353,21 @@ class MVPHandler(ControlHandler):
         content += ' · REJECT — нет предложения: ' + str(counts['REJECT'])
         content += ' · HOLD — требует внимания: ' + str(counts['HOLD'])
         content += ' · ' + link('/analysis?analysis_errors=yes', 'Ошибки анализа: ' + str(counts['ERROR'])) + '</p>'
-        content += '<p>Показаны коммерческие READY с существующим КП. Это не разрешение на отправку писем.</p>'
-        if not data['offers']:
+        run = parse_qs(urlsplit(getattr(self, 'path', '/proposals')).query).get('run', [''])[0]
+        runs = {m['run_id']: m.get('run_name', m['run_id']) for lead in data['leads']
+                for m in lead.get('members', [lead]) if m.get('run_id')}
+        content += '<form method="get" action="/proposals"><label>Запуск сбора <select name="run"><option value="">Вся база</option>'
+        for key, name in sorted(runs.items()):
+            content += '<option value="' + esc(key) + '"' + (' selected' if run == key else '') + '>' + esc(name) + '</option>'
+        content += '</select></label><button>Показать</button></form>'
+        offers = [o for o in data['offers'] if not run or any(m.get('run_id') == run for m in o['lead'].get('members', [o['lead']]))]
+        content += '<p>Счётчики выше — вся база. Показано КП: ' + str(len(offers)) + '. ' + ('Домены выбранного запуска: ' + esc(run) + '. КП может быть получено в другой проверке этого домена.' if run else 'Одна актуальная версия READY на домен по всей базе, включая исторические запуски.') + ' Это не разрешение на отправку писем.</p>'
+        if not offers:
             self.html(content + '<p>Готовых КП пока нет. ' + link('/analysis', 'Перейти к проверке сайтов') + '</p>')
             return
         content += '<form method="get" action="/crm/preview" id="crm-selection"><button>Передать выбранные в CRM →</button></form>'
         content += '<div class="table-scroll" tabindex="0" role="region" aria-label="Список организаций"><table><thead><tr><th>CRM</th><th>Организация</th><th>Сайт</th><th>Контакт</th><th>Основание КП</th><th>Статус</th><th>Дата КП (UTC)</th><th>КП</th></tr></thead><tbody>'
-        for offer in data['offers']:
+        for offer in offers:
             lead = offer['lead']
             contact = lead.get('email') or lead.get('phone') or (offer['saved']['contacts'][0]['email'] if offer['saved']['contacts'] else '')
             content += '<tr><td><input form="crm-selection" type="checkbox" name="lead" value="' + esc(lead['id']) + '" aria-label="Выбрать ' + esc(lead['name']) + '"' + ('' if contact else ' disabled') + '></td>'
@@ -407,10 +465,13 @@ class MVPHandler(ControlHandler):
                            result['status'] + ': ' + '; '.join(e['error'] for e in result['errors']))
                 if drafts:
                     message = result['status'] + ': ' + '; '.join(e['error'] for e in result['errors'])
+                from control_jobs import log_text
+                message = crm_status(result['status']) + '. ' + log_text(message.encode())
                 details = ''.join('<p>' + label + ': ' + esc(result.get(key, '—')) + '</p>'
                                   for label, key in [('Account', 'account_id'), ('Document', 'document_id'), ('Email', 'email_id')])
+                details += '<p>' + crm_entity_links(result) + '</p>'
                 if result.get('reason'):
-                    details += '<p>' + esc(result['reason']) + '</p>'
+                    details += '<p>' + esc(log_text(result['reason'].encode())) + '</p>'
                 if result.get('email_id'):
                     label = 'Открыть проверенный черновик' if result['status'] == 'DRAFT_VERIFIED' else 'Открыть Email для сверки (не подтверждён)'
                     details += link('http://192.168.233.105/#Email/view/' + result['email_id'], label)
@@ -442,17 +503,26 @@ class MVPHandler(ControlHandler):
 
     def home(self):
         data, history, counts = self.workflow()
-        content = '<h1>От организаций к готовым предложениям</h1><p class="lead">Пройдите четыре шага. Письма автоматически не отправляются.</p><div class="grid">'
+        summary, _ = analysis_summary(data['leads'], history, {domain(r['target']) for r in data.get('reports', []) if r['kind'] == 'audit'})
+        content = '<h1>От организаций к готовым предложениям</h1><p class="lead">Пройдите четыре шага. Письма автоматически не отправляются.</p><p>Показатели по всей доступной базе, включая исторический импорт; организации объединены по домену. Это не итоги последнего запуска.</p><div class="grid">'
         for label, description, url, enabled in (
-            ('1. Собрать организации', 'Собрано организаций: ' + str(len(data['leads'])), '/collect', True),
-            ('2. Проверить сайты', 'Проверено: ' + str(counts['checked']) + '; в работе: ' + str(counts['active']), '/analysis', counts['usable'] > 0),
+            ('1. Собрать организации', 'Пригодных организаций с допустимым сайтом (по доменам): ' + str(summary['unique']), '/collect', True),
+            ('2. Проверить сайты', 'Новых сайтов: ' + str(summary['available']) + '; проверялись ранее: ' + str(summary['checked']) + '; в работе: ' + str(summary['active']), '/analysis', counts['usable'] > 0),
             ('3. Готовые предложения', 'Готовых КП: ' + str(counts['READY']), '/proposals', counts['READY'] > 0),
-            ('4. Передать в CRM', 'Подходящих READY с контактом: ' + str(counts['crm_ready']) + '. Передача ещё не проверена.', '/crm', counts['crm_ready'] > 0),
+            ('4. Передать в CRM', 'Подходящих READY с контактом: ' + str(counts['crm_ready']) + '. Выберите КП для предпросмотра; сохранённые результаты доступны в CRM.', '/crm', counts['crm_ready'] > 0),
         ):
-            content += '<article><h2>' + label + '</h2><strong class="metric">' + str({'/collect': len(data['leads']), '/analysis': counts['checked'], '/proposals': counts['READY'], '/crm': counts['crm_ready']}[url]) + '</strong><p>' + description + '</p>'
+            content += '<article><h2>' + label + '</h2><strong class="metric">' + str({'/collect': summary['unique'], '/analysis': summary['available'], '/proposals': counts['READY'], '/crm': counts['crm_ready']}[url]) + '</strong><p>' + description + '</p>'
             content += ('<a class="cta" href="' + url + '">' + label + '</a>' if enabled else '<button disabled>' + label + '</button><p>Пока нет подходящих данных предыдущего шага.</p>')
             content += '</article>'
-        self.html(content + '</div><p><a href="/service">Служебное</a></p>')
+        content += '</div>'
+        jobs = getattr(self.server, 'jobs', None)
+        if jobs:
+            for row in jobs.list():
+                if row['kind'] in {'parser-v3', 'analysis-batch'} and row['status'] in {'queued', 'running'}:
+                    content += '<p role="status">Выполняется: ' + link('/jobs/' + row['id'], 'Сбор организаций' if row['kind'] == 'parser-v3' else 'Прогресс проверки сайтов') + '</p>'
+        if data.get('warnings'):
+            content += '<p role="status">Часть файлов не загружена; показатели неполные. Подробности в служебном разделе.</p>'
+        self.html(content + '<p><a href="/service">Служебное</a></p>')
 
     def service(self):
         content = '<h1>Служебное</h1><p class="lead">Задания, диагностика и сохранённые технические материалы.</p>'
