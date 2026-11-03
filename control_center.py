@@ -141,6 +141,95 @@ nav { display: flex; flex-wrap: wrap; gap: 16px; }
 }
 @media (max-width: 540px) { .grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* LexRadar: улучшенная читаемость интерфейса */
+html { font-size: 17px; }
+body { font-size: 17px; line-height: 1.55; }
+
+header nav a, aside a, nav a {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+main p, main li, main label,
+main input, main select, main button,
+main .cta, main td, main th {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+main h1 { font-size: clamp(30px, 3vw, 40px); }
+main h2 { font-size: 24px; }
+main h3 { font-size: 18px; }
+
+table { font-size: 16px; }
+.organizations-table button { font-size: 15px; }
+.qualification, .badge { font-size: 15px; }
+
+.metric { font-size: 38px; }
+
+/* Технические подписи не должны быть микроскопическими */
+main small, main .muted { font-size: 15px; }
+
+/* Используем доступную ширину большого монитора */
+main { max-width: 1400px; }
+
+
+/* LexRadar LARGE TEXT MODE */
+html { font-size: 20px; }
+body { font-size: 20px; line-height: 1.55; }
+
+header nav a, aside a, nav a {
+    font-size: 22px !important;
+    line-height: 1.5;
+}
+
+main { max-width: 1800px; width: 100%; }
+
+main p, main li, main label,
+main input, main select, main button,
+main .cta, main td, main th {
+    font-size: 20px;
+    line-height: 1.5;
+}
+
+main h1 { font-size: 42px; }
+main h2 { font-size: 30px; }
+main h3 { font-size: 24px; }
+
+main small, main .muted,
+.qualification, .badge {
+    font-size: 18px;
+}
+
+table, .organizations-table button {
+    font-size: 19px;
+}
+
+.metric { font-size: 48px; }
+
+.grid { gap: 20px; }
+.grid article { padding: 24px; }
+
+
+
+/* LexRadar CORRECT WIDE LAYOUT */
+main, footer {
+    width: calc(100% - 248px) !important;
+    max-width: none !important;
+    margin-left: 248px !important;
+    margin-right: 0 !important;
+    padding-left: 28px !important;
+    padding-right: 28px !important;
+}
+
+@media (max-width: 900px) {
+    main, footer {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+}
+
 </style>
 </head>
 <body>

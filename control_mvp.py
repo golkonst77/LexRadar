@@ -19,11 +19,12 @@ from control_analysis import target
 from control_pages import esc, link, crm_status, crm_entity_links
 from control_enrichment import observation
 from control_results import read_file
+from control_mailing import Mailing
 
 
 NAV = '''<a href="/">Обзор</a><a href="/collect">Сбор организаций</a>
 <a href="/analysis">Проверка сайтов</a><a href="/proposals">Готовые предложения</a>
-<a href="/crm">Передача в CRM</a><a href="/service">Служебное</a>'''
+<a href="/crm">Передача в CRM</a><a href="/mailing">Рассылка</a><a href="/service">Служебное</a>'''
 
 
 def analysis_summary(records, history, completed=()):
@@ -293,7 +294,8 @@ class MVPHandler(ControlHandler):
                 content += '<p>' + {'succeeded': 'Сбор завершён.', 'failed': 'Сбор завершён с ошибкой или цель не подтверждена.', 'cancelled': 'Сбор остановлен.'}.get(row['status'], '') + '</p>'
                 if usable is None:
                     content += '<p>Итоговое количество не подтверждено.</p>'
-                content += '<p><a class="cta" href="/analysis?run=' + esc(row['id']) + '">Перейти к проверке сайтов →</a></p>'
+                if row['status'] == 'succeeded':
+                    content += '<p><a class="cta" href="/analysis?run=' + esc(row['id']) + '">Перейти к проверке сайтов →</a></p>'
         else:
             children = jobs.analysis_children(row['id']) if row['kind'] == 'analysis-batch' else [row]
             finished = sum(c['status'] not in {'pending', 'queued', 'running'} for c in children)
@@ -316,7 +318,9 @@ class MVPHandler(ControlHandler):
                 if child['error']:
                     content += '<p role="status">' + esc(info['domain']) + ': ошибка проверки. Подробности в «Служебном».</p>'
             content += '<p><a class="cta" href="/proposals">Посмотреть готовые предложения →</a></p>'
-        if row['error']:
+        if row['error'] and row['status'] == 'succeeded':
+            content += '<p role="status">Есть служебные предупреждения. Подробности в «Служебном».</p>'
+        elif row['error']:
             content += '<p role="alert">' + ('Не удалось подтвердить результат сбора.' if row['kind'] == 'parser-v3' else 'Задание завершено с ошибкой.') + ' Подробности в «Служебном».</p>'
         if active:
             content += '<p>Экран обновляется автоматически каждые 5 секунд.</p>'
@@ -347,61 +351,124 @@ class MVPHandler(ControlHandler):
                 content = self.execution_progress(row) + '<details><summary>Служебное</summary>' + content + '</details>'
         super().html(content, status)
 
+    def network_selection(self, data):
+        from src.lexradar.crm_networks import select_networks
+        journal = Path.home() / '.local/state/lexradar/crm-prepare.json'
+        state = json.loads(journal.read_text()) if journal.exists() else {}
+        if not isinstance(state, dict):
+            raise ValueError('Invalid CRM journal')
+        offers = {o['lead']['id']: o for o in data['offers']}
+        rows = []
+        for lead in data['leads']:
+            offer = offers.get(lead['id'])
+            rows.append(dict(id='web-account-' + lead['id'], company_name=lead['name'],
+                             website=next(iter(lead['websites']), ''), email=lead.get('email') or '',
+                             emails=[c['email'] for c in offer['saved']['contacts']] if offer else [],
+                             eligible=bool(offer)))
+        return select_networks(rows, state)
+
+    @staticmethod
+    def crm_remaining_ids(offers, networks, prepared):
+        return [o['lead']['id'] for o in offers
+                if networks['web-account-' + o['lead']['id']]['status'] == 'REPRESENTATIVE'
+                and 'web-account-' + o['lead']['id'] + ':draft' not in prepared]
+
     def proposals_page(self):
         data, _, counts = self.workflow()
-        content = '<h1>Готовые предложения</h1><p>READY: ' + str(counts['READY'])
+        content = '<h1>Готовые предложения</h1><p>Всего READY по всей базе: <strong>' + str(counts['READY']) + '</strong>'
         content += ' · REJECT — нет предложения: ' + str(counts['REJECT'])
         content += ' · HOLD — требует внимания: ' + str(counts['HOLD'])
         content += ' · ' + link('/analysis?analysis_errors=yes', 'Ошибки анализа: ' + str(counts['ERROR'])) + '</p>'
-        run = parse_qs(urlsplit(getattr(self, 'path', '/proposals')).query).get('run', [''])[0]
+        params = parse_qs(urlsplit(getattr(self, 'path', '/proposals')).query)
+        content += '<form method="get" action="/proposals"><button name="select" value="remaining">Выбрать оставшиеся для CRM</button></form>'
+        run = '' if params.get('select') == ['remaining'] else params.get('run', [''])[0]
         runs = {m['run_id']: m.get('run_name', m['run_id']) for lead in data['leads']
                 for m in lead.get('members', [lead]) if m.get('run_id')}
         content += '<form method="get" action="/proposals"><label>Запуск сбора <select name="run"><option value="">Вся база</option>'
         for key, name in sorted(runs.items()):
             content += '<option value="' + esc(key) + '"' + (' selected' if run == key else '') + '>' + esc(name) + '</option>'
         content += '</select></label><button>Показать</button></form>'
+        try:
+            networks = self.network_selection(data)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            networks = {}
+            content += '<p role="status">История CRM недоступна; выбор заблокирован до сверки.</p>'
         offers = [o for o in data['offers'] if not run or any(m.get('run_id') == run for m in o['lead'].get('members', [o['lead']]))]
         content += '<p>Счётчики выше — вся база. Показано КП: ' + str(len(offers)) + '. ' + ('Домены выбранного запуска: ' + esc(run) + '. КП может быть получено в другой проверке этого домена.' if run else 'Одна актуальная версия READY на домен по всей базе, включая исторические запуски.') + ' Это не разрешение на отправку писем.</p>'
         if not offers:
             self.html(content + '<p>Готовых КП пока нет. ' + link('/analysis', 'Перейти к проверке сайтов') + '</p>')
             return
+        remaining_ids = []
+        try:
+            journal = Path.home() / '.local/state/lexradar/crm-prepare.json'
+            prepared = json.loads(journal.read_text()) if journal.exists() else {}
+            if not isinstance(prepared, dict):
+                raise ValueError('Invalid journal')
+            remaining_ids = self.crm_remaining_ids(data['offers'], networks, prepared)
+            new_ids = [o['lead']['id'] for o in offers
+                       if o['lead']['id'] in remaining_ids
+                       and (o['lead'].get('email') or o['lead'].get('phone') or o['saved']['contacts'])]
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            new_ids = []
+            content += '<p role="status">Не удалось прочитать историю CRM. Быстрый выбор новых недоступен; требуется сверка.</p>'
+        limit = params.get('select', [''])[0]
+        selected = set(remaining_ids if limit == 'remaining' else new_ids if limit == 'all' else new_ids[:int(limit)] if limit in {'10', '20', '30'} else [])
+        content += '<p>Новых READY с контактом в этом списке: ' + str(len(new_ids)) + '. Новые — без :draft записи в локальном журнале подготовки CRM; существующий Account не исключает КП. Повторы и HOLD выбирайте вручную для сверки.</p>'
+        content += '<form method="get" action="/proposals"><input type="hidden" name="run" value="' + esc(run) + '">'
+        for value, label in [('10', 'Выбрать первые 10'), ('20', 'Выбрать первые 20'), ('30', 'Выбрать первые 30'), ('all', 'Выбрать все новые')]:
+            content += '<button name="select" value="' + value + '"' + ('' if new_ids else ' disabled') + '>' + label + '</button>'
+        content += '</form><p role="status">Отмечено быстрым выбором: ' + str(len(selected)) + '. Галочки можно изменить перед передачей.</p>'
         content += '<form method="get" action="/crm/preview" id="crm-selection"><button>Передать выбранные в CRM →</button></form>'
-        content += '<div class="table-scroll" tabindex="0" role="region" aria-label="Список организаций"><table><thead><tr><th>CRM</th><th>Организация</th><th>Сайт</th><th>Контакт</th><th>Основание КП</th><th>Статус</th><th>Дата КП (UTC)</th><th>КП</th></tr></thead><tbody>'
-        for offer in offers:
+        excluded = sum(networks.get('web-account-' + o['lead']['id'], {}).get('status') == 'DUPLICATE_NETWORK' for o in offers)
+        content += '<p>Исключено филиалов из CRM-выбора в показанных КП: <strong>' + str(excluded) + '</strong>. Аудиты и КП сохранены.</p>'
+        content += '<div class="table-scroll" tabindex="0" role="region" aria-label="Список организаций"><table><thead><tr><th>№</th><th>CRM</th><th>Включить в рассылку</th><th>Организация</th><th>Сайт</th><th>Контакт</th><th>Основание КП</th><th>Статус</th><th>Дата КП (UTC)</th><th>КП</th></tr></thead><tbody>'
+        for number, offer in enumerate(offers, 1):
             lead = offer['lead']
-            contact = lead.get('email') or lead.get('phone') or (offer['saved']['contacts'][0]['email'] if offer['saved']['contacts'] else '')
-            content += '<tr><td><input form="crm-selection" type="checkbox" name="lead" value="' + esc(lead['id']) + '" aria-label="Выбрать ' + esc(lead['name']) + '"' + ('' if contact else ' disabled') + '></td>'
+            network = networks.get('web-account-' + lead['id'], {})
+            contact = network.get('email') or lead.get('phone') or ''
+            content += '<tr><td>' + str(number) + '</td><td><input form="crm-selection" type="checkbox" name="lead" value="' + esc(lead['id']) + '" aria-label="Выбрать ' + esc(lead['name']) + '"' + (' checked' if lead['id'] in selected else '') + ('' if contact and network.get('status') == 'REPRESENTATIVE' else ' disabled') + '></td>'
+            content += '<td><label><input form="crm-selection" type="checkbox" name="mailing" value="' + esc(lead['id']) + '" checked> Включить в рассылку</label></td>'
             content += '<td>' + link('/organizations/' + lead['id'], lead['name']) + '</td><td>' + link(lead['websites'][0], target(lead['websites'][0])[1]) + '</td><td>' + esc(contact or 'Не указан') + '</td>'
             content += '<td>' + '<br>'.join(esc(b) for b in offer['basis']) + '</td><td><span class="qualification ready">READY</span>' + (('<br>Последний анализ: ' + esc(offer['latest_status'])) if offer['latest_status'] != 'READY' else '') + '</td><td>' + esc(offer['job']['ended'] or offer['job']['created']) + '</td><td><a class="cta" href="/proposal-files/' + offer['job']['id'] + '/pdf">Открыть КП</a>'
+            content += '<br>' + esc(network.get('status', 'HOLD')) + ': представитель — ' + esc(network.get('representative_name', 'требуется сверка')) + '; исключено в группе: ' + str(network.get('excluded', 0))
             content += '<br>' + link('/proposal-files/' + offer['job']['id'] + '/html', 'HTML') + '</td></tr>'
         self.html(content + '</tbody></table></div><p>' + link('/analysis', '← Проверка сайтов') + ' · ' + link('/crm', '4. Передать в CRM →') + '</p>')
 
     def crm_selection_preview(self):
-        selected = set(parse_qs(urlsplit(self.path).query).get('lead', []))
-        content = '<h1>Предварительное подтверждение передачи в CRM</h1>'
-        content += '<p>Предпросмотр без запросов в CRM. После подтверждения будет проверен Account. Для ACCOUNT_VERIFIED можно отдельно подготовить PDF и черновик письма.</p>'
+        params = parse_qs(urlsplit(self.path).query)
+        selected = set(params.get('lead', []))
+        mailing = set(params.get('mailing', [])) & selected
+        content = '<h1>Передача готовых КП в CRM</h1>'
+        content += '<p>Предпросмотр без запросов в CRM. При передаче внутреннее согласование завершено автоматически: Account, PDF и черновик письма готовятся последовательно с техническими проверками.</p>'
         back = '<p>' + link('/proposals', '← Вернуться к выбору готовых предложений') + '</p>'
         if not selected:
             self.html(content + '<p>Ничего не выбрано. Отметьте готовые предложения галочками.</p>' + back)
             return
-        offers = [o for o in self.workflow()[0]['offers'] if o['lead']['id'] in selected]
+        data = self.workflow()[0]
+        try:
+            networks = self.network_selection(data)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            networks = {}
+        offers = [o for o in data['offers'] if o['lead']['id'] in selected
+                  and networks.get('web-account-' + o['lead']['id'], {}).get('status') == 'REPRESENTATIVE']
         content += '<p>Выбрано организаций: ' + str(len(selected)) + '. Доступно READY с КП: ' + str(len(offers)) + '.</p>'
         if len(offers) != len(selected):
-            content += '<p>Часть выбранных предложений больше недоступна как READY с КП. Вернитесь к списку и проверьте выбор.</p>'
+            content += '<p>Часть предложений недоступна как READY с КП либо исключена как DUPLICATE_NETWORK. Вернитесь к списку и проверьте выбор.</p>'
         for offer in offers:
             lead = offer['lead']
             contacts = list(dict.fromkeys(c for c in [lead.get('email'), lead.get('phone')]
                                          + [c['email'] for c in offer['saved']['contacts']] if c))
             content += '<article><h2>' + esc(lead['name']) + '</h2><p>Сайт: '
             content += link(lead['websites'][0], lead['websites'][0]) + '</p><p>Контакты: '
-            content += esc(', '.join(contacts) if contacts else 'Не указаны — требуется проверка') + '</p><p>'
+            content += esc(', '.join(contacts) if contacts else 'Не указаны — требуется проверка') + '</p><p>Автоматическая рассылка: ' + ('включить при подтверждённом основании' if lead['id'] in mailing else 'исключена оператором') + '</p><p>'
             content += link('/proposal-files/' + offer['job']['id'] + '/pdf', 'Открыть КП (PDF)') + ' · '
             content += link('/proposal-files/' + offer['job']['id'] + '/html', 'Открыть КП (HTML)') + '</p></article>'
         if len(offers) == len(selected) and all(o['lead'].get('email') or o['lead'].get('phone')
                                                or o['saved']['contacts'] for o in offers):
             fields = ''.join('<input type="hidden" name="lead" value="' + esc(o['lead']['id']) + '">' for o in offers)
-            content += self.form('/crm/preview', 'Подтвердить поиск или создание Account', fields, confirm=False)
-        self.html(content + '<p>Подтверждение разрешает только поиск или создание Account. Документы и письма не создаются.</p>' + back)
+            fields += ''.join('<input type="hidden" name="mailing" value="' + esc(lead_id) + '">' for lead_id in sorted(mailing))
+            content += self.form('/crm/preview', 'Передать КП в CRM', fields, confirm=False)
+        self.html(content + '<p>Передача не подтверждает согласие получателя на рекламную отправку. Без отдельного подтверждённого основания отправка заблокирована.</p>' + back)
 
     def do_POST(self):
         if urlsplit(self.path).path != '/crm/preview':
@@ -432,34 +499,95 @@ class MVPHandler(ControlHandler):
                 or values.get('confirm') != ['yes']):
             self.reject_post(403, 'confirmation_required', 'csrf_or_confirmation_invalid')
             return
-        if values.get('stage', ['account']) not in (['account'], ['draft']):
+        if values.get('stage', ['account']) not in (['account'], ['draft'], ['draft_batch']):
             self.reject_post(400, 'invalid_form', 'invalid_stage')
             return
         selected = set(values.get('lead', []))
-        offers = [o for o in self.workflow()[0]['offers'] if o['lead']['id'] in selected]
+        data = self.workflow()[0]
+        try:
+            networks = self.network_selection(data)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            networks = {}
+        offers = [o for o in data['offers'] if o['lead']['id'] in selected
+                  and networks.get('web-account-' + o['lead']['id'], {}).get('status') == 'REPRESENTATIVE']
         back = '<p>' + link('/proposals', '← Вернуться к выбору готовых предложений') + '</p>'
         if not selected or len(offers) != len(selected) or any(
                 not (o['lead'].get('email') or o['lead'].get('phone') or o['saved']['contacts']) for o in offers):
-            self.html('<h1>Подтверждение отклонено</h1><p>Выбор пуст или предложения больше недоступны как READY с КП и контактом. Проверьте выбор.</p>' + back, 400)
+            self.html('<h1>Подтверждение отклонено</h1><p>Выбор пуст или предложения недоступны как READY с КП и контактом либо исключены как DUPLICATE_NETWORK. Проверьте выбор.</p>' + back, 400)
+            return
+        mailing = set(values.get('mailing', [])) & selected
+        try:
+            self.server.mailing.select(selected, mailing)
+        except (OSError, ValueError, TypeError):
+            self.html('<h1>Подготовка остановлена</h1><p>Не удалось сохранить выбор рассылки; повторите после сверки журнала.</p>' + back, 400)
             return
         from src.lexradar import crm_prepare
         from src.lexradar import espo_export as espo
         root = self.server.jobs.state_dir.resolve()
-        drafts = values.get('stage') == ['draft']
+        batch = values.get('stage', ['account']) != ['draft']
+        drafts = values.get('stage') in (['draft_batch'], ['draft'])
+        journal = Path.home() / '.local/state/lexradar/crm-prepare.json'
+        if values.get('stage') == ['draft_batch']:
+            try:
+                state = json.loads(journal.read_text())
+                offers = [o for o in offers if state.get('web-account-' + o['lead']['id'], {}).get('result', {}).get('status') == 'ACCOUNT_VERIFIED']
+            except (OSError, ValueError, AttributeError):
+                self.html('<h1>Подготовка остановлена</h1><p>Не удалось прочитать журнал CRM; требуется сверка.</p>' + back, 400)
+                return
         content = '<h1>Результат подготовки CRM</h1>'
-        for offer in offers:
+        counts = Counter()
+        if batch:
+            nonce = secrets.token_urlsafe(24)
+
+            def progress_update(done, finished=False):
+                percent = done * 100 // len(offers) if offers else 100
+                text = ('Завершено' if finished else 'Подготовка') + ': обработано ' + str(done) + ' из ' + str(len(offers))
+                text += '. Успешных: ' + str(counts['success']) + ' · HOLD: ' + str(counts['hold']) + ' · Ошибок: ' + str(counts['error']) + ' · ' + str(percent) + '%'
+                return ('<script nonce="' + nonce + '">document.getElementById("crm-progress-text").textContent='
+                        + json.dumps(text) + ';document.getElementById("crm-progress-bar").value='
+                        + str(percent) + ';</script>')
+
+            content += ('<div style="position:sticky;top:0;z-index:10;background:#fff;padding:16px;border:1px solid #E5E7EB;border-radius:12px">'
+                        '<p id="crm-progress-text" role="status" aria-live="polite">Подготовка: обработано 0 из ' + str(len(offers))
+                        + '. Успешных: 0 · HOLD: 0 · Ошибок: 0 · 0%</p>'
+                        '<progress id="crm-progress-bar" aria-label="Выполнение подготовки CRM" max="100" value="0" style="width:100%"></progress></div>')
+            page = organization_page(content + '<p>Пакетная подготовка: ' + str(len(offers)) + ' Account. Черновики с галочкой «Включить в рассылку» попадут в очередь; без разрешения отправка заблокирована. Не закрывайте страницу до завершения.</p><!--progress-->')
+            head, tail = page.split('<!--progress-->')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Connection', 'close')
+            self.send_header('X-Content-Type-Options', 'nosniff')
+            self.send_header('Referrer-Policy', 'same-origin')
+            self.send_header('Content-Security-Policy', "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+            self.end_headers()
+            self.close_connection = True
+            self.wfile.write(head.encode('utf-8'))
+            self.wfile.flush()
+        for number, offer in enumerate(offers, 1):
             lead = offer['lead']
+            if batch:
+                self.wfile.write(('<p role="status">Обработано ' + str(number - 1) + ' из ' + str(len(offers)) + '. Сейчас: ' + esc(lead['name']) + '</p>').encode('utf-8'))
+                self.wfile.flush()
             try:
                 pdf = read_file(root, offer['base'] + 'proposal.pdf', 8_000_000)
                 row = {'id': 'web-account-' + lead['id'], 'company_name': lead['name'],
                        'website': lead['websites'][0], 'pdf_path': offer['base'] + 'proposal.pdf',
                        'pdf_sha256': crm_prepare.digest(pdf), 'dossier': offer['base'] + 'dossier',
                        'letter_text': 'Account only: подтверждённый READY из Control Center'}
-                row['email'] = lead.get('email') or (offer['saved']['contacts'][0]['email'] if offer['saved']['contacts'] else '')
+                row['email'] = networks['web-account-' + lead['id']]['email']
                 row['recipient_verified'] = bool(row['email'])
                 result = crm_prepare.run(
-                    [row], root, Path.home() / '.local/state/lexradar/crm-prepare.json',
+                    [row], root, journal,
                     confirm=True, accounts_only=not drafts, prepare_drafts=drafts)[0]
+                if result['status'] == 'ACCOUNT_VERIFIED':
+                    result = crm_prepare.run(
+                        [row], root, journal, confirm=True, prepare_drafts=True)[0]
+                if result.get('status') == 'DRAFT_VERIFIED' and result.get('email_id'):
+                    try:
+                        self.server.mailing.enqueue(result, row)
+                    except (OSError, ValueError, TypeError, KeyError):
+                        result.setdefault('warnings', []).append('Очередь будет восстановлена из CRM-журнала; требуется сверка.')
                 message = ('Account проверен: ' + result['account_id']
                            if result['status'] == 'ACCOUNT_VERIFIED' else
                            result['status'] + ': ' + '; '.join(e['error'] for e in result['errors']))
@@ -470,20 +598,36 @@ class MVPHandler(ControlHandler):
                 details = ''.join('<p>' + label + ': ' + esc(result.get(key, '—')) + '</p>'
                                   for label, key in [('Account', 'account_id'), ('Document', 'document_id'), ('Email', 'email_id')])
                 details += '<p>' + crm_entity_links(result) + '</p>'
+                if result.get('status') == 'DRAFT_VERIFIED':
+                    if lead['id'] not in mailing:
+                        details += '<p>Исключено из автоматической рассылки. Account, PDF и Email Draft сохранены.</p>'
+                    elif 'Очередь будет восстановлена из CRM-журнала; требуется сверка.' in result.get('warnings', []):
+                        details += '<p role="status">Постановка сейчас не подтверждена; требуется сверка очереди. CRM-экспорт сохранён.</p>'
+                    else:
+                        details += '<p>Письмо передано в накопительную очередь; без отдельного разрешения — ожидает разрешения. Статус смотрите в блоке «Рассылка LexRadar» на главной.</p>'
                 if result.get('reason'):
                     details += '<p>' + esc(log_text(result['reason'].encode())) + '</p>'
                 if result.get('email_id'):
                     label = 'Открыть проверенный черновик' if result['status'] == 'DRAFT_VERIFIED' else 'Открыть Email для сверки (не подтверждён)'
                     details += link('http://192.168.233.105/#Email/view/' + result['email_id'], label)
-                if result['status'] == 'ACCOUNT_VERIFIED':
-                    fields = '<input type="hidden" name="stage" value="draft"><input type="hidden" name="lead" value="' + esc(lead['id']) + '">'
-                    details += self.form('/crm/preview', 'Подготовить PDF и Email Draft', fields, confirm=False)
             except (espo.Hold, OSError, ValueError, KeyError, TypeError):
-                result = {'errors': [True]}
+                result = {'status': 'ERROR', 'errors': [True]}
                 details = ''
                 message = 'Ошибка подготовки CRM; требуется сверка журнала перед повтором.'
-            content += '<article><h2>' + esc(lead['name']) + '</h2><p>' + esc(message) + '</p>' + details + '</article>'
-        self.html(content + '<p>Отправка не выполнялась; sendAt не устанавливался.</p>' + back)
+            counts['success' if result['status'] in {'DRAFT_VERIFIED', 'DOCUMENT_VERIFIED_NO_DRAFT'} else 'hold' if result['status'].startswith('HOLD') else 'error'] += 1
+            article = '<article><h2>' + esc(lead['name']) + '</h2><p>' + esc(message) + '</p>' + details + '</article>'
+            if batch:
+                progress = '<p role="status">Обработано ' + str(number) + ' из ' + str(len(offers)) + '. Успешно: ' + str(counts['success']) + ' · HOLD: ' + str(counts['hold']) + ' · Ошибки: ' + str(counts['error']) + '</p>'
+                self.wfile.write((article + progress + progress_update(number)).encode('utf-8'))
+                self.wfile.flush()
+            else:
+                content += article
+        if batch:
+            summary = '<p role="status">Завершено. Успешно: ' + str(counts['success']) + ' · HOLD: ' + str(counts['hold']) + ' · Ошибки: ' + str(counts['error']) + '. Пропущено без ACCOUNT_VERIFIED: ' + str(len(selected) - len(offers)) + '.</p>'
+            self.wfile.write((progress_update(len(offers), finished=True) + summary + '<p>DRAFT_VERIFIED передаётся в очередь только с галочкой «Включить в рассылку». Планирование разрешено только при отдельном документированном разрешении на рекламную отправку.</p>' + back + tail).encode('utf-8'))
+            self.wfile.flush()
+            return
+        self.html(content + '<p>DRAFT_VERIFIED передаётся в очередь только с галочкой «Включить в рассылку». Планирование разрешено только при отдельном документированном разрешении на рекламную отправку.</p>' + back)
 
     def proposal_file(self, path):
         parts = path.split('/')
@@ -502,19 +646,58 @@ class MVPHandler(ControlHandler):
         self.respond(200, raw, 'application/pdf' if parts[3] == 'pdf' else 'text/html; charset=utf-8')
 
     def home(self):
+        self.refresh_seconds = 60
         data, history, counts = self.workflow()
         summary, _ = analysis_summary(data['leads'], history, {domain(r['target']) for r in data.get('reports', []) if r['kind'] == 'audit'})
-        content = '<h1>От организаций к готовым предложениям</h1><p class="lead">Пройдите четыре шага. Письма автоматически не отправляются.</p><p>Показатели по всей доступной базе, включая исторический импорт; организации объединены по домену. Это не итоги последнего запуска.</p><div class="grid">'
+        crm_remaining = '—'
+        crm_description = 'История CRM недоступна; показатели требуют сверки.'
+        try:
+            networks = self.network_selection(data)
+            journal = Path.home() / '.local/state/lexradar/crm-prepare.json'
+            prepared = json.loads(journal.read_text()) if journal.exists() else {}
+            if not isinstance(prepared, dict):
+                raise ValueError('Invalid CRM journal')
+            excluded = sum(networks['web-account-' + o['lead']['id']]['status'] == 'DUPLICATE_NETWORK'
+                           for o in data['offers'])
+            drafts = sum(entry.get('result', {}).get('status') == 'DRAFT_VERIFIED'
+                         for key, entry in prepared.items()
+                         if key.startswith('web-account-') and not key.endswith(':draft'))
+            crm_remaining = len(self.crm_remaining_ids(data['offers'], networks, prepared))
+            crm_description = ('Всего READY: ' + str(counts['READY'])
+                               + ' · Исключено филиалов (DUPLICATE_NETWORK): ' + str(excluded)
+                               + ' · Подготовлено черновиков (DRAFT_VERIFIED): ' + str(drafts)
+                               + ' · Осталось уникальных READY без черновика: ' + str(crm_remaining)
+                               + '. По локальному CRM-журналу; прежние попытки, включая Account и HOLD, исключены из оставшихся.')
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            pass
+        content = '<h1>От организаций к готовым предложениям</h1><p class="lead">Пройдите четыре шага. После CRM-экспорта письма попадают в очередь; отправка требует отдельного разрешения.</p><p>Показатели по всей доступной базе, включая исторический импорт; организации объединены по домену. Это не итоги последнего запуска.</p><div class="grid">'
         for label, description, url, enabled in (
-            ('1. Собрать организации', 'Пригодных организаций с допустимым сайтом (по доменам): ' + str(summary['unique']), '/collect', True),
-            ('2. Проверить сайты', 'Новых сайтов: ' + str(summary['available']) + '; проверялись ранее: ' + str(summary['checked']) + '; в работе: ' + str(summary['active']), '/analysis', counts['usable'] > 0),
-            ('3. Готовые предложения', 'Готовых КП: ' + str(counts['READY']), '/proposals', counts['READY'] > 0),
-            ('4. Передать в CRM', 'Подходящих READY с контактом: ' + str(counts['crm_ready']) + '. Выберите КП для предпросмотра; сохранённые результаты доступны в CRM.', '/crm', counts['crm_ready'] > 0),
+            ('1. Собрать организации', 'Организаций в базе', '/collect', True),
+            ('2. Проверить сайты', 'Ожидают проверки', '/analysis', counts['usable'] > 0),
+            ('3. Готовые предложения', 'Готовых КП', '/proposals', counts['READY'] > 0),
+            ('4. Передать в CRM', 'Готовы к передаче', '/crm', crm_remaining > 0),
         ):
-            content += '<article><h2>' + label + '</h2><strong class="metric">' + str({'/collect': summary['unique'], '/analysis': summary['available'], '/proposals': counts['READY'], '/crm': counts['crm_ready']}[url]) + '</strong><p>' + description + '</p>'
-            content += ('<a class="cta" href="' + url + '">' + label + '</a>' if enabled else '<button disabled>' + label + '</button><p>Пока нет подходящих данных предыдущего шага.</p>')
+            number = {
+                '/collect': summary['unique'],
+                '/analysis': summary['available'],
+                '/proposals': counts['READY'],
+                '/crm': crm_remaining,
+            }[url]
+            content += (
+                '<article><h2>' + label + '</h2>'
+                '<strong class="metric">' + str(number) + '</strong>'
+                '<p>' + description + '</p>'
+            )
+            content += (
+                '<a class="cta" href="' + url + '">' + label + '</a>'
+                if enabled else
+                '<button disabled>' + label + '</button>'
+            )
             content += '</article>'
         content += '</div>'
+        mailing = getattr(self.server, 'mailing', None)
+        if mailing:
+            content += mailing.html()
         jobs = getattr(self.server, 'jobs', None)
         if jobs:
             for row in jobs.list():
@@ -537,7 +720,9 @@ class MVPHandler(ControlHandler):
             self.respond_json(403, {'error': 'local_host_required'})
             return
         path = urlsplit(self.path).path
-        if path == '/service':
+        if path == '/mailing':
+            self.html(self.server.mailing.html(details=True, status=parse_qs(urlsplit(self.path).query).get('status', [''])[0]))
+        elif path == '/service':
             self.service()
         elif path == '/proposals':
             self.proposals_page()
@@ -564,12 +749,15 @@ def main():
         server.csrf_token = secrets.token_urlsafe(32)
         server.catalog = Catalog(server.results_dir, server.parser_dir)
         server.jobs = MVPJobs(server.state_dir, server.parser_dir, server.results_dir)
+        server.mailing = Mailing(server.state_dir)
+        server.mailing.start()
         print(f'LexRadar Control Center: http://127.0.0.1:{args.port}', flush=True)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             pass
         finally:
+            server.mailing.close()
             server.jobs.close()
 
 

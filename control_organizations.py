@@ -32,7 +32,12 @@ def load_organizations(root):
             if visited > 128:
                 warnings += 1
                 break
-            dirs[:] = sorted(d for d in dirs if not d.startswith('.') and d not in EXCLUDED)
+            dirs[:] = sorted(
+                d for d in dirs
+                if not d.startswith(('.', 'backup-', 'archive-'))
+                and not d.endswith(('.bak', '.backup'))
+                and d not in EXCLUDED | {'backup', 'backups', 'archive', 'archives'}
+            )
             if len(Path(directory).relative_to(root).parts) >= 8 and dirs:
                 warnings += 1
                 dirs[:] = []
