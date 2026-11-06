@@ -1,5 +1,6 @@
 """Four-step Control Center using the existing queue, engines and saved data."""
 import argparse
+import fcntl
 import hmac
 import json
 import secrets
@@ -20,11 +21,26 @@ from control_pages import esc, link, crm_status, crm_entity_links
 from control_enrichment import observation
 from control_results import read_file
 from control_mailing import Mailing
+from control_followup import Followup, ID
 
 
 NAV = '''<a href="/">Обзор</a><a href="/collect">Сбор организаций</a>
 <a href="/analysis">Проверка сайтов</a><a href="/proposals">Готовые предложения</a>
-<a href="/crm">Передача в CRM</a><a href="/mailing">Рассылка</a><a href="/service">Служебное</a>'''
+<a href="/crm">Передача в CRM</a><a href="/mailing">Рассылка</a>
+<a href="/followup">Контроль после отправки</a><a href="/service">Служебное</a>'''
+
+
+def hold_category(row):
+    reason = row['saved']['reason']
+    if reason == 'no_confirmed_triggers_1_2_3_5':
+        return 'evidence'
+    if reason == 'finding_reliability_requires_review':
+        return 'review'
+    if reason == 'review_run_mismatch':
+        return 'identity'
+    if row['saved']['status'] == 'SKIPPED' and reason:
+        return 'technical'
+    return 'unknown'
 
 
 def analysis_summary(records, history, completed=()):
@@ -151,7 +167,7 @@ class MVPHandler(ControlHandler):
             start = page.find('<footer>')
             end = page.find('</footer>', start)
             if start >= 0 and end >= 0:
-                page = page[:start] + '<footer><p>Локальный режим · Автоматическая рассылка отключена</p>' + page[end:]
+                page = page[:start] + '<footer><p>Локальная панель · Статус рассылки — в разделе «Рассылка»</p>' + page[end:]
             body = page.encode('utf-8')
         super().respond(status, body, content_type)
 
@@ -168,6 +184,7 @@ class MVPHandler(ControlHandler):
         history = jobs.analysis_history() if jobs else {}
         counts = Counter()
         offers = []
+        holds = []
         from control_offers import current_offers, verified
         current = current_offers(jobs) if jobs else {}
         seen = set()
@@ -189,6 +206,8 @@ class MVPHandler(ControlHandler):
                 saved = observation(jobs.state_dir, job, host)
                 if job['status'] == 'succeeded':
                     counts[saved['qualification'] or 'HOLD'] += 1
+                    if (saved['qualification'] or 'HOLD') == 'HOLD':
+                        holds.append(dict(lead=lead, job=job, host=host, saved=saved))
                 elif job['status'] in {'failed', 'cancelled'}:
                     counts['ERROR'] += 1
                 latest_status = saved['qualification']
@@ -212,6 +231,7 @@ class MVPHandler(ControlHandler):
         counts['READY'] = len(offers)
         counts['crm_ready'] = sum(bool(o['lead'].get('phone') or o['lead'].get('email')
                                       or o['saved']['contacts']) for o in offers)
+        data['holds'] = holds
         data['offers'] = offers
         return data, history, counts
 
@@ -365,12 +385,10 @@ class MVPHandler(ControlHandler):
                 content = self.execution_progress(row) + '<details><summary>Служебное</summary>' + content + '</details>'
         super().html(content, status)
 
-    def network_selection(self, data):
+    def network_selection(self, data, state=None):
         from src.lexradar.crm_networks import select_networks
-        journal = Path.home() / '.local/state/lexradar/crm-prepare.json'
-        state = json.loads(journal.read_text()) if journal.exists() else {}
-        if not isinstance(state, dict):
-            raise ValueError('Invalid CRM journal')
+        if state is None:
+            state = self.crm_history()
         offers = {o['lead']['id']: o for o in data['offers']}
         rows = []
         for lead in data['leads']:
@@ -382,53 +400,261 @@ class MVPHandler(ControlHandler):
         return select_networks(rows, state)
 
     @staticmethod
-    def crm_remaining_ids(offers, networks, prepared):
+    def local_history(path, lock_path):
+        with lock_path.open('r') as lock:
+            fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            if path.stat().st_size > 8_000_000:
+                raise ValueError('History too large')
+            state = json.loads(path.read_text())
+        if not isinstance(state, dict) or any(not isinstance(v, dict) for v in state.values()):
+            raise ValueError('Invalid history')
+        return state
+
+    def crm_history(self):
+        directory = Path.home() / '.local/state/lexradar'
+        # Missing primary history is unknown, never an empty CRM.
+        state = self.local_history(directory / 'crm-prepare.json', directory / 'crm-prepare.lock')
+        path = directory / 'espo-export.json'
+        if path.exists():
+            state.update({'export:' + k: v for k, v in self.local_history(path, path.with_suffix('.lock')).items()})
+        return state
+
+    @staticmethod
+    def crm_remaining_ids(offers, networks, prepared, root):
+        from src.lexradar.crm_networks import network_keys
+        from src.lexradar import crm_prepare
+        from src.lexradar import espo_export as espo
+        prepared = dict(prepared)
+        for offer in offers:
+            lead = offer['lead']
+            source = 'web-account-' + lead['id']
+            entry = prepared.get(source, {})
+            result = entry.get('result', {})
+            # Only a pre-write identity HOLD can be reconsidered; pending steps remain blocking.
+            if (result.get('status') != 'HOLD_IDENTITY' or entry.get('steps') != {}
+                    or source + ':draft' in prepared
+                    or any(entry.get(k) or result.get(k) for k in
+                           ('account_id', 'document_id', 'email_id', 'draft_error', 'draft_failure'))
+                    or any(m.get('document_id') or m.get('attachment_id')
+                           for m in result.get('materials', []))):
+                continue
+            try:
+                row = dict(id=source, company_name=lead['name'], website=lead['websites'][0],
+                           pdf_path=offer['base'] + 'proposal.pdf', dossier=offer['base'] + 'dossier',
+                           letter_text='Account only: подтверждённый READY из Control Center')
+                row['pdf_sha256'] = crm_prepare.digest(read_file(root, row['pdf_path'], 8_000_000))
+                items = crm_prepare.materials(row, root)
+                binding = dict(host=espo.website_domain(row['website']), company=row['company_name'],
+                               materials=[{k: v for k, v in item.items() if k != 'data'} for item in items],
+                               letter=row['letter_text'])
+                if entry.get('binding') != crm_prepare.digest(json.dumps(
+                        binding, sort_keys=True, ensure_ascii=False).encode()):
+                    continue
+                crm_prepare.identify(row, root, entry, clinic_account=True)
+            except (espo.Hold, OSError, ValueError, KeyError, TypeError):
+                continue
+            del prepared[source]
+        used = set()
+        for entry in prepared.values():
+            for binding in [entry.get('network'), entry.get('binding')] + entry.get('previous_bindings', []):
+                if isinstance(binding, dict):
+                    used.update(network_keys(binding))
         return [o['lead']['id'] for o in offers
                 if networks['web-account-' + o['lead']['id']]['status'] == 'REPRESENTATIVE'
-                and 'web-account-' + o['lead']['id'] + ':draft' not in prepared]
+                and 'web-account-' + o['lead']['id'] not in prepared
+                and 'web-account-' + o['lead']['id'] + ':draft' not in prepared
+                and not network_keys(dict(website=o['lead']['websites'][0], company_name=o['lead']['name'])) & used
+                and (networks['web-account-' + o['lead']['id']]['email'] or o['lead'].get('phone'))]
+
+    def crm_availability(self, data):
+        prepared = self.crm_history()
+        directory = self.server.jobs.state_dir
+        observed = {}
+        for name in ('mailing-archive.json', 'mailing.json'):
+            path = directory / name
+            if path.exists():
+                observed.update(self.local_history(path, directory / 'mailing.lock'))
+        # Saved queue bindings also prevent a new transfer after journal changes.
+        for eid, row in observed.items():
+            prepared['mailing:' + eid] = dict(row, binding=dict(
+                website=row.get('website', ''), company_name=row.get('name', '')))
+            source = row.get('source_id')
+            if source:
+                prepared.setdefault(source, row)
+        networks = self.network_selection(data, prepared)
+        remaining = self.crm_remaining_ids(data['offers'], networks, prepared, directory.resolve())
+        transferred, sent, accounts = set(), set(), set()
+        for offer in data['offers']:
+            lead = offer['lead']
+            source = 'web-account-' + lead['id']
+            host = domain(lead['websites'][0])
+            for key, entry in prepared.items():
+                binding = entry.get('network') or entry.get('binding') or {}
+                result = entry.get('result', {})
+                steps = entry.get('steps', {})
+                if (key.removesuffix(':draft') != source and entry.get('source_id') != source
+                        and (not isinstance(binding, dict) or domain(binding.get('website', '')) != host)):
+                    continue
+                aid = entry.get('account_id') or result.get('account_id') or steps.get('account', {}).get('id')
+                if aid:
+                    accounts.add(aid)
+                if (aid or result.get('document_id') or result.get('email_id')
+                        or entry.get('document_id') or steps.get('document', {}).get('id')
+                        or steps.get('email', {}).get('id')):
+                    transferred.add(lead['id'])
+                if entry.get('status') == 'SENT' and entry.get('checked_at'):
+                    sent.add(aid or lead['id'])
+        # Older confirmed Sent remain evidence even if the queue no longer contains them.
+        path = directory / 'followup.sqlite3'
+        if path.exists():
+            with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+                for (raw,) in db.execute('SELECT record FROM snapshot'):
+                    row = json.loads(raw)
+                    if row.get('account_id') in accounts and row.get('date_sent'):
+                        sent.add(row['account_id'])
+        return dict(networks=networks, remaining=remaining, transferred=len(transferred), sent=len(sent))
+
+    def holds_page(self):
+        data, _, counts = self.workflow()
+        params = parse_qs(urlsplit(self.path).query)
+        category = params.get('category', [''])[0]
+        sort = params.get('sort', [''])[0]
+        query = params.get('q', [''])[0].strip().casefold()
+        categories = {
+            'evidence': ('Нет подтверждённых признаков', 'Проверить сохранённые материалы вручную. Без доказательств не делать юридических выводов и не создавать КП.'),
+            'review': ('Надёжность доказательств требует проверки', 'Вручную сверить доказательства и ограничения результата; HOLD не подтверждает нарушение.'),
+            'technical': ('Техническая недоступность / ограничения сбора', 'Согласовать повторную проверку; при robots_disallow сначала проверить разрешение на сбор.'),
+            'identity': ('Связь результата с организацией', 'Сверить домен и запуск; проверить возможный дубль без удаления данных.'),
+            'unknown': ('Причина не определена', 'Проверить сохранённый результат и журнал; не переводить в READY автоматически.'),
+        }
+        rows = []
+        for row in data['holds']:
+            rows.append((hold_category(row), row))
+        totals = Counter(key for key, _ in rows)
+        if params.get('format') == ['stats']:
+            self.respond_json(200, dict(
+                generated_at=datetime.now(timezone.utc).isoformat(timespec='seconds'),
+                scope='latest_audit_hold_per_normalized_domain',
+                total=len(rows), categories={key: totals[key] for key in categories},
+                index_warnings=data.get('warnings', 0)))
+            return
+        if sort == 'category':
+            order = list(categories)
+            rows.sort(key=lambda item: (order.index(item[0]), item[1]['host']))
+        content = '<h1>Разобрать HOLD</h1><p>Актуальных HOLD: <strong>' + str(counts['HOLD']) + '</strong>. Один последний анализ на нормализованный домен. Филиалы одного домена объединены; разные домены одной сети могут оставаться отдельно. CRM HOLD и ошибки заданий сюда не входят.</p>'
+        content += '<p>Повтор доступен только для технических ограничений и проверки надёжности доказательств. Используется штатный анализ с соблюдением robots.txt; HOLD изменится только по новому результату. Юридический итог движка и коммерческий HOLD различаются; исходный итог доступен в results.csv и review.json.</p>'
+        content += '<p>' + link('/holds?format=stats', 'Обезличенная статистика (JSON, вся выборка)') + '</p>'
+        if data.get('warnings'):
+            content += '<p role="status">Есть ограничения индекса: ' + str(data['warnings']) + '. Полнота базы не гарантирована.</p>'
+        content += '<table><thead><tr><th>Категория</th><th>Количество</th><th>Рекомендуемое действие</th></tr></thead><tbody>'
+        for key, (title, action) in categories.items():
+            content += '<tr><td>' + link('/holds?' + urlencode({'category': key}), title) + '</td><td>' + str(totals[key]) + '</td><td>' + esc(action) + '</td></tr>'
+        content += '</tbody></table><form method="get" action="/holds"><label>Категория <select name="category"><option value="">Все</option>'
+        for key, (title, _) in categories.items():
+            content += '<option value="' + key + '"' + (' selected' if category == key else '') + '>' + esc(title) + '</option>'
+        content += '</select></label><label>Порядок <select name="sort"><option value="">По списку организаций</option><option value="category"' + (' selected' if sort == 'category' else '') + '>По категории и домену</option></select></label>'
+        content += '<label>Поиск <input name="q" value="' + esc(params.get('q', [''])[0]) + '"></label><button>Показать</button></form>'
+        content += '<form method="post" action="/holds/retry"><input type="hidden" name="csrf" value="' + esc(self.server.csrf_token) + '"><input type="hidden" name="confirm" value="yes">'
+        if category in {'technical', 'review'}:
+            content += '<label><input type="checkbox" id="hold-all"> Выбрать все показанные в текущей категории</label>'
+        content += '<p role="status" aria-live="polite">Выбрано организаций: <strong id="hold-count">0</strong></p><button>Повторно проверить выбранные</button>'
+        content += '<table><thead><tr><th>Выбор</th><th>Организация</th><th>Домен</th><th>Категория и причина</th><th>Сохранённый источник</th></tr></thead><tbody>'
+        shown = 0
+        for key, row in rows:
+            reason = row['saved']['reason'] or 'Причина не определена'
+            if category and key != category:
+                continue
+            if query and query not in (row['lead']['name'] + ' ' + row['host'] + ' ' + reason + ' ' + categories[key][0]).casefold():
+                continue
+            shown += 1
+            base = '/analysis-files/' + row['job']['id'] + '/'
+            checkbox = ('<input type="checkbox" name="lead" value="' + esc(row['lead']['id']) + '" aria-label="Выбрать ' + esc(row['lead']['name']) + '">' if key in {'technical', 'review'} else '—')
+            content += '<tr><td>' + checkbox + '</td><td>' + esc(row['lead']['name']) + '</td><td>' + esc(row['host']) + '</td><td>' + esc(categories[key][0]) + '<br>' + esc(reason) + '</td><td>' + link('/jobs/' + row['job']['id'], 'Результат задания') + ' · ' + link(base + 'results.csv', 'results.csv') + ' · ' + link(base + 'review.json', 'review.json (если сохранён)') + '</td></tr>'
+            if row['saved'].get('warning'):
+                content += '<tr><td colspan="5">Ограничение сохранённого источника: ' + esc(row['saved']['warning']) + '</td></tr>'
+        self.followup_nonce = secrets.token_urlsafe(24)
+        content += '''</tbody></table></form><script nonce="''' + self.followup_nonce + '''">
+const boxes = [...document.querySelectorAll('input[name="lead"]')];
+const all = document.getElementById('hold-all');
+function countHolds() {
+  const count = boxes.filter(box => box.checked).length;
+  document.getElementById('hold-count').textContent = count;
+  if (all) { all.checked = boxes.length > 0 && count === boxes.length; all.indeterminate = count > 0 && count < boxes.length; }
+}
+boxes.forEach(box => box.addEventListener('change', countHolds));
+if (all) all.addEventListener('change', () => { boxes.forEach(box => box.checked = all.checked); countHolds(); });
+countHolds();
+</script>'''
+        try:
+            self.html(content + '<p>Показано: ' + str(shown) + '</p>')
+        finally:
+            self.followup_nonce = None
+
+    def retry_holds(self, values):
+        back = '<p>' + link('/holds', 'Вернуться к HOLD') + '</p>'
+        try:
+            if set(values) - {'csrf', 'confirm', 'lead'}:
+                raise ValueError('Некорректная форма')
+            selected = set(values.get('lead', []))
+            jobs = self.server.jobs
+            with jobs.lock:
+                records = [row['lead'] for row in self.workflow()[0]['holds']
+                           if hold_category(row) in {'technical', 'review'}]
+                if not selected or len(selected) > 200 or not selected <= {r['id'] for r in records}:
+                    raise ValueError('Выбор пуст или HOLD уже изменился; обновите список')
+                # Explicit repeats use the existing queue; new-only filtering does not apply to HOLD.
+                token, preview = Jobs.preview_analysis(jobs, records, identifiers=selected)
+                try:
+                    if not preview['params']['sites']:
+                        raise ValueError('Выбрано: ' + str(len(selected)) + '. Поставлено: 0. ' + '; '.join(preview['params']['skipped']))
+                    identifier = jobs.submit_analysis(token)
+                finally:
+                    jobs.previews.pop(token, None)
+            content = '<h1>Повторная проверка поставлена в очередь</h1><p>Выбрано организаций: ' + str(len(selected)) + '. Поставлено: ' + str(len(preview['params']['sites'])) + '. Пропущено: ' + str(len(preview['params']['skipped'])) + '.</p>'
+            for reason in preview['params']['skipped']:
+                content += '<p>' + esc(reason) + '</p>'
+            self.html(content + link('/jobs/' + identifier, 'Прогресс проверки') + back)
+        except ValueError as exc:
+            self.html('<h1>Повторная проверка не поставлена в очередь</h1><p>' + esc(exc) + '</p>' + back, 400)
+        except (OSError, sqlite3.Error):
+            self.html('<h1>Не удалось подтвердить постановку в очередь</h1><p>Проверьте журнал заданий перед повтором.</p>' + back, 503)
 
     def proposals_page(self):
         data, _, counts = self.workflow()
-        content = '<h1>Готовые предложения</h1><p>Всего READY по всей базе: <strong>' + str(counts['READY']) + '</strong>'
+        content = '<h1>Готовые предложения</h1><p>Всего подготовлено КП (актуальные по доменам): <strong>' + str(counts['READY']) + '</strong>'
         content += ' · REJECT — нет предложения: ' + str(counts['REJECT'])
         content += ' · HOLD — требует внимания: ' + str(counts['HOLD'])
         content += ' · ' + link('/analysis?analysis_errors=yes', 'Ошибки анализа: ' + str(counts['ERROR'])) + '</p>'
+        content += '<p>' + link('/holds', 'Разобрать HOLD') + '</p>'
         params = parse_qs(urlsplit(getattr(self, 'path', '/proposals')).query)
+        historical = params.get('view') == ['history']
+        content += '<p>' + link('/proposals', 'Ожидают передачи') + ' · ' + link('/proposals?view=history', 'Все подготовленные КП / история') + '</p>'
         content += '<form method="get" action="/proposals"><button name="select" value="remaining">Выбрать оставшиеся для CRM</button></form>'
         run = '' if params.get('select') == ['remaining'] else params.get('run', [''])[0]
         runs = {m['run_id']: m.get('run_name', m['run_id']) for lead in data['leads']
                 for m in lead.get('members', [lead]) if m.get('run_id')}
-        content += '<form method="get" action="/proposals"><label>Запуск сбора <select name="run"><option value="">Вся база</option>'
+        content += '<form method="get" action="/proposals">' + ('<input type="hidden" name="view" value="history">' if historical else '') + '<label>Запуск сбора <select name="run"><option value="">Вся база</option>'
         for key, name in sorted(runs.items()):
             content += '<option value="' + esc(key) + '"' + (' selected' if run == key else '') + '>' + esc(name) + '</option>'
         content += '</select></label><button>Показать</button></form>'
         try:
-            networks = self.network_selection(data)
-        except (OSError, ValueError, TypeError, KeyError, AttributeError):
-            networks = {}
+            availability = self.crm_availability(data)
+            networks = availability['networks']
+            remaining_ids = availability['remaining']
+            remaining_count = len(remaining_ids)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError, sqlite3.Error):
+            networks, remaining_ids = {}, []
+            remaining_count = '—'
             content += '<p role="status">История CRM недоступна; выбор заблокирован до сверки.</p>'
-        offers = [o for o in data['offers'] if not run or any(m.get('run_id') == run for m in o['lead'].get('members', [o['lead']]))]
-        content += '<p>Счётчики выше — вся база. Показано КП: ' + str(len(offers)) + '. ' + ('Домены выбранного запуска: ' + esc(run) + '. КП может быть получено в другой проверке этого домена.' if run else 'Одна актуальная версия READY на домен по всей базе, включая исторические запуски.') + ' Это не разрешение на отправку писем.</p>'
-        if not offers:
-            self.html(content + '<p>Готовых КП пока нет. ' + link('/analysis', 'Перейти к проверке сайтов') + '</p>')
-            return
-        remaining_ids = []
-        try:
-            journal = Path.home() / '.local/state/lexradar/crm-prepare.json'
-            prepared = json.loads(journal.read_text()) if journal.exists() else {}
-            if not isinstance(prepared, dict):
-                raise ValueError('Invalid journal')
-            remaining_ids = self.crm_remaining_ids(data['offers'], networks, prepared)
-            new_ids = [o['lead']['id'] for o in offers
-                       if o['lead']['id'] in remaining_ids
-                       and (o['lead'].get('email') or o['lead'].get('phone') or o['saved']['contacts'])]
-        except (OSError, ValueError, TypeError, KeyError, AttributeError):
-            new_ids = []
-            content += '<p role="status">Не удалось прочитать историю CRM. Быстрый выбор новых недоступен; требуется сверка.</p>'
+        offers = [o for o in data['offers']
+                  if (historical or o['lead']['id'] in remaining_ids)
+                  and (not run or any(m.get('run_id') == run for m in o['lead'].get('members', [o['lead']])))]
+        new_ids = [o['lead']['id'] for o in offers if o['lead']['id'] in remaining_ids]
+        content += '<p>Ожидают новой передачи по локальной истории: ' + str(remaining_count) + '. Показано КП: ' + str(len(offers)) + '.</p>'
         limit = params.get('select', [''])[0]
-        selected = set(remaining_ids if limit == 'remaining' else new_ids if limit == 'all' else new_ids[:int(limit)] if limit in {'10', '20', '30'} else [])
-        content += '<p>Новых READY с контактом в этом списке: ' + str(len(new_ids)) + '. Новые — без :draft записи в локальном журнале подготовки CRM; существующий Account не исключает КП. Повторы и HOLD выбирайте вручную для сверки.</p>'
-        content += '<form method="get" action="/proposals"><input type="hidden" name="run" value="' + esc(run) + '">'
+        selected = set(new_ids if limit == 'remaining' else new_ids if limit == 'all' else new_ids[:int(limit)] if limit in {'10', '20', '30'} else [])
+        content += '<p>Доступно для новой передачи в этом списке: ' + str(len(new_ids)) + '. Исключены прежние попытки, Account/Document/Email, HOLD и дубли сетей. Отсутствие записи не доказывает отсутствие организации в CRM; при подтверждении сохраняются штатные проверки дублей.</p>'
+        content += '<form method="get" action="/proposals"><input type="hidden" name="run" value="' + esc(run) + '">' + ('<input type="hidden" name="view" value="history">' if historical else '')
         for value, label in [('10', 'Выбрать первые 10'), ('20', 'Выбрать первые 20'), ('30', 'Выбрать первые 30'), ('all', 'Выбрать все новые')]:
             content += '<button name="select" value="' + value + '"' + ('' if new_ids else ' disabled') + '>' + label + '</button>'
         content += '</form><p role="status">Отмечено быстрым выбором: ' + str(len(selected)) + '. Галочки можно изменить перед передачей.</p>'
@@ -440,7 +666,7 @@ class MVPHandler(ControlHandler):
             lead = offer['lead']
             network = networks.get('web-account-' + lead['id'], {})
             contact = network.get('email') or lead.get('phone') or ''
-            content += '<tr><td>' + str(number) + '</td><td><input form="crm-selection" type="checkbox" name="lead" value="' + esc(lead['id']) + '" aria-label="Выбрать ' + esc(lead['name']) + '"' + (' checked' if lead['id'] in selected else '') + ('' if contact and network.get('status') == 'REPRESENTATIVE' else ' disabled') + '></td>'
+            content += '<tr><td>' + str(number) + '</td><td><input form="crm-selection" type="checkbox" name="lead" value="' + esc(lead['id']) + '" aria-label="Выбрать ' + esc(lead['name']) + '"' + (' checked' if lead['id'] in selected else '') + ('' if lead['id'] in remaining_ids else ' disabled') + '></td>'
             content += '<td><label><input form="crm-selection" type="checkbox" name="mailing" value="' + esc(lead['id']) + '" checked> Включить в рассылку</label></td>'
             content += '<td>' + link('/organizations/' + lead['id'], lead['name']) + '</td><td>' + link(lead['websites'][0], target(lead['websites'][0])[1]) + '</td><td>' + esc(contact or 'Не указан') + '</td>'
             content += '<td>' + '<br>'.join(esc(b) for b in offer['basis']) + '</td><td><span class="qualification ready">READY</span>' + (('<br>Последний анализ: ' + esc(offer['latest_status'])) if offer['latest_status'] != 'READY' else '') + '</td><td>' + esc(offer['job']['ended'] or offer['job']['created']) + '</td><td><a class="cta" href="/proposal-files/' + offer['job']['id'] + '/pdf">Открыть КП</a>'
@@ -460,14 +686,16 @@ class MVPHandler(ControlHandler):
             return
         data = self.workflow()[0]
         try:
-            networks = self.network_selection(data)
-        except (OSError, ValueError, TypeError, KeyError, AttributeError):
-            networks = {}
+            availability = self.crm_availability(data)
+            networks = availability['networks']
+            remaining_ids = availability['remaining']
+        except (OSError, ValueError, TypeError, KeyError, AttributeError, sqlite3.Error):
+            networks, remaining_ids = {}, []
         offers = [o for o in data['offers'] if o['lead']['id'] in selected
-                  and networks.get('web-account-' + o['lead']['id'], {}).get('status') == 'REPRESENTATIVE']
+                  and o['lead']['id'] in remaining_ids]
         content += '<p>Выбрано организаций: ' + str(len(selected)) + '. Доступно READY с КП: ' + str(len(offers)) + '.</p>'
         if len(offers) != len(selected):
-            content += '<p>Часть предложений недоступна как READY с КП либо исключена как DUPLICATE_NETWORK. Вернитесь к списку и проверьте выбор.</p>'
+            content += '<p>Часть предложений уже передана, имеет прежнюю попытку/HOLD либо недоступна для новой передачи. Вернитесь к списку и проверьте выбор.</p>'
         for offer in offers:
             lead = offer['lead']
             contacts = list(dict.fromkeys(c for c in [lead.get('email'), lead.get('phone')]
@@ -485,7 +713,7 @@ class MVPHandler(ControlHandler):
         self.html(content + '<p>Передача не подтверждает согласие получателя на рекламную отправку. Без отдельного подтверждённого основания отправка заблокирована.</p>' + back)
 
     def do_POST(self):
-        if urlsplit(self.path).path != '/crm/preview':
+        if urlsplit(self.path).path not in {'/crm/preview', '/followup/action', '/holds/retry'}:
             return super().do_POST()
         if not self.valid_local_request():
             self.reject_post(403, 'local_host_required', 'invalid_host')
@@ -513,21 +741,51 @@ class MVPHandler(ControlHandler):
                 or values.get('confirm') != ['yes']):
             self.reject_post(403, 'confirmation_required', 'csrf_or_confirmation_invalid')
             return
+        if urlsplit(self.path).path == '/holds/retry':
+            self.retry_holds(values)
+            return
+        if urlsplit(self.path).path == '/followup/action':
+            eid = values.get('email_id', [''])[0]
+            followup_back = ('/followup?' + urlencode({'email': eid}) + '#followup-detail'
+                             if ID.fullmatch(eid) else '/followup')
+            try:
+                allowed = {'csrf', 'confirm', 'email_id', 'status', 'due', 'comment', 'revision'}
+                if set(values) - allowed or any(len(v) != 1 for v in values.values()):
+                    raise ValueError('Некорректная форма.')
+                self.server.followup.update(*(values.get(k, [''])[0] for k in
+                    ('email_id', 'status', 'due', 'comment', 'revision')))
+            except ValueError as exc:
+                self.html('<h1>Результат не сохранён</h1><p>' + esc(exc) + '</p><p>'
+                          + link(followup_back, 'Вернуться к выбранной записи') + '</p>', 400)
+                return
+            except (OSError, sqlite3.Error, TypeError, KeyError):
+                self.html('<h1>Результат не сохранён</h1><p>Локальное хранилище недоступно. '
+                          'Прежние данные не сброшены; обновите очередь перед повтором.</p><p>'
+                          + link(followup_back, 'Вернуться к выбранной записи') + '</p>', 503)
+                return
+            self.send_response(303)
+            self.send_header('Location', '/followup?' + urlencode({
+                'email': values['email_id'][0], 'saved': int(values['revision'][0]) + 1}) + '#followup-detail')
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
         if values.get('stage', ['account']) not in (['account'], ['draft'], ['draft_batch']):
             self.reject_post(400, 'invalid_form', 'invalid_stage')
             return
         selected = set(values.get('lead', []))
         data = self.workflow()[0]
         try:
-            networks = self.network_selection(data)
-        except (OSError, ValueError, TypeError, KeyError, AttributeError):
-            networks = {}
+            availability = self.crm_availability(data)
+            networks = availability['networks']
+            remaining_ids = availability['remaining']
+        except (OSError, ValueError, TypeError, KeyError, AttributeError, sqlite3.Error):
+            networks, remaining_ids = {}, []
         offers = [o for o in data['offers'] if o['lead']['id'] in selected
-                  and networks.get('web-account-' + o['lead']['id'], {}).get('status') == 'REPRESENTATIVE']
+                  and o['lead']['id'] in remaining_ids]
         back = '<p>' + link('/proposals', '← Вернуться к выбору готовых предложений') + '</p>'
         if not selected or len(offers) != len(selected) or any(
                 not (o['lead'].get('email') or o['lead'].get('phone') or o['saved']['contacts']) for o in offers):
-            self.html('<h1>Подтверждение отклонено</h1><p>Выбор пуст или предложения недоступны как READY с КП и контактом либо исключены как DUPLICATE_NETWORK. Проверьте выбор.</p>' + back, 400)
+            self.html('<h1>Подтверждение отклонено</h1><p>Выбор пуст или предложения уже переданы, имеют прежнюю попытку/HOLD либо недоступны для новой передачи. Проверьте выбор.</p>' + back, 400)
             return
         mailing = set(values.get('mailing', [])) & selected
         try:
@@ -663,38 +921,30 @@ class MVPHandler(ControlHandler):
         self.refresh_seconds = 60
         data, history, counts = self.workflow()
         summary, _ = analysis_summary(data['leads'], history, {domain(r['target']) for r in data.get('reports', []) if r['kind'] == 'audit'})
-        crm_remaining = '—'
+        crm_remaining = transferred = sent = '—'
         crm_description = 'История CRM недоступна; показатели требуют сверки.'
         try:
-            networks = self.network_selection(data)
-            journal = Path.home() / '.local/state/lexradar/crm-prepare.json'
-            prepared = json.loads(journal.read_text()) if journal.exists() else {}
-            if not isinstance(prepared, dict):
-                raise ValueError('Invalid CRM journal')
-            excluded = sum(networks['web-account-' + o['lead']['id']]['status'] == 'DUPLICATE_NETWORK'
-                           for o in data['offers'])
-            drafts = sum(entry.get('result', {}).get('status') == 'DRAFT_VERIFIED'
-                         for key, entry in prepared.items()
-                         if key.startswith('web-account-') and not key.endswith(':draft'))
-            crm_remaining = len(self.crm_remaining_ids(data['offers'], networks, prepared))
-            crm_description = ('Всего READY: ' + str(counts['READY'])
-                               + ' · Исключено филиалов (DUPLICATE_NETWORK): ' + str(excluded)
-                               + ' · Подготовлено черновиков (DRAFT_VERIFIED): ' + str(drafts)
-                               + ' · Осталось уникальных READY без черновика: ' + str(crm_remaining)
-                               + '. По локальному CRM-журналу; прежние попытки, включая Account и HOLD, исключены из оставшихся.')
-        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            availability = self.crm_availability(data)
+            crm_remaining = len(availability['remaining'])
+            transferred, sent = availability['transferred'], availability['sent']
+            crm_description = ('По локальным журналам и последним сохранённым наблюдениям CRM. '
+                               'Передано — зафиксирован Account, Document или Email; это не обязательно завершённый Draft. '
+                               'Отправлено — сохранённый Sent, не подтверждение доставки. '
+                               'Отсутствие локальной записи не доказывает отсутствие организации в CRM; '
+                               'внешняя история может быть неполной. Перед записью действуют штатные проверки CRM.')
+        except (OSError, ValueError, TypeError, KeyError, AttributeError, sqlite3.Error):
             pass
         content = '<h1>От организаций к готовым предложениям</h1><p class="lead">Пройдите четыре шага. После CRM-экспорта письма попадают в очередь; отправка требует отдельного разрешения.</p><p>Показатели по всей доступной базе, включая исторический импорт; организации объединены по домену. Это не итоги последнего запуска.</p><div class="grid">'
         for label, description, url, enabled in (
             ('1. Собрать организации', 'Организаций в базе', '/collect', True),
             ('2. Проверить сайты', 'Ожидают проверки', '/analysis', counts['usable'] > 0),
-            ('3. Готовые предложения', 'Готовых КП', '/proposals', counts['READY'] > 0),
-            ('4. Передать в CRM', 'Готовы к передаче', '/crm', crm_remaining > 0),
+            ('3. Готовые предложения', 'Ожидают передачи в CRM', '/proposals', isinstance(crm_remaining, int) and crm_remaining > 0),
+            ('4. Передать в CRM', 'Готовы к передаче', '/crm', isinstance(crm_remaining, int) and crm_remaining > 0),
         ):
             number = {
                 '/collect': summary['unique'],
                 '/analysis': summary['available'],
-                '/proposals': counts['READY'],
+                '/proposals': crm_remaining,
                 '/crm': crm_remaining,
             }[url]
             content += (
@@ -703,12 +953,16 @@ class MVPHandler(ControlHandler):
                 '<p>' + description + '</p>'
             )
             content += (
-                '<a class="cta" href="' + url + '">' + label + '</a>'
+                '<a class="cta" href="' + ('/proposals?select=remaining' if url == '/crm' else url) + '">' + label + '</a>'
                 if enabled else
                 '<button disabled>' + label + '</button>'
             )
             content += '</article>'
-        content += '</div>'
+        content += '</div><div class="grid">'
+        for label, value in (('Всего подготовлено КП', counts['READY']),
+                             ('Передано в CRM', transferred), ('Отправлено клиентам', sent)):
+            content += '<article><h2>' + label + '</h2><strong class="metric">' + str(value) + '</strong></article>'
+        content += '</div><p>Всего подготовлено — актуальные сохранённые КП по доменам. ' + link('/proposals?view=history', 'Все подготовленные КП / история') + '</p><p>' + crm_description + '</p>'
         mailing = getattr(self.server, 'mailing', None)
         if mailing:
             content += mailing.html()
@@ -729,15 +983,29 @@ class MVPHandler(ControlHandler):
             content += '<p>' + link(url, title) + '</p>'
         self.html(content)
 
+    def followup_page(self):
+        self.followup_nonce = secrets.token_urlsafe(24)
+        try:
+            self.html(self.server.followup.html(self))
+        finally:
+            self.followup_nonce = None
+
     def do_GET(self):
         if not self.valid_local_request():
             self.respond_json(403, {'error': 'local_host_required'})
             return
         path = urlsplit(self.path).path
-        if path == '/mailing':
+        if path == '/followup':
+            self.followup_page()
+        elif path == '/mailing':
             self.html(self.server.mailing.html(details=True, status=parse_qs(urlsplit(self.path).query).get('status', [''])[0]))
         elif path == '/service':
             self.service()
+        elif path == '/holds':
+            self.holds_page()
+        elif path == '/crm':
+            self.path = '/proposals?select=remaining'
+            self.proposals_page()
         elif path == '/proposals':
             self.proposals_page()
         elif path == '/crm/preview':
@@ -763,6 +1031,7 @@ def main():
         server.csrf_token = secrets.token_urlsafe(32)
         server.catalog = Catalog(server.results_dir, server.parser_dir)
         server.jobs = MVPJobs(server.state_dir, server.parser_dir, server.results_dir)
+        server.followup = Followup(server.state_dir)
         server.mailing = Mailing(server.state_dir)
         server.mailing.start()
         print(f'LexRadar Control Center: http://127.0.0.1:{args.port}', flush=True)

@@ -621,7 +621,9 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
             self.send_header("Refresh", str(self.refresh_seconds))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "same-origin")
-        self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+        script_policy = ("script-src 'nonce-" + self.followup_nonce + "'; "
+                         if getattr(self, 'followup_nonce', None) else '')
+        self.send_header("Content-Security-Policy", "default-src 'none'; " + script_policy + "style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
         self.end_headers()
         self.wfile.write(body)
 
