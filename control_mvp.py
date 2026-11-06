@@ -277,11 +277,25 @@ class MVPHandler(ControlHandler):
         if row['kind'] == 'parser-v3':
             reviewed, usable = result.get('cards_reviewed'), result.get('usable')
             # Read committed decisions only; the parser remains the sole writer.
-            if reviewed is None or usable is None:
-                database = jobs.state_dir / row['id'] / 'parser.sqlite'
+            sequential = params.get('industry') == '1'
+            if sequential or reviewed is None or usable is None:
+                database = jobs.state_dir / ('medadvisor-sequential' if sequential else row['id']) / 'parser.sqlite'
+                if sequential:
+                    reviewed = usable = None
                 try:
                     with closing(sqlite3.connect(database.as_uri() + '?mode=ro', uri=True, timeout=0.1)) as db:
-                        reviewed, usable = db.execute('SELECT count(*), coalesce(sum(accepted), 0) FROM collection_decisions').fetchone()
+                        if sequential:
+                            # Parser run IDs are local to SQLite; bind by the job's execution interval.
+                            runs = db.execute(
+                                'SELECT id FROM runs WHERE julianday(started_at) >= julianday(?) '
+                                'AND julianday(started_at) <= julianday(?) LIMIT 2',
+                                (row['started'], end.isoformat())).fetchall() if row['started'] else []
+                            if len(runs) == 1:
+                                reviewed, usable = db.execute(
+                                    'SELECT count(*), coalesce(sum(accepted), 0) FROM collection_decisions WHERE run_id=?',
+                                    (runs[0][0],)).fetchone()
+                        else:
+                            reviewed, usable = db.execute('SELECT count(*), coalesce(sum(accepted), 0) FROM collection_decisions').fetchone()
                 except sqlite3.Error:
                     pass
             title = 'Собираем организации' if active else 'Собрано ' + str(usable if usable is not None else '—') + ' из ' + str(params['target'])

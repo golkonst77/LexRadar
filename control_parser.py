@@ -75,10 +75,13 @@ with sync_playwright() as p:
 
     def command(self, params, directory):
         params = self.validate(params['industry'], str(params['target']), params['name'])
+        database = (directory.parent / 'medadvisor-sequential' / 'parser.sqlite'
+                    if params['industry'] == '1' else directory / 'parser.sqlite')
         return [self.python, '-B', '-u', str(self.source / 'parser_run.py'),
                 '--industry', params['industry'], '--target', str(params['target']),
                 '--max-cards', str(max(200, 10 * params['target'])), '--max-pages', '200',
-                '--database', str(directory / 'parser.sqlite'), '--output', str(directory / 'parser.csv')]
+                '--database', str(database), '--output', str(directory / 'parser.csv'),
+                *(['--sequential'] if params['industry'] == '1' else [])]
 
     def result(self, directory, target):
         summary = json.loads(read_file(directory, 'parser.summary.json', 1_000_000))

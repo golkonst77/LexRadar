@@ -18,6 +18,7 @@ STUB = '''import argparse, csv, json, time, os, subprocess, sys
 from pathlib import Path
 p=argparse.ArgumentParser()
 for k in ('industry','target','database','output','max-cards','max-pages'):p.add_argument('--'+k,required=True)
+p.add_argument('--sequential',action='store_true')
 a=p.parse_args()
 root=Path(a.output).parent
 if (Path(__file__).parent/'gate').exists():
@@ -301,7 +302,7 @@ class ParserTest(unittest.TestCase):
         row = self.wait(first)
         self.assertEqual(row['status'], 'succeeded', row)
         self.assertEqual(json.loads(row['result'])['usable'], 2)
-        self.assertTrue((self.jobs.state_dir / first / 'parser.sqlite').is_file())
+        self.assertTrue((self.jobs.state_dir / 'medadvisor-sequential' / 'parser.sqlite').is_file())
         second = self.launch('1')
         self.assertEqual(self.wait(second)['status'], 'succeeded')
         page = self.request('/organizations?run='+first)[1].decode()
