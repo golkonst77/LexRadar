@@ -14,6 +14,7 @@ dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
 
 [project.scripts]
 lexradar = "lexradar.cli:main"
+espo-export = "lexradar.espo_export:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -29,6 +30,7 @@ line-length = 100
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.setuptools.package-data]
+"lexradar" = ["espo_email.json", "crm_identity_documents.json"]
 "lexradar.auditors" = ["prompts/*.txt"]
 
 "lexradar.verifier" = ["prompts/*.txt"]

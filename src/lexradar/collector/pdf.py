@@ -16,6 +16,7 @@ def extract_inventory(
     timeout: float,
     max_page_chars: int = 100_000,
     max_total_chars: int = 1_000_000,
+    *, metadata_dates: bool = False,
 ) -> PDFInventory:
     if (
         not 1 <= max_pages <= 500
@@ -33,6 +34,7 @@ def extract_inventory(
                 str(max_pages),
                 str(max_page_chars),
                 str(max_total_chars),
+                "metadata" if metadata_dates else "",
             ],
             capture_output=True,
             timeout=timeout,
@@ -163,7 +165,22 @@ def worker() -> None:
         if all(p.original_chars is not None for p in records) and len(records) == count
         else None
     )
+    metadata = {}
+    if len(sys.argv) > 5 and sys.argv[5] == "metadata":
+        try:
+            info = reader.metadata
+            for name, attribute in (("pdf_creation_date", "creation_date"),
+                                    ("pdf_modification_date", "modification_date")):
+                try:
+                    value = getattr(info, attribute, None)
+                    if value is not None:
+                        metadata[name] = value.isoformat()
+                except (ValueError, TypeError, OverflowError):
+                    pass
+        except Exception:
+            pass  # Malformed optional metadata must not discard extracted evidence.
     inventory = PDFInventory(
+        metadata_dates=metadata,
         text=text,
         page_texts=texts,
         reading=ReadingState(

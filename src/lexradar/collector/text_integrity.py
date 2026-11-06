@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .models import CollectionResult
 from .pdf import extract_inventory
-from .reading import ReadingState, extract_html
+from .reading import RECOVERED_HTML, ReadingState, extract_html, recover_html
 
 
 def recheck_text(data: CollectionResult, root: Path) -> list[str]:
@@ -28,7 +28,15 @@ def recheck_text(data: CollectionResult, root: Path) -> list[str]:
             body = file.read(20_000_001)
         if len(body) > 20_000_000 or sha256(body).hexdigest() != original.sha256:
             raise ValueError("Original HTML changed during reproduction")
-        reproduced, reading = extract_html(body, page.reading.max_total_chars)
+        if RECOVERED_HTML in page.reading.limitations:
+            reproduced, reading, _ = recover_html(body, page.reading.max_total_chars)
+        else:
+            reproduced, reading = extract_html(
+                body,
+                page.reading.max_total_chars,
+                main_only="Complete static main content; outer navigation excluded"
+                in page.reading.limitations,
+            )
         reading.original_saved = True
         reading.source_sha256 = original.sha256
         if page.text == reproduced:

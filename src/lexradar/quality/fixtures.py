@@ -27,6 +27,7 @@ class FixtureFetcher:
         on_event=None,
         allow_redirects=True,
         max_file_bytes=None,
+        allow_cross_origin=False,
     ):
         if origin(url) != origin("https://benchmark.example/") or allowed_origin != origin(url):
             raise CollectionError("Synthetic transport accepts fixture origin only")

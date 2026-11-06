@@ -119,3 +119,84 @@ def test_incremental_nested_title_quarantines_suffix(split):
     assert "".join(parser.parts) == "before"
     assert parser.quarantined
     assert parser.limitations
+
+
+def test_svg_animation_does_not_quarantine_following_text():
+    parser = StaticText()
+    parser.feed('<body><svg><circle><animate attributeName="cx"/></circle></svg>'
+                '<p>Policy after animation</p></body>')
+    parser.close()
+    assert not parser.limitations
+    assert "Policy after animation" in " ".join(parser.parts)
+
+    parser = StaticText()
+    parser.feed('<body><animate/>Uncertain HTML</body>')
+    parser.close()
+    assert parser.quarantined
+    assert not parser.parts
+
+
+@pytest.mark.parametrize("tag", sorted(StaticText.SVG_SELF_CLOSING - {"svg"}))
+def test_svg_self_closing_elements_preserve_strict_text(tag):
+    text, reading = extract_html(
+        f'<svg><defs><{tag} data-value="SECRET"/></defs></svg><p>Clinic</p>'.encode(), 1000
+    )
+    assert text == "Clinic"
+    assert reading.extraction_state == "complete"
+    assert reading.diagnostic_html is None
+
+
+@pytest.mark.parametrize("container", ["", "<svg><foreignObject>", "<svg><desc>"])
+@pytest.mark.parametrize("tag", ["feColorMatrix", "feFuncR", "path", "div", "script", "style", "title", "unknown"])
+def test_svg_slash_exception_does_not_apply_to_html_or_excluded_elements(container, tag):
+    text, reading = extract_html(f'{container}<{tag}/>SECRET'.encode(), 1000)
+    assert text == ""
+    assert reading.extraction_state == "partial"
+
+
+@pytest.mark.parametrize("tag", ["script", "style", "title", "unknown", "div"])
+def test_svg_context_does_not_allow_excluded_or_non_svg_slash_tags(tag):
+    text, reading = extract_html(f'<svg><{tag}/>SECRET</svg>after'.encode(), 1000)
+    assert text == ""
+    assert reading.extraction_state == "partial"
+
+
+def test_nested_svg_reenters_svg_context_inside_foreign_object():
+    text, reading = extract_html(
+        b'<svg><foreignObject><svg><feColorMatrix/></svg></foreignObject></svg>Clinic',
+        1000,
+    )
+    assert text == "Clinic"
+    assert reading.extraction_state == "complete"
+
+
+@pytest.mark.parametrize('tag', ['ul', 'ol', 'menu'])
+def test_optional_list_item_end_tags(tag):
+    text, reading = extract_html(f'<{tag}><li>one<li>two</{tag}>after'.encode(), 1000)
+    assert text == 'one two after'
+    assert reading.extraction_state == 'complete'
+
+
+@pytest.mark.parametrize('html', [
+    '<ul><li>one</li></li><li>two</li></ul>after',
+    '</li>one<ul><li>two</li></ul></li>after',
+    '<ul><li>outer<ul></li><li>inner</ul></li></ul>after',
+])
+def test_stray_list_end_preserves_text_but_not_completeness(html):
+    text, reading = extract_html(html.encode(), 1000)
+    assert text.endswith('after')
+    assert reading.extraction_state == 'partial'
+    assert reading.original_chars is None
+    assert not reading.text_coverage_complete
+
+
+@pytest.mark.parametrize('html', [
+    '<ul><li><span>before</li>SECRET</span></ul>',
+    '<ul><li><template>before</li>SECRET</template></ul>',
+    '<ul><li>before</li bogus>SECRET</ul>',
+    '<svg></li>SECRET</svg>',
+])
+def test_list_recovery_does_not_cross_ambiguous_boundaries(html):
+    text, reading = extract_html(html.encode(), 1000)
+    assert 'SECRET' not in text
+    assert reading.extraction_state == 'partial'

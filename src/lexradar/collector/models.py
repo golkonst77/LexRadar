@@ -68,6 +68,11 @@ class CollectedEvidence(Evidence):
 
 
 class InputField(Model):
+    placeholder: str | None = None
+    aria_label: str | None = None
+    associated_label: str | None = None
+    disabled: bool = False
+    readonly: bool = False
     tag: str
     type: str
     name: str | None = None
@@ -85,6 +90,21 @@ class FormObservation(Model):
     submission_context: str
     screenshot: Artifact | None = None
     unavailable_reason: str | None = None
+
+
+class RelevantLinkObservation(Model):
+    url: str
+    text: str = ""
+    kind: Literal[
+        "appointment",
+        "contacts",
+        "privacy_policy",
+        "consent",
+        "cookie",
+        "legal_information",
+        "document",
+    ]
+    visible_in_static_html: bool
 
 
 class EntityObservation(Model):
@@ -108,6 +128,10 @@ class PageObservation(Model):
     text: str | None = None
     categories: list[str] = Field(default_factory=list)
     document_links: list[str] = Field(default_factory=list)
+    relevant_links: list[RelevantLinkObservation] = Field(default_factory=list)
+    static_analytics_hints: list[str] = Field(default_factory=list)
+    cookie_text_observed: bool = False
+    consent_management_controls: list[str] = Field(default_factory=list)
     forms: list[FormObservation] = Field(default_factory=list)
     evidence_id: str
 
@@ -133,7 +157,28 @@ class DocumentObservation(Model):
     extraction_reason: str | None = None
 
 
+class FreshnessSignal(Model):
+    kind: Literal["footer_copyright", "http_last_modified", "http_etag",
+                  "policy_declared_date", "pdf_creation_date", "pdf_modification_date"]
+    value: str
+    source: str | None = None
+    confidence: Literal["explicit_text", "server_declared", "opaque_validator", "document_declared"]
+    evidence_id: str | None = None
+
+
+class SiteFreshness(Model):
+    policy_priority: Literal["high"] | None = None
+    signals: list[FreshnessSignal] | None = None
+    processing_seconds: float | None = None
+    footer_year: int | None = None
+    footer_year_stale: bool | None = None
+    http_last_modified: str | None = None
+    http_etag: str | None = None
+    signal_source: str | None = None
+
+
 class CollectionResult(Model):
+    site_freshness: SiteFreshness | None = None
     origin: MaterialOrigin = Field(default_factory=MaterialOrigin)
     schema_version: Literal["0.2"] = "0.2"
     target_url: HttpUrl

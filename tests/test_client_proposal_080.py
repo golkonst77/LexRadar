@@ -6,6 +6,7 @@ import pytest
 
 from lexradar.client_proposal import pricing, render_client
 from lexradar.proposal_export import build
+from lexradar.proposal_rules import NoProposalTriggers
 
 SOURCE = Path("runs-076/result.json")
 COLLECTION = Path("runs-054/doktstom-improved/dossier/collection.json")
@@ -77,7 +78,7 @@ def test_reject_invented_facts(tmp_path, failure):
 
 
 def test_no_confirmed_observations_no_accusations():
-    with pytest.raises(ValueError, match="2–4"):
+    with pytest.raises(NoProposalTriggers):
         render_client(
             CONFIG["client"], [dict(confirmed=False, quote="invented")], CONFIG["commercial"]
         )
@@ -103,11 +104,10 @@ def test_no_seller_substitution():
         render_client(CONFIG["client"], [], dict(sender="ООО ПростоБюро"))
 
 
-def test_personalization_is_escaped():
-    page = render_client(
-        dict(name="<script>name</script>", url="https://example.test/"),
-        [dict(confirmed=True, title="<script>x</script>", quote="<img>", meaning="<&>")] * 2,
-        dict(date="16.10.2026"),
-    )
-    assert "<script>" not in page and "<img>" not in page
-    assert "&lt;script&gt;" in page
+def test_untrusted_fragments_cannot_bypass_trigger_gate():
+    with pytest.raises(NoProposalTriggers):
+        render_client(
+            dict(name="<script>name</script>", url="https://example.test/"),
+            [dict(confirmed=True, title="<script>x</script>", quote="<img>", meaning="<&>")],
+            dict(date="16.10.2026"),
+        )

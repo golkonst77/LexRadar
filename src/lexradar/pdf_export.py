@@ -1,5 +1,6 @@
 """Small offline Unicode PDF export using pypdf and an installed TrueType font."""
 
+import os
 import struct
 import textwrap
 from pathlib import Path
@@ -131,3 +132,36 @@ endcmap CMapName currentdict /CMap defineresource pop end end"""
         page[NameObject("/Contents")] = stream("\n".join(content).encode("ascii"))
     with output.open("xb") as target:
         writer.write(target)
+
+
+def write_html_pdf(html: str, output: Path):
+    """Client PDF from the same HTML/CSS, with all external requests disabled."""
+    from playwright.sync_api import sync_playwright
+
+    if output.exists():
+        raise FileExistsError(output)
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(
+            executable_path=os.environ.get("LEXRADAR_CHROMIUM_PATH"),
+            headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"]
+        )
+        try:
+            context = browser.new_context(java_script_enabled=False, offline=True)
+            context.route("**/*", lambda route: route.abort())
+            page = context.new_page()
+            # Word's named page and keep-together containers can emit a blank first sheet.
+            print_style = """<style>@media print {
+                .WordSection1 { page: auto !important; }
+                .paper, .section { break-inside: auto !important; }
+                h2, h3 { break-after: avoid !important; }
+                .motivation-block { break-inside: avoid; }
+                div[style*="border:solid #F7C6C1"] { break-inside: avoid; }
+            }</style>"""
+            page.set_content(
+                html.replace("</head>", print_style + "</head>", 1), wait_until="domcontentloaded"
+            )
+            content = page.pdf(format="A4", print_background=True, prefer_css_page_size=True)
+        finally:
+            browser.close()
+    with output.open("xb") as target:
+        target.write(content)

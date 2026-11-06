@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass, field
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 from ..collector.models import InputField
 from ..collector.reading import StaticText
@@ -15,7 +15,19 @@ def compact(parts: list[str]) -> str:
 
 def static_reference(base: str, value: str) -> str:
     try:
-        return urljoin(base, value)
+        reference = urljoin(base, value)
+        if any(ord(c) < 32 for c in reference):
+            return reference
+        parts = urlsplit(reference)
+        return urlunsplit(
+            (
+                parts.scheme,
+                parts.netloc,
+                quote(parts.path, safe="/%:@!$&'()*+,;=-._~"),
+                quote(parts.query, safe="/%?:@!$&'()*+,;=-._~"),
+                parts.fragment,
+            )
+        )
     except ValueError:
         # Preserve a malformed declared reference as data, without interpreting/following it.
         return value
@@ -38,10 +50,21 @@ class Link:
     form_index: int | None
     parts: list[str] = field(default_factory=list)
     span: StaticSpan | None = None
+    attributes: dict[str, str | None] = field(default_factory=dict)
 
     @property
     def text(self):
         return compact(self.parts)
+
+    @property
+    def visible_in_static_html(self):
+        style = (self.attributes.get("style") or "").replace(" ", "").casefold()
+        return not (
+            "hidden" in self.attributes
+            or (self.attributes.get("aria-hidden") or "").casefold() == "true"
+            or "display:none" in style
+            or "visibility:hidden" in style
+        )
 
 
 @dataclass
@@ -302,6 +325,10 @@ class SavedMarkup(StaticText):
                     type=kind,
                     name=values.get("name"),
                     label=values.get("aria-label"),
+                    aria_label=values.get("aria-label"),
+                    placeholder=values.get("placeholder"),
+                    disabled="disabled" in values,
+                    readonly="readonly" in values,
                     required="required" in values,
                     checked=("checked" in values) if kind in {"checkbox", "radio"} else None,
                 )
@@ -319,7 +346,9 @@ class SavedMarkup(StaticText):
                 self.uncertain("Static link limit; suffix withheld")
                 return
             self.anchor = Link(
-                static_reference(self.url, values["href"]), self.form.index if self.form else None
+                static_reference(self.url, values["href"]),
+                self.form.index if self.form else None,
+                attributes=values,
             )
             self.links.append(self.anchor)
             self.anchor.span = self.span(
@@ -443,8 +472,9 @@ class SavedMarkup(StaticText):
                 self.labels[(self.label_form_index, self.label_for)] = compact(self.label_parts)
             elif self.form and self.label_parts is not None:
                 for input_field in self.form.fields[self.label_start_field_count :]:
+                    input_field.associated_label = compact(self.label_parts)
                     if not input_field.label:
-                        input_field.label = compact(self.label_parts)
+                        input_field.label = input_field.associated_label
             self.label_parts = None
             self.label_for = None
 
@@ -489,5 +519,7 @@ class SavedMarkup(StaticText):
             for index, input_field in enumerate(form.fields):
                 element_id = self.field_ids.get((form.index, index))
                 key = (form.index, element_id)
-                if key in self.labels and not input_field.label:
-                    input_field.label = self.labels[key]
+                if key in self.labels:
+                    input_field.associated_label = self.labels[key]
+                    if not input_field.label:
+                        input_field.label = self.labels[key]

@@ -1,4 +1,4 @@
-"""Bounded robots rules for the fixed LexRadar product token; fail closed on ambiguity."""
+"""Bounded robots rules for the fixed LexRadar product token; optional recovery of recognizable rules."""
 
 import re
 from dataclasses import dataclass
@@ -61,11 +61,11 @@ class RobotsRules:
         return max(candidates)[1] if candidates else True
 
 
-def parse_robots(body: bytes) -> RobotsRules:
+def parse_robots(body: bytes, *, recover=False) -> RobotsRules:
     if len(body) > MAX_ROBOTS_BYTES:
         raise ValueError("Robots size limit")
-    text = body.decode("utf-8-sig", errors="strict")
-    if any(ord(c) < 32 and c not in "\n\r\t" for c in text):
+    text = body.decode("utf-8-sig", errors="replace" if recover else "strict")
+    if not recover and any(ord(c) < 32 and c not in "\n\r\t" for c in text):
         raise ValueError("Invalid robots control character")
     groups, agents, directives, has_directive = [], [], [], False
     meaningful = False
@@ -83,25 +83,34 @@ def parse_robots(body: bytes) -> RobotsRules:
             continue
         meaningful = True
         if len(line) > 4000 or ":" not in line:
+            if recover:
+                continue
             raise ValueError("Ambiguous robots syntax")
         name, value = (v.strip() for v in line.split(":", 1))
         name = name.casefold()
         if name == "user-agent":
             if not value or not re.fullmatch(r"[a-zA-Z0-9_.* /()-]+", value):
+                if recover:
+                    finish()
+                    continue
                 raise ValueError("Invalid robots agent")
             if has_directive:
                 finish()
             agents.append(value.casefold())
         elif name in {"allow", "disallow", "crawl-delay"}:
             if not agents:
+                if recover:
+                    continue
                 raise ValueError("Robots directive without user-agent")
             has_directive = True
             directives.append((name, value))
             if len(directives) > 10000:
+                if recover:
+                    break
                 raise ValueError("Robots rule limit")
         # Extension directives (e.g. Sitemap) never cause another network request.
     finish()
-    if meaningful and not groups:
+    if meaningful and not groups and not recover:
         raise ValueError("No recognizable robots groups")
     scores = [
         (
@@ -120,16 +129,20 @@ def parse_robots(body: bytes) -> RobotsRules:
     agent = PRODUCT_TOKEN if best else "*" if selected else "none"
     rules, delays = [], []
     # Validate paths/delays only in applicable groups. A malformed rule for another
-    # product cannot invalidate LexRadar's valid policy; selected ambiguity stays closed.
+    # product cannot invalidate LexRadar's valid policy; recovery skips invalid directives.
     for _, directives in selected:
         for name, value in directives:
             if name == "crawl-delay":
                 try:
                     delay = Decimal(value)
                     if not delay.is_finite() or delay < 0 or delay > 86400:
+                        if recover:
+                            continue
                         raise ValueError("Invalid Crawl-delay")
                     delays.append(float(delay))
                 except InvalidOperation as exc:
+                    if recover:
+                        continue
                     raise ValueError("Invalid Crawl-delay") from exc
             elif value:
                 # Every URL path starts with /; adding it before a leading wildcard
@@ -137,6 +150,14 @@ def parse_robots(body: bytes) -> RobotsRules:
                 if value.startswith("*"):
                     value = "/" + value
                 if not value.startswith("/"):
+                    if recover:
+                        continue
                     raise ValueError("Invalid robots path")
-                rules.append((name == "allow", octets(value)))
+                try:
+                    pattern = octets(value)
+                except ValueError:
+                    if recover:
+                        continue
+                    raise
+                rules.append((name == "allow", pattern))
     return RobotsRules(tuple(rules), max(delays, default=0), agent)

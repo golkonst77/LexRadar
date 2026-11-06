@@ -5,7 +5,7 @@ import json
 from pydantic import ValidationError
 
 from .evidence import EvidencePacket
-from .grounding import exact_locations
+from .grounding import check_quote, exact_locations
 from .models import AIAuditorResult, TextGrounding
 
 
@@ -51,8 +51,9 @@ def validate_result(
         ):
             raise ResultError("unsupported_cookie_evidence")
     if review.status == "OK":
-        if any(c.topic.value == "cookies_analytics" and c.status != "reviewed"
-               for c in result.coverage):
+        if any(
+            c.topic.value == "cookies_analytics" and c.status != "reviewed" for c in result.coverage
+        ):
             raise ResultError("cookie_ok_with_insufficient_coverage")
         if any(
             not evidence[r.evidence_id].available
@@ -77,19 +78,22 @@ def validate_result(
                 finding.text_grounding = [TextGrounding(**locations[0])]
                 finding.examination_scope = "text_excerpt"
                 notes.append("exact_fact_quote_bound_to_unique_packet_span")
-        valid_spans = True
-        for q in finding.text_grounding:
-            locations = exact_locations(packet, [q.evidence_id], finding.source, q.exact_quote)
-            if not locations or locations[0]["page"] != q.page:
-                valid_spans = False
+        quote_checks = [check_quote(packet, q) for q in finding.text_grounding]
+        valid_spans = all(c["status"] == "MATCH" for c in quote_checks)
+        for q, check in zip(finding.text_grounding, quote_checks, strict=True):
+            if check["status"] != "MATCH":
+                notes.append(f"{finding.id}: quotation_{check['status'].lower()}")
                 continue
-            span = locations[0]
-            if (q.start is not None and q.start != span["start"]) or (
-                q.end is not None and q.end != span["end"]
-            ):
-                valid_spans = False
-                continue
-            q.start, q.end = span["start"], span["end"]
+            own = [
+                m
+                for m in check["matches"]
+                if m["evidence_id"] == q.evidence_id
+                and m["page"] == q.page
+                and (q.start is None or q.start == m["start"])
+                and (q.end is None or q.end == m["end"])
+            ]
+            if len(own) == 1:
+                q.start, q.end = own[0]["start"], own[0]["end"]
 
         if any(q.evidence_id not in finding.evidence_ids for q in finding.text_grounding):
             raise ResultError("quotation_refers_to_uncited_evidence")
@@ -157,24 +161,19 @@ def validate_result(
                     "Only quotation occurrence checked; interpretation needs human review; "
                     "unread pages excluded"
                 )
+        # Only literal proof of the complete fact can set this legacy flag.
+        # Other valid quotations remain independently visible in the assessment sidecar.
         grounded = (
-            finding.fact_assertion == "present" and finding.examination_scope == "text_excerpt"
-        ) and all(
-            any(
-                q.evidence_id == eid
-                and q.exact_quote.strip()
-                and (finding.fact == q.exact_quote if finding.material or eid in docs else True)
-                and (
-                    q.page is not None and q.exact_quote in docs[eid].page_texts.get(q.page, "")
-                    if eid in docs
-                    else q.page in {None, 1} and q.exact_quote in (pages[eid].text or "")
-                )
-                for q in finding.text_grounding
+            finding.fact_assertion == "present"
+            and finding.examination_scope == "text_excerpt"
+            and any(
+                q.exact_quote == finding.fact and check["status"] == "MATCH"
+                for q, check in zip(finding.text_grounding, quote_checks, strict=True)
             )
-            for eid in finding.evidence_ids
         )
-        grounded = grounded and valid_spans
         finding.fact_supported = bool(grounded)
+        if not valid_spans:
+            finding.limitations.append("Some quotations failed; see independent quote assessments")
         if finding.fact_assertion == "absent":
             finding.search_limitations.extend(
                 [

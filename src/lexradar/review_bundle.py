@@ -8,8 +8,10 @@ import hashlib
 import json
 from pathlib import Path
 
+from .auditors.evidence import load_packet
 from .client_proposal import render_client
 from .commercial_preview import esc, safe_link
+from .policy3 import inspect_policy3
 
 
 def form_groups(forms):
@@ -156,6 +158,9 @@ def build(source: Path, brief: dict, output: Path):
             "визуальную проверку. Текущее состояние сайта не подтверждено.</p></section>"
         )
     limits = "".join(f"<li>{esc(x)}</li>" for x in result["limitations"])
+    # Legacy bundles may have only verified originals, without a Collector text packet.
+    policy_packet = load_packet(dossier, 20_000_000) if "pages" in collection else None
+    result["policy3"] = inspect_policy3(policy_packet)
     proposal = render_client(
         {"name": brief["client"], "url": brief["url"]},
         [
@@ -168,6 +173,7 @@ def build(source: Path, brief: dict, output: Path):
             for f in findings
         ],
         {"date": result["review_date"], **brief.get("commercial", {})},
+        policy_packet=policy_packet,
     )
     inventory = ""
     for i, group in enumerate(groups, 1):
