@@ -623,6 +623,8 @@ class ControlHandler(Pages, BaseHTTPRequestHandler):
         self.send_header("Referrer-Policy", "same-origin")
         script_policy = ("script-src 'nonce-" + self.followup_nonce + "'; "
                          if getattr(self, 'followup_nonce', None) else '')
+        if getattr(self, 'home_nonce', None):
+            script_policy = "script-src 'nonce-" + self.home_nonce + "'; connect-src 'self'; "
         self.send_header("Content-Security-Policy", "default-src 'none'; " + script_policy + "style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
         self.end_headers()
         self.wfile.write(body)

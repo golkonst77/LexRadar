@@ -918,7 +918,7 @@ countHolds();
         self.respond(200, raw, 'application/pdf' if parts[3] == 'pdf' else 'text/html; charset=utf-8')
 
     def home(self):
-        self.refresh_seconds = 60
+        self.refresh_seconds = None
         data, history, counts = self.workflow()
         summary, _ = analysis_summary(data['leads'], history, {domain(r['target']) for r in data.get('reports', []) if r['kind'] == 'audit'})
         crm_remaining = transferred = sent = '—'
@@ -965,7 +965,29 @@ countHolds();
         content += '</div><p>Всего подготовлено — актуальные сохранённые КП по доменам. ' + link('/proposals?view=history', 'Все подготовленные КП / история') + '</p><p>' + crm_description + '</p>'
         mailing = getattr(self.server, 'mailing', None)
         if mailing:
-            content += '<article><h2>Рассылка</h2><a class="cta" href="/mailing">Открыть рассылку</a></article>'
+            content += mailing.summary_html()
+            self.home_nonce = secrets.token_urlsafe(24)
+            content += '''<script nonce="''' + self.home_nonce + '''">
+(() => {
+  const card = document.getElementById('mailing-summary');
+  async function refresh() {
+    try {
+      const response = await fetch('/mailing/summary.json', {cache: 'no-store', signal: AbortSignal.timeout(10000)});
+      if (!response.ok) throw new Error('summary unavailable');
+      const data = await response.json();
+      card.querySelectorAll('[data-mailing]').forEach(node => {
+        node.textContent = data[node.dataset.mailing];
+        if (node.dataset.mailing === 'reserve') node.style.color = data.reserve_color;
+      });
+    } catch (_) {
+      card.querySelector('[data-mailing="freshness"]').textContent = 'Данные устарели: обновление недоступно. Показаны прежние значения.';
+    } finally {
+      setTimeout(refresh, 30000);
+    }
+  }
+  refresh();
+})();
+</script>'''
         jobs = getattr(self.server, 'jobs', None)
         if jobs:
             for row in jobs.list():
@@ -973,7 +995,10 @@ countHolds();
                     content += '<p role="status">Выполняется: ' + link('/jobs/' + row['id'], 'Сбор организаций' if row['kind'] == 'parser-v3' else 'Прогресс проверки сайтов') + '</p>'
         if data.get('warnings'):
             content += '<p role="status">Часть файлов не загружена; показатели неполные. Подробности в служебном разделе.</p>'
-        self.html(content + '<p><a href="/service">Служебное</a></p>')
+        try:
+            self.html(content + '<p><a href="/service">Служебное</a></p>')
+        finally:
+            self.home_nonce = None
 
     def service(self):
         content = '<h1>Служебное</h1><p class="lead">Задания, диагностика и сохранённые технические материалы.</p>'
@@ -997,6 +1022,8 @@ countHolds();
         path = urlsplit(self.path).path
         if path == '/followup':
             self.followup_page()
+        elif path == '/mailing/summary.json':
+            self.respond_json(200, self.server.mailing.summary())
         elif path == '/mailing':
             self.html(self.server.mailing.html(details=True, status=parse_qs(urlsplit(self.path).query).get('status', [''])[0]))
         elif path == '/service':

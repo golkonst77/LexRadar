@@ -221,6 +221,8 @@ class Mailing:
                                    slot=email.get('sendAt'), checked_at=mailer.stamp(datetime.now(UTC)))
                         row['status'] = ('SENT' if email.get('status') == 'Sent' else
                                          'SCHEDULED' if email.get('status') == 'Draft' and email.get('sendAt') else 'QUEUED')
+                        if row['status'] == 'SENT':
+                            row['dateSent'] = email.get('dateSent')
                         row['reason'] = ''
                         if row['status'] == 'SCHEDULED' and mailer.utc(row['slot']) < datetime.now(UTC) - timedelta(minutes=20):
                             row['reason'] = 'Слот прошёл; CRM ещё не подтвердила Sent'
@@ -281,6 +283,8 @@ class Mailing:
                         if check.get('sendAt') != slot or check.get('status') not in ('Draft', 'Sent'):
                             raise ValueError('Планирование не подтверждено')
                         row.update(status='SENT' if check['status'] == 'Sent' else 'SCHEDULED', slot=slot)
+                        if row['status'] == 'SENT':
+                            row['dateSent'] = check.get('dateSent')
                         used.append(mailer.utc(slot))
                     except ValueError as exc:
                         row.update(status=row['status'] if row['status'] in ('SENT', 'SCHEDULED') else 'HOLD', reason=str(exc))
@@ -305,6 +309,97 @@ class Mailing:
     def close(self):
         self.stop.set()
         self.wake.set()
+
+    def summary(self):
+        """Read the atomic saved journal without waiting for cycle's CRM lock."""
+        now = datetime.now(UTC)
+
+        def timestamp(value):
+            if not value:
+                return None
+            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
+
+        def local(value):
+            return value.astimezone(MOSCOW).strftime('%d.%m.%Y %H:%M МСК') if value else '—'
+
+        result = dict(queued='—', sent='—', sent_today='Нет данных', scheduled='—', nearest='—', finish='—',
+                      reserve='—', reserve_status='Прогноз недоступен', reserve_color='#64748b',
+                      checked_at='—', updated_at=local(now), stale=True,
+                      freshness='Данные устарели: сохранённая сверка недоступна.')
+        try:
+            state = json.loads(self.path.read_text())
+            if not isinstance(state, dict) or any(not isinstance(r, dict) or not isinstance(r.get('status'), str)
+                                                  for r in state.values()):
+                return result
+            rows = list(state.values())
+            counts = Counter(r['status'] for r in rows)
+            result.update(queued=counts['QUEUED'] + counts['SCHEDULED'] + counts['WAITING_APPROVAL'],
+                          sent=counts['SENT'])
+            checks = [timestamp(r.get('checked_at')) for r in rows]
+            checked = min(checks) if checks and all(checks) else None
+            stale = (bool(self.error) or checked is None or (now - checked).total_seconds() > 180
+                     or any(t > now for t in checks if t))
+            result.update(checked_at=local(checked), stale=stale,
+                          freshness='Данные устарели или сверка неполна.' if stale else 'Данные актуальны по сохранённой сверке.')
+            slots = [timestamp(r.get('slot')) for r in rows if r['status'] == 'SCHEDULED']
+            slots = [s for s in slots if s and s > now]
+            today = now.astimezone(MOSCOW).date()
+            sent_today = unknown_sent = 0
+            for row in rows:
+                if row['status'] != 'SENT':
+                    continue
+                try:
+                    date = timestamp(row.get('dateSent'))
+                except (ValueError, TypeError, AttributeError):
+                    date = None
+                if date is None or date > now:
+                    unknown_sent += 1
+                elif date.astimezone(MOSCOW).date() == today:
+                    sent_today += 1
+            result['sent_today'] = sent_today
+            if unknown_sent:
+                result.update(stale=True, freshness=result['freshness'] +
+                              f' «Отправлено сегодня»: данные неполны, у {unknown_sent} SENT дата отправки неизвестна или некорректна; они не учтены.')
+            result.update(scheduled=sum(s.astimezone(MOSCOW).date() == today for s in slots),
+                          nearest=local(min(slots)) if slots else '—')
+            valid = slots and len(set(slots)) == len(slots) and all(
+                s.astimezone(MOSCOW).weekday() < 5 and 9 <= s.astimezone(MOSCOW).hour < 19
+                and s.minute in (0, 30) and s.second == 0 and s.microsecond == 0 for s in slots)
+            result['finish'] = local(max(slots)) if valid else 'Не определено'
+            if valid:
+                days = len(slots) / 20
+                result.update(reserve=f'{days:.1f}'.replace('.', ','),
+                              reserve_status='Запас достаточный' if days >= 5 else 'Пора пополнять очередь' if days >= 1 else 'Срочно пополнить очередь',
+                              reserve_color='#16803c' if days >= 5 else '#b77900' if days >= 1 else '#c62828')
+        except (OSError, ValueError, TypeError, AttributeError):
+            result.update(stale=True, freshness='Данные устарели: журнал недоступен или содержит некорректные даты.')
+        return result
+
+    def summary_html(self):
+        summary = self.summary()
+        content = '<article id="mailing-summary"><h2>Рассылка LexRadar</h2>'
+
+        def metric(title, number, subtitle, key, accent=None):
+            style = ('color:' + accent + ';') if accent else ''
+            return ('<div style="background:#f5f7fb;border:1px solid #e6eaf0;'
+                    'border-radius:12px;padding:24px;min-width:0">'
+                    '<div style="font-size:22px;color:#64748b;margin-bottom:10px">' + esc(title) + '</div>'
+                    '<div style="font-size:52px;font-weight:750;line-height:1.2;' + style + '" data-mailing="' + key + '">' + esc(str(number)) + '</div>'
+                    '<div style="font-size:20px;color:#64748b;margin-top:8px">' + subtitle + '</div></div>')
+
+        content += '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0">'
+        content += metric('В очереди', summary['queued'], 'писем к отправке', 'queued')
+        content += metric('Отправится сегодня', summary['scheduled'], 'по графику', 'scheduled')
+        content += metric('Отправлено сегодня', summary['sent_today'], 'по данным CRM', 'sent_today')
+        content += metric('Запас рассылки', summary['reserve'], 'раб. дня · <span data-mailing="reserve_status">' + esc(summary['reserve_status']) + '</span>', 'reserve', summary['reserve_color'])
+        content += '</div>'
+        content += '<div style="border-top:1px solid #e6eaf0;padding-top:14px;margin-top:8px">'
+        content += '<p style="font-weight:600;margin:0 0 6px">Завершение очереди: <span data-mailing="finish">' + esc(summary['finish']) + '</span></p>'
+        content += '<p style="color:#64748b;font-size:20px;margin:0">Ближайшая отправка: <span data-mailing="nearest">' + esc(summary['nearest']) + '</span></p>'
+        content += '</div>'
+        content += '<p style="color:#64748b;font-size:12px">Данные очереди — последняя сохранённая сверка; сегодня — по Москве. <span data-mailing="freshness">' + esc(summary['freshness']) + '</span></p>'
+        return content + '<a href="/mailing">Подробнее</a></article>'
 
     def html(self, details=False, status=''):
         def timestamp(value):
