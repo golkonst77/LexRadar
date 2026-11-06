@@ -11,6 +11,7 @@ from datetime import date
 from pathlib import Path
 
 from . import espo_export as espo
+from .crm_networks import main_domain, network_keys, select_networks
 
 
 def digest(data):
@@ -64,16 +65,19 @@ class IdentityHold(espo.Hold):
     pass
 
 
-def identify(row, root, entry):
+def identify(row, root, entry, *, clinic_account=False):
     """Use saved same-host captures, never audit conclusions or brand similarity."""
-    host = espo.website_domain(row['website'])
+    def domain(url):
+        return espo.website_domain(url).encode('idna').decode('ascii')
+
+    host = domain(row['website'])
     dossier = root / row['dossier']
     path = dossier / 'collection.json'
     owner_names, site_operators, aliases = set(), set(), {}
     evidence, names, identifiers = [], {}, {'inn': set(), 'ogrn': set()}
     if path.exists():
         collection = json.loads(path.read_text())
-        if espo.website_domain(collection.get('target_url')) != host:
+        if domain(collection.get('target_url')) != host:
             raise IdentityHold('Dossier target domain differs from manifest')
         pages = [{k: v for k, v in page.items() if k != 'reviewed_pdf'}
                  for page in collection.get('pages', [])]
@@ -83,7 +87,7 @@ def identify(row, root, entry):
             sha = document.get('reading', {}).get('source_sha256')
             statement = reviewed.get(sha)
             if (not statement or document.get('http_status') != 200 or
-                    espo.website_domain(document.get('final_url')) != host):
+                    domain(document.get('final_url')) != host):
                 continue
             eid = document.get('evidence_id', '')
             if not re.fullmatch(r'document-[0-9]+', eid):
@@ -99,7 +103,7 @@ def identify(row, root, entry):
                           'reading': {'source_sha256': sha}})
         for page in pages:
             url = page.get('final_url', '')
-            if page.get('http_status') != 200 or espo.website_domain(url) != host:
+            if page.get('http_status') != 200 or domain(url) != host:
                 continue
             eid = page.get('evidence_id', '')
             if page.get('reviewed_pdf'):
@@ -160,7 +164,7 @@ def identify(row, root, entry):
                 if not excluded:
                     names[identity_name(name)] = name
                     if (re.search(r'оператор[^.;]{0,80}$', local_before, re.I) and
-                            any(espo.website_domain(u.rstrip('.,);')) == host
+                            any(domain(u.rstrip('.,);')) == host
                                 for u in re.findall(r'https?://[^\s<>]+', text))):
                         site_operators.add(identity_name(name))
                     candidate_text.append((before if index == 0 else '') + name + after)
@@ -182,34 +186,43 @@ def identify(row, root, entry):
                 owner_names.add(full)
             if short in site_operators:
                 site_operators.add(full)
-    if len(names) > 1 or any(len(values) > 1 for values in identifiers.values()):
-        raise IdentityHold('Multiple legal entities/requisites in saved site: ' + '; '.join(names.values()))
-    for field, values in identifiers.items():
-        if row.get(field) and values and str(row[field]) not in values:
-            raise IdentityHold('Manifest ' + field + ' conflicts with saved site')
-    requested = identity_name(row['company_name'])
-    if names:
-        legal, name = next(iter(names.items()))
-        if legal not in owner_names:
-            raise IdentityHold('Legal name mentioned without site owner/operator evidence: ' + name)
-        core = re.sub(r'^(ооо|ао|пао|нао|зао|оао|гбуз|гауз) ', '', legal)
-        documented_operator = (legal in site_operators and
-                               all(len(v) == 1 for v in identifiers.values()) and
-                               not re.search(r'^(?:ооо|ао|пао|нао|зао|оао|гбуз|гауз)\b|филиал|на улице|на ул\.|на проспекте', requested))
-        if requested not in (legal, core) and not documented_operator:
-            raise IdentityHold('Manifest name/branch not linked to legal entity: ' + name)
-        return {'verified': True, 'method': 'saved_site', 'company_name': name, 'legal_name': name,
-                'brand_name': row['company_name'],
-                'evidence': evidence, 'identifiers': {k: sorted(v) for k, v in identifiers.items()}}
-    previous = entry.get('result', {})
-    if previous.get('identity_verified') is True and entry.get('account_id'):
-        if previous.get('identity', {}).get('method') == 'manual':
-            return previous['identity']
-        return {'verified': True, 'method': 'saved_verified_binding',
-                'company_name': row['company_name'], 'account_id': entry['account_id']}
-    if row.get('identity_verified') is True:
-        return {'verified': True, 'method': 'manual', 'company_name': row['company_name']}
-    raise IdentityHold('No legal identity evidence on saved same-domain pages')
+    try:
+        if len(names) > 1 or any(len(values) > 1 for values in identifiers.values()):
+            raise IdentityHold('Multiple legal entities/requisites in saved site: ' + '; '.join(names.values()))
+        for field, values in identifiers.items():
+            if row.get(field) and values and str(row[field]) not in values:
+                raise IdentityHold('Manifest ' + field + ' conflicts with saved site')
+        requested = identity_name(row['company_name'])
+        if names:
+            legal, name = next(iter(names.items()))
+            if legal not in owner_names:
+                raise IdentityHold('Legal name mentioned without site owner/operator evidence: ' + name)
+            core = re.sub(r'^(ооо|ао|пао|нао|зао|оао|гбуз|гауз) ', '', legal)
+            documented_operator = (legal in site_operators and
+                                   all(len(v) == 1 for v in identifiers.values()) and
+                                   not re.search(r'^(?:ооо|ао|пао|нао|зао|оао|гбуз|гауз)\b|филиал|на улице|на ул\.|на проспекте', requested))
+            if requested not in (legal, core) and not documented_operator:
+                raise IdentityHold('Manifest name/branch not linked to legal entity: ' + name)
+            return {'verified': True, 'method': 'saved_site', 'company_name': name, 'legal_name': name,
+                    'brand_name': row['company_name'],
+                    'evidence': evidence, 'identifiers': {k: sorted(v) for k, v in identifiers.items()}}
+        previous = entry.get('result', {})
+        if previous.get('identity_verified') is True and entry.get('account_id'):
+            if previous.get('identity', {}).get('method') == 'manual':
+                return previous['identity']
+            return {'verified': True, 'method': 'saved_verified_binding',
+                    'company_name': row['company_name'], 'account_id': entry['account_id']}
+        if row.get('identity_verified') is True:
+            return {'verified': True, 'method': 'manual', 'company_name': row['company_name']}
+        raise IdentityHold('No legal identity evidence on saved same-domain pages')
+    except IdentityHold as exc:
+        if not clinic_account:
+            raise
+        return {'verified': False, 'method': 'clinic_domain',
+                'company_name': row['company_name'], 'brand_name': row['company_name'],
+                'legal_name': None, 'legal_entity_status': 'unconfirmed',
+                'reason': str(exc), 'evidence': evidence,
+                'identifiers': {}, 'legal_candidates': list(names.values())}
 
 
 class Prepare(espo.Exporter):
@@ -259,7 +272,7 @@ class Prepare(espo.Exporter):
         espo.save(self.journal, self.state)
         return record['id']
 
-    def account(self, row, entry, marker, *, preview=False):
+    def account(self, row, entry, marker, *, preview=False, reconciliation=None):
         host = espo.website_domain(row['website'])
         candidates = self.api.find('Account', 'website', host, operator='contains')
         candidates = [c for c in candidates if espo.website_domain(c.get('website')) == host]
@@ -267,6 +280,18 @@ class Prepare(espo.Exporter):
         saved_id = entry.get('account_id') or entry.get('steps', {}).get('account', {}).get('id')
         if saved_id:
             candidates.append(self.api.get('Account', saved_id))
+        if entry.get('network'):
+            network = entry['network']
+            related = self.api.find('Account', 'website', main_domain(row['website']), operator='contains')
+            for key in network_keys(network):
+                if key.startswith('name:'):
+                    related += self.api.find('Account', 'name', key[5:], operator='contains')
+            for candidate in related:
+                candidate_row = dict(company_name=candidate.get('name', ''), website=candidate.get('website', ''))
+                if network_keys(network) & network_keys(candidate_row):
+                    if espo.website_domain(candidate.get('website')) != host:
+                        raise espo.Hold('DUPLICATE_NETWORK: existing Account ' + candidate['id'])
+                    candidates.append(candidate)
         candidates = {c['id']: c for c in candidates}
         if len(candidates) > 1:
             raise IdentityHold('Ambiguous Account; reconcile verified identity')
@@ -278,6 +303,30 @@ class Prepare(espo.Exporter):
         else:
             if preview:
                 return None
+            if reconciliation is not None:
+                errors = entry.get('result', {}).get('errors', [])
+                fingerprint = digest(json.dumps(entry, sort_keys=True, ensure_ascii=False).encode())
+                if (reconciliation.get('entry_sha256') != fingerprint
+                        or reconciliation.get('account_absent_confirmed') is not True
+                        or not all(isinstance(reconciliation.get(k), str) and reconciliation[k].strip()
+                                   for k in ('operator', 'checked_at', 'evidence'))
+                        or entry.get('result', {}).get('status') != 'HOLD'
+                        or not any('CRM HTTP 400: POST Account;' in e.get('error', '') for e in errors)
+                        or entry.get('steps') != {'account': {'pending': True}}
+                        or any(entry.get(k) or entry.get('result', {}).get(k) for k in
+                               ('account_id', 'document_id', 'email_id', 'draft_error', 'draft_failure'))):
+                    raise espo.Hold('Invalid/stale operator CRM reconciliation; no retry')
+                # Consume approval durably before POST; pending is never cleared.
+                entry.setdefault('account_retry_reconciliations', []).append(dict(reconciliation))
+                espo.save(self.journal, self.state)
+                payload = {'name': row['company_name'], 'website': row['website'],
+                           'description': marker, **self.contacts({'phones': []}, {})}
+                found = self.api.find('Account', 'description', marker)
+                if found:
+                    raise espo.Hold('Existing Account marker; reconcile before retry')
+                response = self.api.request('POST', 'Account', payload)
+                entry['steps']['account']['id'] = response['id']
+                espo.save(self.journal, self.state)
             account_id = self.ensure(entry, 'account', 'Account', {
                 'name': row['company_name'], 'website': row['website'], 'description': marker,
                 **self.contacts({'phones': []}, {})}, 'description')
@@ -333,7 +382,7 @@ class Prepare(espo.Exporter):
         return {'document_id': document, 'attachment_id': attachment}
 
 
-def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accounts_only=False, prepare_drafts=False):
+def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accounts_only=False, prepare_drafts=False, account_reconciliations=None):
     results = []
     journal.parent.mkdir(parents=True, exist_ok=True)
     with journal.with_suffix('.lock').open('a') as lock:
@@ -346,6 +395,12 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accoun
                     raise espo.Hold('Row must be an object')
                 if sum(isinstance(r, dict) and r.get('id') == row.get('id') for r in rows) != 1:
                     raise espo.Hold('Duplicate manifest id')
+                if accounts_only or prepare_drafts:
+                    decision = select_networks([r for r in rows if isinstance(r, dict)], state)[row['id']]
+                    if decision['status'] == 'DUPLICATE_NETWORK':
+                        result.update(decision)
+                        result['errors'].append({'error': 'Network representative: ' + decision['representative_name']})
+                        continue
                 items = materials(row, root)
                 result['materials'] = [{k: v for k, v in item.items() if k != 'data'} for item in items]
                 result['identity_verified'] = row.get('identity_verified') is True
@@ -353,13 +408,23 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accoun
                            'materials': result['materials'], 'letter': row['letter_text']}
                 key = digest(json.dumps(binding, sort_keys=True, ensure_ascii=False).encode())
                 entry = state.get(row['id'], {})
-                if entry and entry.get('binding') != key:
+                changed = bool(entry and entry.get('binding') != key)
+                reprepare = (changed and (accounts_only or prepare_drafts)
+                             and row['id'].startswith('web-account-')
+                             and row['id'] + ':draft' not in state
+                             and bool(entry.get('account_id'))
+                             and entry.get('steps') == {'account': {'id': entry['account_id']}}
+                             and not entry.get('draft_error'))
+                if changed and not reprepare:
                     raise espo.Hold('Manifest changed under saved ID; reconcile journal')
                 try:
-                    result['identity'] = identify(row, root, entry)
+                    result['identity'] = identify(row, root, {} if reprepare else entry,
+                                                  clinic_account=accounts_only or prepare_drafts)
                 except (OSError, ValueError, KeyError, TypeError):
                     raise IdentityHold('Saved identity evidence missing, unreadable or malformed') from None
-                result['identity_verified'] = True
+                result['identity_verified'] = result['identity']['verified']
+                if not result['identity_verified']:
+                    result['warnings'].append({'error': 'Legal entity unconfirmed; clinic Account only'})
                 if not confirm:
                     if check_crm:
                         if api is None:
@@ -399,7 +464,7 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accoun
                     if (saved_draft and not (resumable or binding_failure)
                             and previous.get('status') not in ('DRAFT_VERIFIED', 'DOCUMENT_VERIFIED_NO_DRAFT')):
                         raise espo.Hold('Legacy draft attempt has no durable recovery protocol; сверьте Document, Email и вложения в CRM, повтор POST заблокирован')
-                    if (previous.get('status') not in ('ACCOUNT_VERIFIED', 'DRAFT_VERIFIED', 'DOCUMENT_VERIFIED_NO_DRAFT') and not (binding_failure or resumable)) or not entry.get('account_id'):
+                    if (previous.get('status') not in ('ACCOUNT_VERIFIED', 'DRAFT_VERIFIED', 'DOCUMENT_VERIFIED_NO_DRAFT') and not (binding_failure or resumable or reprepare)) or not entry.get('account_id'):
                         raise espo.Hold('ACCOUNT_VERIFIED required before preparing draft')
                     if api is None:
                         api = espo.API()
@@ -412,15 +477,23 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accoun
                     if (identity_name(account_record.get('name', '')) != identity_name(verified_row['company_name'])
                             or espo.website_domain(account_record.get('website')) != binding['host']):
                         raise IdentityHold('Account identity conflict; no duplicate or reassignment allowed')
+                    if reprepare:
+                        entry.setdefault('previous_bindings', []).append(entry['binding'])
+                        entry['binding'] = key
                     verified_row['company_name'] = account_record['name']
                     result['account_id'] = account
+                    known_email = saved_draft.get('steps', {}).get('email', {}).get('id')
+                    for email in ([] if saved_draft.get('steps', {}).get('email') else api.find('Email', 'parentId', account)):
+                        if email.get('parentType') == 'Account' and email.get('status') in {'Draft', 'Sent'} and email['id'] != known_email:
+                            raise espo.Hold('Existing Account Email; reconcile before preparing another approach')
                     # Reuse the existing exporter and its durable steps in the same locked journal.
                     draft_id = row['id'] + ':draft'
                     draft = state.setdefault(draft_id, {'sha256': items[0]['sha256'], 'steps': {},
                                                        'account_id': account})
                     if draft.get('account_id') != account:
                         raise espo.Hold('Draft Account binding changed')
-                    export_row = {**verified_row, 'id': draft_id, 'export_approved': True}
+                    export_row = {**verified_row, 'id': draft_id, 'export_approved': True,
+                                  'brand_name': row['company_name']}
                     espo.validate(export_row, root)
                     saved_binding = draft.get('binding')
                     export_binding = {k: export_row.get(k, '') for k in ('company_name', 'website', 'email')}
@@ -447,11 +520,23 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accoun
                         raise espo.Hold('Required CRM schema unavailable: ' + kind)
                 entry = state.setdefault(row['id'], {'binding': key, 'steps': {},
                                                     'publish_date': date.today().isoformat()})
+                if accounts_only:
+                    entry.setdefault('network', {k: row.get(k, '') for k in ('company_name', 'website', 'email')})
                 worker = Prepare(api, journal, state, definitions)
                 marker = 'LexRadar-REVIEW-' + digest((row['id'] + key).encode())
-                account = worker.account({**row, 'company_name': result['identity']['company_name']}, entry, marker)
+                if not result['identity_verified']:
+                    marker += '\nЮридическое лицо не подтверждено. Реквизиты не установлены.'
+                reconciliation = (account_reconciliations or {}).get(row['id'])
+                if reconciliation is not None and (changed or row['id'] + ':draft' in state
+                                                    or not accounts_only or prepare_drafts):
+                    raise espo.Hold('Account retry requires unchanged binding, accounts_only and no draft')
+                account = worker.account({**row, 'company_name': result['identity']['company_name']}, entry, marker,
+                                         reconciliation=reconciliation)
                 result['account_id'] = account
                 if accounts_only:
+                    if reprepare:
+                        entry.setdefault('previous_bindings', []).append(entry['binding'])
+                        entry['binding'] = key
                     entry.setdefault('draft_contact', row.get('email', ''))
                     result['status'] = 'ACCOUNT_VERIFIED'
                     continue
@@ -506,7 +591,7 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accoun
             except (OSError, ValueError, KeyError, TypeError):
                 result['errors'].append({'error': 'Local/API failure; inspect journal before retry'})
             finally:
-                if confirm and isinstance(row, dict) and row.get('id') in state:
+                if confirm and result['status'] != 'DUPLICATE_NETWORK' and isinstance(row, dict) and row.get('id') in state:
                     if prepare_drafts:
                         draft = state.get(row['id'] + ':draft', {})
                         if draft.get('account_id'):
@@ -527,6 +612,7 @@ def run(rows, root, journal, *, confirm=False, api=None, check_crm=False, accoun
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('manifest', type=Path)
+    parser.add_argument('--account-reconciliation', type=Path, help='Operator confirmation JSON keyed by manifest ID; Account-only retry')
     parser.add_argument('--check-crm', action='store_true', help='Read-only Account identity check during preview')
     parser.add_argument('--confirm-prepare-crm', action='store_true')
     parser.add_argument('--journal', type=Path, default=Path.home() / '.local/state/lexradar/crm-prepare.json')
@@ -534,7 +620,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         results = run(espo.read_manifest(args.manifest), args.manifest.resolve().parent,
-                      args.journal, confirm=args.confirm_prepare_crm, check_crm=args.check_crm)
+                      args.journal, confirm=args.confirm_prepare_crm, check_crm=args.check_crm,
+                      accounts_only=bool(args.account_reconciliation),
+                      account_reconciliations=json.loads(args.account_reconciliation.read_text()) if args.account_reconciliation else None)
         espo.save(args.output, results)
         print(json.dumps({'mode': 'CRM_PREPARE_ONLY', 'rows': len(results),
                           'statuses': dict(Counter(r['status'] for r in results)),
