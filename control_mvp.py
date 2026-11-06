@@ -965,7 +965,7 @@ countHolds();
         content += '</div><p>Всего подготовлено — актуальные сохранённые КП по доменам. ' + link('/proposals?view=history', 'Все подготовленные КП / история') + '</p><p>' + crm_description + '</p>'
         mailing = getattr(self.server, 'mailing', None)
         if mailing:
-            content += mailing.html()
+            content += '<article><h2>Рассылка</h2><a class="cta" href="/mailing">Открыть рассылку</a></article>'
         jobs = getattr(self.server, 'jobs', None)
         if jobs:
             for row in jobs.list():
