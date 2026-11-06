@@ -468,6 +468,8 @@ class Pages:
         if len(self.headers.get_all('Host', [])) > 1:
             return False
         host = self.headers.get('Host', '')
+        if host == 'lr.prostoburo.com':
+            return True
         if not host:
             return self.request_version == 'HTTP/1.0'
         if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in host) or '?' in host or '#' in host:
@@ -482,6 +484,8 @@ class Pages:
 
     def origin_rejection(self):
         origins = self.headers.get_all('Origin', [])
+        if self.headers.get('Host', '') == 'lr.prostoburo.com':
+            return None if origins == ['https://lr.prostoburo.com'] else 'external_origin_required'
         if not origins:
             return None  # Existing policy: CSRF and confirmation still required.
         if len(origins) != 1:
