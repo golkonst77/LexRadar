@@ -6,12 +6,17 @@ from test_offline_mvp_048 import dossier, no_network, ready  # noqa: F401
 
 from lexradar.auditors.models import ProviderDiagnostics, RequestLog, Usage
 from lexradar.auditors.orchestrator import analyze
+from lexradar.auditors.prompts import messages_for as pair_messages
 from lexradar.auditors.provider import HTTPReply, ProviderError, ProviderReply
+from lexradar.offline_mvp import profile as pair_profile
 from lexradar.single_auditor import DeepSeekAdapter, messages_for, profile
 
 
+@pytest.mark.parametrize("single", [True, False])
 @pytest.mark.parametrize("phase", ["open", "read"])
-def test_safe_diagnostics_and_retry(ready, tmp_path, phase):  # noqa: F811
+def test_safe_diagnostics_and_retry(ready, tmp_path, phase, single):  # noqa: F811
+    config = (profile() if single else pair_profile()).model_copy(update={"retries": 1})
+
     class Provider:
         calls = 0
 
@@ -29,17 +34,20 @@ def test_safe_diagnostics_and_retry(ready, tmp_path, phase):  # noqa: F811
                         "headers": "secret-person-payload",
                     },
                 ) from ValueError("secret-person-payload")
-            return ProviderReply(json.dumps(ready[1]["A"]), Usage())
+            label = "A" if settings.model == config.auditor_a.model else "B"
+            return ProviderReply(json.dumps(ready[1][label]), Usage())
 
+    provider = Provider()
     report = analyze(
         ready[0],
         tmp_path / "out",
-        profile(),
-        provider=Provider(),
-        message_builder=messages_for,
+        config,
+        provider=provider,
+        message_builder=messages_for if single else pair_messages,
         sleep=lambda _: None,
     )
-    assert report.completed
+    assert report.completed is (not single)
+    assert provider.calls == len(report.logs) == (1 if single else 3)
     assert not report.automatic_send_allowed
     for records in [
         json.loads((tmp_path / "out/analysis.json").read_text())["logs"],
@@ -51,7 +59,8 @@ def test_safe_diagnostics_and_retry(ready, tmp_path, phase):  # noqa: F811
             "http_status": 200,
             "received_bytes": 17,
         }
-        assert records[1]["provider_diagnostics"] is None
+        assert len(records) == (1 if single else 3)
+        assert all(record["provider_diagnostics"] is None for record in records[1:])
         assert "secret-person-payload" not in json.dumps(records)
     old = report.logs[0].model_dump()
     del old["provider_diagnostics"]
@@ -86,10 +95,10 @@ def test_timeout_profile_and_transport(monkeypatch, timeout):
     assert adapter.config.max_input_bytes == profile().max_input_bytes == 200_000
     with pytest.raises(ProviderError, match="http_429"):
         adapter.complete(adapter.config.auditor_a, [{"role": "user", "content": "fixture"}])
-    adapter.config.retries = 0
+    adapter.config.retries = 1
     with pytest.raises(ProviderError, match="unexpected_single"):
         adapter.complete(adapter.config.auditor_a, [])
-    assert profile().timeout_seconds == 45
+    assert profile().timeout_seconds == 120
     with pytest.raises(ValueError):
         profile(timeout_seconds=60)
 
@@ -98,10 +107,14 @@ def test_mvp_120_and_budget_retry(ready, tmp_path):  # noqa: F811
     from test_auditors import approve_packet
 
     class Broken:
+        calls = 0
+
         def complete(self, settings, messages):
+            self.calls += 1
             raise ProviderError("transport_error", retryable=True)
 
     config = profile(timeout_seconds=120)
+    provider = Broken()
     report = analyze(
         ready[0],
         tmp_path / "paid-fake",
@@ -109,12 +122,14 @@ def test_mvp_120_and_budget_retry(ready, tmp_path):  # noqa: F811
         mode="openrouter",
         allow_external_transfer=True,
         packet_approval=approve_packet(ready[0]),
-        provider=Broken(),
+        provider=provider,
         message_builder=messages_for,
         mvp_no_screening=True,
         sleep=lambda _: None,
     )
-    assert len(report.logs) == 2
+    assert provider.calls == len(report.logs) == 1
+    assert not report.completed
+    assert report.logs[0].status == "transport_error"
     assert report.budget_charged_usd <= report.budget_limit_usd == Decimal("0.50")
     assert not report.automatic_send_allowed
     run = json.loads((tmp_path / "paid-fake/run.json").read_text())

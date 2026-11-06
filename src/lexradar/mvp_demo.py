@@ -93,8 +93,26 @@ def create_inputs(root):
         response = {
             "auditor": "A",
             "findings": [] if index == 2 else [finding],
+            "cookie_analytics_review": {
+                "status": "NOT_VERIFIED",
+                "rationale": (
+                    "DEMO: синтетический фрагмент не содержит сведений о cookie и аналитике"
+                ),
+                "evidence": [],
+                "limitations": ["Не проверены баннер, политика, JavaScript и сетевые запросы"],
+            },
             "coverage": [
-                {"topic": topic.value, "status": "reviewed", "limitations": []}
+                {
+                    "topic": topic.value,
+                    "status": (
+                        "insufficient_evidence" if topic.value == "cookies_analytics"
+                        else "reviewed"
+                    ),
+                    "limitations": (
+                        ["DEMO: нет сведений о cookie и аналитике"]
+                        if topic.value == "cookies_analytics" else []
+                    ),
+                }
                 for topic in sorted(REQUIRED_TOPICS)
             ],
             "limitations": ["DEMO"],

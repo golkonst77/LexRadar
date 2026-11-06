@@ -37,7 +37,7 @@ def test_packet_prompt_budget():
     messages, version, digest = messages_for("A", packet)
     assert version == "single-a-v2" and len(digest) == 64
     assert messages[1]["content"] == original_messages("A", packet)[0][1]["content"]
-    assert original_messages("A", packet)[1] == "single-a-v1"
+    assert original_messages("A", packet)[1] == "single-a-v3-cookie"
     assert config.retries == 0 and config.timeout_seconds == 120
     assert config.max_budget_usd == Decimal("0.10")
     assert Budget(config.max_budget_usd).reserve(config.auditor_a, messages) < Decimal("0.10")

@@ -684,6 +684,16 @@ def test_streaming_total_budget(server, case):
     assert fetcher.received <= 1025  # One extra byte detects exceeding the limit.
 
 
+def test_https_host_omits_default_port(monkeypatch):
+    from lexradar.collector.network import PinnedHTTPS
+
+    connection = PinnedHTTPS("clinic.example", 443, "8.8.8.8", 1)
+    sent = []
+    monkeypatch.setattr(connection, "send", sent.append)
+    connection.request("GET", "/")
+    assert b"Host: clinic.example\r\n" in b"".join(sent)
+
+
 def test_tls_keeps_hostname_verification(monkeypatch):
     from unittest.mock import MagicMock
 
@@ -696,3 +706,21 @@ def test_tls_keeps_hostname_verification(monkeypatch):
     connection = network.PinnedHTTPS("clinic.example", 443, "8.8.8.8", 1)
     connection.connect()
     context.wrap_socket.assert_called_once_with(transport_socket, server_hostname="clinic.example")
+
+
+def test_image_link_does_not_consume_page_budget(server, tmp_path, monkeypatch):
+    url, policy, requests = server
+    original = Path.read_bytes
+    html = (b'<html><body><a href="/a.JPG?download=1">Image</a>'
+            b'<a href="/contact">Contact</a></body></html>')
+
+    def fixture_bytes(path):
+        return html if path == Path("tests/fixtures/collector/index.html") else original(path)
+
+    monkeypatch.setattr(Path, "read_bytes", fixture_bytes)
+    limits = Limits(max_pages=2)
+    result = collect(url, tmp_path / "image-links", limits,
+                     fetcher=Fetcher(limits, policy), static_only=True)
+    assert len(result.pages) == 2
+    assert str(result.pages[1].requested_url).endswith("/contact")
+    assert "/a.JPG?download=1" not in requests

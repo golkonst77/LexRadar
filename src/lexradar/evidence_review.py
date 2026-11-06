@@ -8,7 +8,11 @@ from .single_auditor import checked_report, commercial
 
 def review(report, packet, directory, *, qualification=None, new_ai_calls=0, new_cost_usd="0"):
     """VERIFIED describes eligibility under the supplied decision, not AI agreement."""
+    from .finding_assessment import evaluate
+
     checked = checked_report(report, packet)
+    independent = evaluate(checked.runs[0].result, packet, checked)
+    independent_by_id = {row["id"]: row for row in independent["findings"]}
     allowed, reasons = qualification if qualification is not None else commercial(checked, packet)
     evidence = {e.id: e for e in packet.data.evidence}
     pages = {p.evidence_id: p for p in packet.data.pages}
@@ -70,6 +74,9 @@ def review(report, packet, directory, *, qualification=None, new_ai_calls=0, new
         entries.append(
             {
                 "id": finding.id,
+                "fact_status": independent_by_id[finding.id]["fact_status"],
+                "independent_quotes": independent_by_id[finding.id]["quotes"],
+                "classification": independent_by_id[finding.id]["classification"],
                 "assessment": status,
                 "reason": reason,
                 "fact": finding.fact,

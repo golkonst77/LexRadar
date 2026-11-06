@@ -14,6 +14,13 @@ from lexradar.offline_mvp import FakeOpenRouterProposal, bind_review, review_mat
 from lexradar.single_auditor import MODEL, DeepSeekAdapter, messages_for, profile, run
 
 
+@pytest.fixture(autouse=True)
+def current_cookie_response(ready):
+    ready[1]["A"]["cookie_analytics_review"] = {
+        "status": "NOT_VERIFIED", "rationale": "Synthetic fixture; cookie behavior not examined"
+    }
+
+
 def test_one_finding_go_without_qwen(ready, tmp_path):
     root, responses = ready
     a = responses["A"]
@@ -25,7 +32,7 @@ def test_one_finding_go_without_qwen(ready, tmp_path):
     class Provider:
         def complete(self, settings, messages):
             calls.append(settings.model)
-            assert "single-a-v1" in messages[0]["content"]
+            assert "cookie_analytics_review" in messages[0]["content"]
             return ProviderReply(json.dumps(a), Usage())
 
     result = run(root, tmp_path / "go", a, provider=Provider())
@@ -106,7 +113,7 @@ def test_retry_limit(ready, tmp_path):
         message_builder=messages_for,
         sleep=lambda _: None,
     )
-    assert provider.calls == 2
+    assert provider.calls == 1
     assert not report.completed and len(report.runs) == 1
 
 
@@ -125,10 +132,10 @@ def test_real_adapter_fake_transport(ready, monkeypatch, failure):
         def post(self, payload, key, timeout, max_bytes):
             data = json.loads(payload)
             assert data["model"] == MODEL
-            assert data["max_tokens"] == 4000
+            assert data["max_tokens"] == 28000
             assert not data["provider"]["allow_fallbacks"]
             assert data["provider"]["max_price"] == {"prompt": 1, "completion": 2}
-            assert timeout == 45 and max_bytes == 500000
+            assert timeout == 120 and max_bytes == 500000
             body = {
                 "model": MODEL if failure != "model" else "qwen/fallback",
                 "choices": [
@@ -137,7 +144,7 @@ def test_real_adapter_fake_transport(ready, monkeypatch, failure):
                         "message": {"content": json.dumps(ready[1]["A"])},
                     }
                 ],
-                "usage": {"completion_tokens": 4001 if failure == "tokens" else 100},
+                "usage": {"completion_tokens": 28001 if failure == "tokens" else 100},
             }
             return HTTPReply(
                 429 if failure == "http" else 200,

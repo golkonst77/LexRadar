@@ -9,6 +9,7 @@ import socket
 import ssl
 import threading
 import time
+import zlib
 from dataclasses import dataclass
 from urllib.parse import quote, urldefrag, urljoin, urlsplit, urlunsplit
 
@@ -18,6 +19,12 @@ from .robots import USER_AGENT
 
 class CollectionError(Exception):
     pass
+
+
+class CompatibilityError(CollectionError):
+    def __init__(self, url):
+        super().__init__("Encoded response unsupported")
+        self.url = url
 
 
 def canonical_url(url: str) -> str:
@@ -109,6 +116,8 @@ class PinnedHTTP(http.client.HTTPConnection):
 
 
 class PinnedHTTPS(PinnedHTTP):
+    default_port = http.client.HTTPS_PORT
+
     def connect(self):
         super().connect()
         self.sock = ssl.create_default_context().wrap_socket(self.sock, server_hostname=self.host)
@@ -120,6 +129,8 @@ class Response:
     status: int
     content_type: str
     body: bytes
+    last_modified: str | None = None
+    etag: str | None = None
 
 
 class Fetcher:
@@ -127,8 +138,36 @@ class Fetcher:
         self.limits = limits
         self.policy = policy or AddressPolicy(limits.timeout_seconds)
         self.received = 0
+        self.browser_playwright = None
 
-    def get(
+    def get(self, url, allowed_origin, **kwargs) -> Response:
+        redirects = 0
+        on_event = kwargs.get("on_event")
+
+        def event(name, target, status=None):
+            nonlocal redirects
+            if name == "redirect_target":
+                redirects += 1
+            if on_event:
+                on_event(name, target, status)
+
+        kwargs["on_event"] = event
+        try:
+            response = self._get(url, allowed_origin, **kwargs)
+        except CompatibilityError as exc:
+            url = exc.url
+        else:
+            if response.status not in {406, 415, 505}:
+                return response
+            url = response.url
+        from .browser_transport import browser_get
+
+        if on_event:
+            on_event("browser_fallback", url)
+        return browser_get(self, url, allowed_origin,
+                           max_redirects=self.limits.max_redirects - redirects, **kwargs)
+
+    def _get(
         self,
         url: str,
         allowed_origin: tuple[str, str, int],
@@ -136,6 +175,7 @@ class Fetcher:
         before_request=None,
         on_event=None,
         allow_redirects=True,
+        allow_cross_origin=False,
         max_file_bytes=None,
     ) -> Response:
         if self.received >= self.limits.max_total_bytes:
@@ -144,7 +184,7 @@ class Fetcher:
         deadline = time.monotonic() + self.limits.timeout_seconds
         current = canonical_url(url)
         for step in range(self.limits.max_redirects + 1):
-            if origin(current) != allowed_origin:
+            if origin(current) != allowed_origin and not allow_cross_origin:
                 if on_event:
                     on_event("navigation_blocked", current)
                 raise CollectionError("Cross-origin navigation blocked")
@@ -186,7 +226,8 @@ class Fetcher:
                     urlunsplit(("", "", p.path or "/", p.query, "")),
                     headers={
                         "User-Agent": USER_AGENT,
-                        "Accept-Encoding": "identity",
+                        "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8",
+                        "Accept-Encoding": "gzip, deflate, identity",
                     },
                 )
                 if on_event:
@@ -204,8 +245,15 @@ class Fetcher:
                     if on_event:
                         on_event("redirect_target", current)
                     continue
-                if response.getheader("Content-Encoding", "identity").lower() != "identity":
-                    raise CollectionError("Encoded response unsupported")
+                if response.status >= 400:
+                    # Preserve access/error status even when the error body is encoded or malformed.
+                    return Response(
+                        current, response.status, response.getheader("Content-Type", ""), b"",
+                        response.getheader("Last-Modified"), response.getheader("ETag"),
+                    )
+                encoding = response.getheader("Content-Encoding", "identity").strip().lower()
+                if encoding not in {"identity", "gzip", "deflate"}:
+                    raise CompatibilityError(current)
                 lengths = response.headers.get_all("Content-Length", [])
                 transfer = response.getheader("Transfer-Encoding")
                 if len(lengths) > 1 or (lengths and transfer):
@@ -245,8 +293,24 @@ class Fetcher:
                         raise CollectionError("Total download limit exceeded")
                 if declared and len(body) != int(declared):
                     raise CollectionError("Incomplete response body")
+                if encoding != "identity":
+                    decoder = zlib.decompressobj(31 if encoding == "gzip" else zlib.MAX_WBITS)
+                    decoded_limit = min(
+                        file_limit, self.limits.max_total_bytes - self.received + len(body)
+                    )
+                    try:
+                        decoded = decoder.decompress(body, decoded_limit + 1)
+                    except zlib.error as exc:
+                        raise CompatibilityError(current) from exc
+                    if len(decoded) > decoded_limit or decoder.unconsumed_tail:
+                        raise CollectionError("Decoded response size limit exceeded")
+                    if not decoder.eof or decoder.unused_data:
+                        raise CompatibilityError(current)
+                    self.received += max(0, len(decoded) - len(body))
+                    body = decoded
                 return Response(
-                    current, response.status, response.getheader("Content-Type", ""), bytes(body)
+                    current, response.status, response.getheader("Content-Type", ""), bytes(body),
+                    response.getheader("Last-Modified"), response.getheader("ETag"),
                 )
             except (OSError, ValueError, http.client.HTTPException) as exc:
                 raise CollectionError(f"Fetch failed: {type(exc).__name__}") from exc

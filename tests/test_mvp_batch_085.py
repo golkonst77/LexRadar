@@ -19,6 +19,7 @@ from lexradar.mvp_demo import create_inputs
 
 
 def mask_fields(text):
+    text = re.sub(r'(?<=<div class="alert">).*?(?=<p>Жалоба пациента)', "FINES", text, flags=re.S)
     text = re.sub(r'(?<=contenteditable="true">).*?(?=</span>)', "FIELD", text)
     return re.sub(
         r'(?<=<ol class="findings editable" contenteditable="true">).*?(?=</ol>)',
@@ -115,14 +116,19 @@ def exercise(root):
     for i, row in enumerate(state["rows"]):
         assert row["ai_calls"] == 0 and row["cost_usd"] == "0"
         directory = output / row["directory"]
-        assert (directory / "analysis/analysis.json").is_file()
+        report = json.loads((directory / "analysis/analysis.json").read_text())
+        cookie = report["runs"][0]["result"]["cookie_analytics_review"]
+        assert cookie["status"] == "NOT_VERIFIED"
+        assert cookie["rationale"] and cookie["limitations"]
+        assert cookie["evidence"] == []
         assert (directory / "evidence-review.json").is_file()
         if i >= 8:
             assert row["qualification"] == "HOLD" and not row.get("proposal")
             assert not (directory / "proposal.html").exists()
             continue
         page = (output / row["proposal"]).read_text()
-        assert mask_fields(page) == mask_fields(before.decode())
+        expected = before.decode().replace("LexRadar · КП v2.2", "LexRadar · КП v2.4", 1)
+        assert mask_fields(page) == mask_fields(expected)
         assert row["input"]["company_name"] in page
         assert row["url"] in page and row["input"]["date"] in page
         assert f"УНИКАЛЬНЫЙ_ФАКТ_{i:02d}" in page

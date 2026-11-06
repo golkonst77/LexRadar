@@ -2,13 +2,14 @@ import csv
 import json
 import socket
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 
 from lexradar.auditors.budget import Budget, BudgetExceeded
 from lexradar.auditors.evidence import load_packet
 from lexradar.auditors.provider import OpenRouterTransport
-from lexradar.mvp_batch import read_csv, run
+from lexradar.mvp_batch import collection_skip_reason, main, read_csv, run
 from lexradar.mvp_demo import create_inputs
 from lexradar.single_auditor import MODEL, messages_for, profile
 
@@ -63,6 +64,88 @@ def test_bad_headers(tmp_path, content):
     path.write_text(content)
     with pytest.raises(ValueError):
         read_csv(path)
+
+
+def test_collection_without_artifacts_keeps_exact_skip_reason():
+    collection = SimpleNamespace(
+        evidence=[
+            SimpleNamespace(
+                available=False,
+                collection_errors=[
+                    "robots_unavailable: Robots HTTP 403; no permission established"
+                ],
+            ),
+            SimpleNamespace(
+                available=False,
+                collection_errors=[
+                    "robots_unavailable: Robots HTTP 403; no permission established"
+                ],
+            ),
+        ]
+    )
+    assert (
+        collection_skip_reason(collection)
+        == "robots_unavailable: Robots HTTP 403; no permission established"
+    )
+
+
+def test_prepare_marks_closed_robots_policy_as_skipped(monkeypatch, tmp_path):
+    import lexradar.collector
+
+    csv_path = tmp_path / "sites.csv"
+    csv_path.write_text("url,company_name,email\nhttps://closed.example/,Clinic,\n")
+    monkeypatch.setattr(
+        lexradar.collector,
+        "collect",
+        lambda *args, **kwargs: SimpleNamespace(
+            evidence=[
+                SimpleNamespace(
+                    available=False,
+                    collection_errors=[
+                        "robots_unavailable: Robots HTTP 403; no permission established"
+                    ],
+                )
+            ]
+        ),
+    )
+    state = run(
+        csv_path,
+        tmp_path / "prepare",
+        mode="prepare",
+        max_sites=10,
+        allow_site_collection=True,
+    )
+    assert state["rows"][0]["status"] == "SKIPPED"
+    assert state["rows"][0]["reason"] == (
+        "robots_unavailable: Robots HTTP 403; no permission established"
+    )
+
+
+def test_cli_prints_batch_counts_reasons_and_report_paths(monkeypatch, tmp_path, capsys):
+    import lexradar.mvp_batch as batch
+
+    state = {
+        "summary": {"SUCCESS": 1, "SKIPPED": 1, "ERROR": 1},
+        "rows": [
+            {
+                "status": "SUCCESS",
+                "directory": "sites/one",
+                "signals": 2,
+                "proposal": "sites/one/proposal.html",
+            },
+            {"status": "SKIPPED", "reason": "robots_unavailable: Robots HTTP 403"},
+            {"status": "ERROR", "directory": "sites/two", "reason": "unexpected"},
+        ],
+    }
+    monkeypatch.setattr(batch, "run", lambda *args, **kwargs: state)
+    main(["input.csv", "--output", str(tmp_path / "batch"), "--max-sites", "10"])
+    output = capsys.readouterr().out
+    assert (
+        "Выбрано: 2; успешно обследовано: 1; "
+        "пропущено: 1; ошибок: 1" in output
+    )
+    assert "robots_unavailable: Robots HTTP 403" in output
+    assert "report.md" in output and "results.csv" in output and "manifest.json" in output
 
 
 def test_demo_end_to_end(inputs, tmp_path):
@@ -140,6 +223,22 @@ def test_limit(inputs, tmp_path):
     assert state["summary"] == {"SUCCESS": 1, "SKIPPED": 4}
 
 
+def test_resume_counts_access_skip_against_site_limit(inputs, tmp_path):
+    root = tmp_path / "skip-resume"
+    state = run(inputs, root, max_sites=1)
+    first = state["rows"][0]
+    first.update(status="SKIPPED", reason="robots_unavailable: Robots HTTP 403")
+    (root / "manifest.json").write_text(json.dumps(state))
+    resumed = run(inputs, root, max_sites=1, resume=True)
+    assert len([row for row in resumed["rows"] if row.get("directory")]) == 1
+    assert resumed["rows"][0]["status"] == "SKIPPED"
+    assert all(not row.get("directory") for row in resumed["rows"][1:])
+    assert all(
+        row.get("reason") in {"site_limit", "duplicate_url"}
+        for row in resumed["rows"][1:]
+    )
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [
@@ -186,7 +285,7 @@ def test_wrong_packet_approval_no_key_or_transport(inputs, tmp_path):
 
 def test_model_and_budget(inputs):
     config = profile()
-    assert MODEL == "deepseek/deepseek-chat" and config.single_auditor
+    assert MODEL == "openai/gpt-5-mini" and config.single_auditor
     assert config.max_budget_usd == Decimal("0.50")
     packet = load_packet(inputs.parent / "dossier-0", config.max_input_bytes)
     messages, _, _ = messages_for("A", packet)

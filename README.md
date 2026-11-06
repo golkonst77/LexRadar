@@ -162,6 +162,28 @@ Open `review-queue.html` locally. `priority_review` is a research priority, not 
 `low_priority` is not a clean-site certification. Every row remains HOLD/internal.
 The initial narrow ranking needs real first-pass recall validation before launch.
 
+## Экспорт готовых КП в EspoCRM
+
+Отдельная команда, без изменения планировщика и аудиторского HOLD:
+
+```bash
+# Preview: локальные проверки, без обращений к CRM
+./espo-export /absolute/path/approved-manifest.csv
+
+# Только создание Draft; отправки нет
+./espo-export /absolute/path/approved-manifest.csv --template /absolute/path/approved-email.json --confirm-create-drafts
+```
+
+Манифест CSV/JSON: `id, company_name, website, email, pdf_path,
+recipient_verified=true, export_approved=true`. PDF уже должен существовать.
+Журнал: `~/.local/state/lexradar/espo-export.json`; сохраняйте его при повторах.
+Результат `DRAFT_VERIFIED` содержит ID Account/Document/Email; откройте Email
+в CRM и проверьте адресата, Draft и PDF. Отправка и sendAt отсутствуют.
+
+[Формат шаблона, проверки, восстановление и ограничения](docs/espo-integration.md).
+В текущей среде API недоступен из-за сетевых ограничений; шаблон-пример требует
+заполнения из утверждённого письма КИТ. Без него запись блокируется.
+
 
 ## Точка продолжения: 29.10.2026
 

@@ -211,11 +211,16 @@ class OpenRouterProvider:
                 capture = getattr(self, "audit_capture", None)
                 if capture is not None:
                     capture.response(captured)
+            capture = getattr(self, "audit_capture", None)
+            if capture is not None:
+                capture.write("provider-envelope.json", body)
             if data.get("error"):
                 raise ProviderError("provider_error", retryable=True)
             if data.get("model") != settings.model:
                 raise ProviderError("unexpected_model_no_fallback")
             choice = data["choices"][0]
+            if choice.get("message", {}).get("refusal"):
+                raise ProviderError("model_refusal")
             if choice.get("finish_reason") not in {"stop", "end_turn"}:
                 raise ProviderError("incomplete_completion")
             content = choice["message"]["content"]

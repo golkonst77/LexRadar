@@ -8,7 +8,10 @@ import hashlib
 import re
 from decimal import Decimal
 from html import escape
+from html.parser import HTMLParser
 from pathlib import Path
+
+from .proposal_rules import BLOCKS, HEALTH_FIELD_BLOCK, NoProposalTriggers, evaluate_rules
 
 
 def esc(value):
@@ -38,49 +41,165 @@ def pricing(config):
 
 
 APPROVED_TEMPLATE = (
-    Path(__file__).resolve().parents[2] / "templates" / "approved" / "КП LexRadar__v2_4.html"
+    Path(__file__).resolve().parents[2] / "approved-templates" / "КП LexRadar__v2_5.html"
 )
-APPROVED_SHA256 = "7e352c2597ff272bcf25095ac442411da2fc291bdbb0559cf0dd116970de7b5e"
-APPROVED_GIT_BLOB = "028404f2de14ab9a77c442d081e5ba0cda86b334"
-# Only the inner contents of these four approved fields may change.
-PERSONALIZATION = re.compile(
-    r'(<span class="editable" contenteditable="true">)(.*?)(</span>)'
-    r'|(<ol class="findings editable" contenteditable="true">)(.*?)(</ol>)',
-    re.DOTALL,
-)
+APPROVED_SHA256 = "b7ad845dfb4db7dbbf3dc9b6316ce76d1c0e41be0262a6b49bf2dbffeb2afc33"
+APPROVED_GIT_BLOB = "9f129eb3a617832e7ea9fa1004f5123d2a79321f"
+PERSONALIZATION = re.compile(r"(<span\s+contenteditable\s*=\s*true\s*>)(.*?)(</span>)", re.I | re.S)
 
 
-def render_client(client, findings, config):
+def proposal_recipient(client, packet):
+    if client.get("recipient"):
+        return client["recipient"]
+    name = (client.get("name") or "").strip()
+    if not name or name.startswith("Сайт ") or "не подтверждена" in name:
+        name = ""
+        if packet is not None:
+            from .primary.service import ENTITY_NAMES
+
+            available = {e.id for e in packet.data.evidence if e.available}
+            names = {
+                match.group() for page in packet.data.pages
+                if page.evidence_id in available and page.reading.provenance == "reproduced"
+                and page.reading.text_coverage_complete
+                for match in ENTITY_NAMES.finditer(page.text or "")
+            }
+            if len(names) == 1:
+                name = names.pop()
+    return "Руководителю " + (name or "клиники")
+
+
+def render_client(client, findings, config, *, policy_packet=None, policy_review=None, pricelist_review=None):
     """Personalize the byte-pinned approved original, entirely offline."""
     if config.get("sender", "ИП Голубев") != "ИП Голубев":
         raise ValueError("Seller must be ИП Голубев")
     raw = APPROVED_TEMPLATE.read_bytes()
     if hashlib.sha256(raw).hexdigest() != APPROVED_SHA256:
         raise ValueError("Approved proposal template integrity mismatch")
-    selected = [f for f in findings if f.get("confirmed") is True and f.get("quote", "").strip()]
-    selected = sorted(selected, key=lambda f: -f.get("priority", 0))[:4]
+    selected = evaluate_rules(policy_packet)
+    if pricelist_review is not None:
+        from .pricelist import review_supported
+
+        if review_supported(pricelist_review):
+            selected.append(dict(rule_id=8, evidence=pricelist_review["positions"]))
     if not selected:
-        raise ValueError("Client proposal requires 2–4 confirmed findings")
-    cards = "".join(
-        f"<li><strong>{esc(f['title'])}</strong> «{esc(f['quote'])}» {esc(f['meaning'])}</li>"
-        for f in selected
-    )
+        raise NoProposalTriggers("no_confirmed_triggers_1_2_3_5")
+    numbers = {item["rule_id"] for item in selected}
+    numbers.add(4)
+    numbers = sorted(numbers)
+    observations = []
+    for number in numbers:
+        if number == 8:
+            from .pricelist import proposal_block
+
+            block = proposal_block(pricelist_review)
+        elif number == 7:
+            block = {
+                "title": "ПРОВЕРКА ФОРМУЛИРОВОК ПОЛИТИКИ ОБРАБОТКИ ДАННЫХ",
+                "paragraphs": list(dict.fromkeys(
+                    proof["explanation"] for rule in selected if rule["rule_id"] == 7
+                    for proof in rule["evidence"]
+                )),
+            }
+        else:
+            block = HEALTH_FIELD_BLOCK if number == 6 else BLOCKS[number]
+        paragraphs = "".join(
+            '<p class="MsoNormal" style="font:11.5pt Arial,sans-serif;margin:6pt 0">'
+            + esc(text)
+            + "</p>"
+            for text in block["paragraphs"]
+        )
+        observations.append(
+            f'<div class="motivation-block" data-rule="{number}">'
+            '<h3 style="font:bold 11.5pt Arial,sans-serif;margin:12pt 0 6pt">'
+            + esc(block["title"])
+            + "</h3>"
+            + paragraphs
+            + "</div>"
+        )
     values = iter(
         (
             esc(config["date"]),
-            esc(client.get("recipient") or "Руководителю " + (client.get("name") or client["url"])),
+            esc(proposal_recipient(client, policy_packet)),
             esc(client["url"]),
-            cards,
         )
     )
-    template = raw.decode("utf-8")
-    if len(PERSONALIZATION.findall(template)) != 4:
-        raise ValueError("Unexpected approved personalization fields")
+    template = raw.decode("utf-16")
+    if len(PERSONALIZATION.findall(template)) != 3:
+        raise ValueError("Unexpected v2.5 recipient, site, or date fields")
+    template = PERSONALIZATION.sub(lambda match: match[1] + next(values) + match[3], template)
+    # The four Word-exported paragraphs have fixed category labels; replace them
+    # together with their slots so page order can never assign a legal category.
+    slot_paragraph = re.compile(
+        r"<p\b[^>]*>(?:(?!</p>).)*?\[Вставить[^\]]*\](?:(?!</p>).)*?</p>", re.S | re.I
+    )
+    slots = list(slot_paragraph.finditer(template))
+    if len(slots) != 4:
+        raise ValueError("Unexpected v2.5 observation fields")
+    for index, match in reversed(list(enumerate(slots))):
+        replacement = "".join(observations) if index == 0 else ""
+        template = template[: match.start()] + replacement + template[match.end() :]
+    template = template.replace("КП v2.2", "КП v2.5")
+    template = re.sub(
+        r"и выявили ряд обстоятельств,\s*требующих внимания с точки зрения "
+        r"законодательства о персональных данных\s*\(152-ФЗ\) и надзорной практики "
+        r"<span class=SpellE>Роскомнадзора</span>\.",
+        "и подготовили предложение по проверке документов и процессов "
+        "обработки персональных данных.",
+        template,
+    )
+    # Remove editing UI from client exports; keep the approved original byte-pinned.
+    template = re.sub(
+        r"<p\b[^>]*>(?:(?!</p>).)*?Нажмите на текст,(?:(?!</p>).)*?</p>", "", template, flags=re.S
+    )
+    template = re.sub(r"<button\b[^>]*>.*?</button>", "", template, flags=re.S | re.I)
+    template = re.sub(
+        r"<p\b[^>]*>(?:(?!</p>).)*?Ориентировочное время: 2–5 минут\."
+        r"(?:(?!</p>).)*?</p>", "", template, flags=re.S
+    )
+    template = re.sub(
+        r"<p\b[^>]*>(?:(?!</p>).)*?Замечания\s+предварительные: "
+        r"окончательная юридическая квалификация зависит от документов и\s+"
+        r"фактических процессов организации\.(?:(?!</p>).)*?</p>",
+        "", template, flags=re.S,
+    )
+    template = template.replace("ПростоБюро", "GØL Web Studio").replace("01.11.2026", "30.11.2026")
+    return "\ufeff" + template
 
-    def substitute(match):
-        return (match[1] or match[4]) + next(values) + (match[3] or match[6])
 
-    return PERSONALIZATION.sub(substitute, template)
+class _ProposalText(HTMLParser):
+    """Extract our Word-exported proposal, ignoring CSS and print/edit controls."""
+
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+        self.excluded = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag in {"head", "style", "script", "button"} and self.excluded is None:
+            self.excluded = tag
+        if not self.excluded and tag in {"p", "h1", "h2", "tr", "br"}:
+            self.parts.append("\n")
+        if not self.excluded and tag in {"td", "th"}:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag):
+        if tag == self.excluded:
+            self.excluded = None
+        if not self.excluded and tag in {"p", "h1", "h2", "tr"}:
+            self.parts.append("\n")
+
+    def handle_data(self, data):
+        if not self.excluded:
+            self.parts.append(re.sub(r"\s+", " ", data))
+
+
+def proposal_text(page):
+    parser = _ProposalText()
+    parser.feed(page)
+    # The existing plain-text PDF font covers BMP only; section emoji are decoration.
+    text = "".join(c for c in "".join(parser.parts) if ord(c) <= 65535 and c != "\ufeff")
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
 
 def document(body):

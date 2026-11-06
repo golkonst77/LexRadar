@@ -93,10 +93,11 @@ def test_single_deepseek_requests_non_streaming_and_rejects_sse(monkeypatch):
             request = json.loads(payload)
             assert request["stream"] is False
             assert request["provider"]["allow_fallbacks"] is False
+            assert request["model"] == "deepseek/deepseek-chat"
             assert request["max_tokens"] == 4000
             assert timeout == 120
             return provider.HTTPReply(200, b"data: [DONE]\n\n")
 
-    adapter = DeepSeekAdapter(Transport(), timeout_seconds=120)
+    adapter = DeepSeekAdapter(Transport(), timeout_seconds=120, model="deepseek/deepseek-chat")
     with pytest.raises(provider.ProviderError, match="invalid_provider_envelope"):
         adapter.complete(adapter.config.auditor_a, [{"role": "user", "content": "fixture"}])

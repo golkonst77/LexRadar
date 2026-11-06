@@ -96,14 +96,16 @@ def test_single_a_matches_historical_request_and_response_reader(monkeypatch, fr
     old_opener = MagicMock()
     old_opener.open.return_value = historical_response
     namespace["build_opener"] = lambda *args: old_opener
-    old_provider = namespace["OpenRouterProvider"](profile(timeout_seconds=120))
+    old_provider = namespace["OpenRouterProvider"](
+        profile(timeout_seconds=120, model="deepseek/deepseek-chat")
+    )
     old_reply = old_provider.complete(old_provider.config.auditor_a, messages)
 
     current_response = TracedResponse(wire)
     current_opener = MagicMock()
     current_opener.open.return_value = current_response
     monkeypatch.setattr(provider, "build_opener", lambda *args: current_opener)
-    adapter = DeepSeekAdapter(timeout_seconds=120)
+    adapter = DeepSeekAdapter(timeout_seconds=120, model="deepseek/deepseek-chat")
     assert type(adapter.transport) is provider.OpenRouterTransport
     reply = adapter.complete(adapter.config.auditor_a, messages)
     old_request = old_opener.open.call_args.args[0]
@@ -119,8 +121,8 @@ def test_single_a_matches_historical_request_and_response_reader(monkeypatch, fr
     # The old loop performs one extra empty read after Content-Length is consumed.
     assert [c for c in historical_response.chunks if c] == [c for c in current_response.chunks if c]
     assert b"".join(current_response.chunks) == body
-    settings = profile(timeout_seconds=120)
+    settings = profile(timeout_seconds=120, model="deepseek/deepseek-chat")
     assert settings.max_budget_usd == profile().max_budget_usd == 0.50
     assert settings.max_response_bytes == 500000
     assert settings.auditor_a.max_output_tokens == 4000
-    assert settings.retries == 1
+    assert settings.retries == 0

@@ -1,6 +1,9 @@
 """Sequential bounded crawl. Browser renders fetched bytes with all networking disabled."""
 
+import json
 import os
+import re
+from time import perf_counter
 from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
@@ -13,7 +16,18 @@ from .artifacts import ArtifactStore, verify_integrity
 from .crawl import CrawlOptions, CrawlSession
 from .document_priority import document_hints, document_sort_key
 from .document_priority import document_priority as document_priority
-from .extract import DOCUMENT_EXTENSIONS, DOM_SCRIPT, categories, entities
+from .extract import (
+    COOKIE_TEXT,
+    DOCUMENT_EXTENSIONS,
+    DOM_SCRIPT,
+    categories,
+    entities,
+    legal_link_kind,
+    screening_link_kind,
+    screening_link_priority,
+    static_analytics_hints,
+)
+from .freshness import http_signals, policy_signals, prioritize_policy, site_freshness
 from .models import (
     CollectedEvidence,
     CollectionResult,
@@ -21,6 +35,7 @@ from .models import (
     FormObservation,
     Limits,
     PageObservation,
+    RelevantLinkObservation,
 )
 from .network import CollectionError, Fetcher, canonical_url, origin
 from .pdf import extract_inventory, legacy_result
@@ -51,6 +66,21 @@ def finalize_evidence(evidence: CollectedEvidence) -> None:
         evidence.observed_fact = "No artifacts captured; reason recorded without assumptions"
 
 
+def screening_signal(page: PageObservation) -> bool:
+    has_contact_field = any(
+        field.type.casefold() in {"tel", "email"}
+        or re.search(r"phone|mobile|email|e-mail|телефон|почт|имя", field.name or "", re.I)
+        or re.search(r"phone|mobile|email|e-mail|телефон|почт|имя", field.label or "", re.I)
+        for form in page.forms
+        for field in form.fields
+    )
+    has_disclosure = any(
+        link.visible_in_static_html and link.kind in {"privacy_policy", "consent"}
+        for link in page.relevant_links
+    )
+    return has_contact_field and has_disclosure
+
+
 def collect(
     url: str,
     output: Path,
@@ -59,20 +89,23 @@ def collect(
     fetcher: Fetcher | None = None,
     crawl_options: CrawlOptions | None = None,
     static_only: bool = False,
+    screening_mode: bool = False,
 ) -> CollectionResult:
     limits = limits or Limits()
+    if screening_mode:
+        limits = limits.model_copy(update={"max_pages": min(limits.max_pages, 7)})
     url = canonical_url(url)
     allowed = origin(url)
     store = ArtifactStore(output, limits)
     session = CrawlSession(fetcher or Fetcher(limits), url, store.root, crawl_options)
     try:
-        return _collect(url, limits, allowed, store, session, static_only)
+        return _collect(url, limits, allowed, store, session, static_only, screening_mode)
     except BaseException:
         session.finish("collector_error")
         raise
 
 
-def _collect(url, limits, allowed, store, session, static_only=False):
+def _collect(url, limits, allowed, store, session, static_only=False, screening_mode=False):
     acquisition = MaterialOrigin(
         kind="collector",
         acquisition_method="bounded_static_http_collector",
@@ -92,11 +125,53 @@ def _collect(url, limits, allowed, store, session, static_only=False):
     result = CollectionResult(target_url=url, started_at=now(), limits=limits, origin=acquisition)
     queue = deque([url])
     seen = {url}
+    depths = {url: 0}
+    page_priorities = {}
     document_urls: dict[str, list[str]] = {}
     from .static_renderer import static_playwright
 
     if static_only:
         result.warnings.append("Static mode: no screenshots, scripts or dynamic behavior checked")
+    if screening_mode:
+        result.warnings.append(
+            "Express screening is static only; missing elements are preliminary observations, "
+            "not proof of absence or a violation. Link visibility excludes external CSS and JS."
+        )
+    target_pages = min(5, limits.max_pages)
+    freshness_enabled = session.options.site_freshness_enabled
+    freshness_seconds = 0.0
+    signal_found = False
+    early_stop = False
+    target_stop = False
+
+    def record_headers(response, evidence_id):
+        nonlocal freshness_seconds
+        if not freshness_enabled or result.site_freshness is None:
+            return
+        started = perf_counter()
+        signals = http_signals(getattr(response, "last_modified", None),
+                               getattr(response, "etag", None), response.url)
+        for signal in signals:
+            signal.evidence_id = evidence_id
+        if signals:
+            result.site_freshness.signals = (result.site_freshness.signals or []) + signals
+            prioritize_policy(result.site_freshness)
+        freshness_seconds += perf_counter() - started
+
+    def link_key(link):
+        if (result.site_freshness and result.site_freshness.policy_priority == "high"
+                and legal_link_kind(link["url"], link["text"]) == "privacy_policy"):
+            return (-3, link["url"]) if screening_mode else (-3, 0, link["url"])
+        if link.get("footer_policy"):
+            return (-2, 0, link["url"]) if not screening_mode else (-2, link["url"])
+        if screening_mode:
+            return (-1 if legal_link_kind(link["url"], link["text"]) else
+                    screening_link_priority(link["text"] + " " + link["url"])), link["url"]
+        kind = legal_link_kind(link["url"], link["text"])
+        priority = {"privacy_policy": 0, "consent": 1, "legal_information": 2, "document": 3}
+        hints = document_sort_key(link["url"], document_hints(link["url"], link["text"]))
+        return (0 if kind else 1, priority.get(kind, hints[0] * 10 + hints[1]), link["url"])
+
     with static_playwright() if static_only else sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             executable_path=os.environ.get("LEXRADAR_CHROMIUM_PATH"),
@@ -108,6 +183,8 @@ def _collect(url, limits, allowed, store, session, static_only=False):
             accept_downloads=False,
             viewport={"width": 1280, "height": 900},
         )
+        if isinstance(session.fetcher, Fetcher) and not static_only:
+            session.fetcher.browser_playwright = playwright
         try:
             while queue and len(result.pages) < limits.max_pages:
                 try:
@@ -115,6 +192,7 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                 except CollectionError:
                     break
                 current = queue.popleft()
+                page_priorities.pop(current, None)
                 eid = f"page-{len(result.pages) + 1:04d}"
                 timestamp = now()
                 evidence = CollectedEvidence(
@@ -141,6 +219,19 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                     page_record.captured_at = evidence.captured_at
                     page_record.final_url = response.url
                     page_record.http_status = response.status
+                    if freshness_enabled and current == url:
+                        freshness_started = perf_counter()
+                        result.site_freshness = site_freshness(
+                            response.body if "text/html" in response.content_type.lower()
+                            and 200 <= response.status < 300 else b"",
+                            getattr(response, "last_modified", None),
+                            getattr(response, "etag", None), response.url,
+                        )
+                        freshness_seconds += perf_counter() - freshness_started
+                    elif freshness_enabled:
+                        record_headers(response, eid)
+                    if response.content_type.split(";", 1)[0].strip().lower() == "application/pdf":
+                        page_record.categories.append("application/pdf")
                     if not 200 <= response.status < 300:
                         raise CollectionError(f"HTTP {response.status}")
                     if "text/html" not in response.content_type.lower():
@@ -174,9 +265,23 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                     page.goto(response.url, wait_until="domcontentloaded")
                     page_record.title = page.title()
                     dom = page.evaluate(DOM_SCRIPT)
+                    if screening_mode:
+                        page_record.static_analytics_hints = static_analytics_hints(response.body)
+                        page_record.cookie_text_observed = bool(
+                            COOKIE_TEXT.search(response.body.decode("utf-8", errors="replace"))
+                        )
+                        page_record.consent_management_controls = dom.get("consentControls", [])
                     page_record.text, page_record.reading = extract_html(
-                        response.body, min(limits.max_file_bytes // 4, 1_000_000)
+                        response.body, min(limits.max_file_bytes // 4, 1_000_000),
+                        main_only=legal_link_kind(current, page_record.title) in
+                        {"privacy_policy", "consent", "legal_information"},
                     )
+                    if freshness_enabled and legal_link_kind(current, page_record.title) == "privacy_policy":
+                        freshness_started = perf_counter()
+                        if result.site_freshness is not None:
+                            signals = policy_signals(page_record.text, response.url, eid)
+                            result.site_freshness.signals = (result.site_freshness.signals or []) + signals
+                        freshness_seconds += perf_counter() - freshness_started
                     original = next((a for a in evidence.artifacts if a.kind == "html"), None)
                     page_record.reading.original_saved = original is not None
                     page_record.reading.source_sha256 = original.sha256 if original else None
@@ -212,6 +317,18 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                         except (CollectionError, BrowserError, OSError) as exc:
                             evidence.collection_errors.append(f"{stage}: {str(exc)[:300]}")
                     result.entities.extend(entities(page_record.text, response.url))
+                    if screening_mode or static_only:
+                        for link in dom["links"]:
+                            kind = legal_link_kind(link["url"], link["text"]) or screening_link_kind(link["text"] + " " + link["url"])
+                            if kind:
+                                page_record.relevant_links.append(
+                                    RelevantLinkObservation(
+                                        url=link["url"],
+                                        text=link["text"],
+                                        kind=kind,
+                                        visible_in_static_html=bool(link.get("visible", True)),
+                                    )
+                                )
                     for index, form in enumerate(dom["forms"]):
                         if session.stop_reason:
                             break
@@ -244,18 +361,19 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                             evidence.collection_errors.append(f"form_screenshot: {str(exc)[:300]}")
                             observation.unavailable_reason = str(exc)[:300]
                         page_record.forms.append(observation)
-                    links = sorted(
-                        dom["links"],
-                        key=lambda x: (
-                            document_sort_key(x["url"], document_hints(x["url"], x["text"]))[:2],
-                            not bool(categories(x["text"] + x["url"])),
-                            x["url"],
-                        ),
-                    )
+                    links = sorted(dom["links"], key=link_key)
+                    unique_links = {}
+                    for link in links:
+                        unique_links.setdefault(link["url"], link)
+                    links = list(unique_links.values())
                     for link in links[: limits.max_links_per_page]:
                         try:
                             target = canonical_url(link["url"])
                             if origin(target) != allowed:
+                                continue
+                            if urlsplit(target).path.lower().endswith(
+                                (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".ico", ".avif")
+                            ):
                                 continue
                             is_document = (
                                 urlsplit(target).path.lower().endswith(DOCUMENT_EXTENSIONS)
@@ -268,33 +386,23 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                                 document_urls[target] = sorted(
                                     set(document_urls.get(target, [])) | set(hints)
                                 )
-                            elif target not in seen and len(seen) < limits.max_pages * 10:
+                            elif (target not in seen and len(seen) < limits.max_pages * 10
+                                  and depths[current] < 2):
                                 seen.add(target)
+                                depths[target] = depths[current] + 1
+                                if screening_mode:
+                                    page_priorities[target] = link_key(link)[0]
                                 # Put legally relevant links ahead of ordinary navigation
                                 # across the entire crawl, not just within this page.
                                 queue.append(target)
                         except CollectionError:
                             continue
                     # Re-sort globally without appendleft reversing the policy-first order.
-                    priorities = {
-                        link["url"]: (
-                            *document_sort_key(
-                                link["url"], document_hints(link["url"], link["text"])
-                            )[:2],
-                            not bool(categories(link["text"] + " " + link["url"])),
-                            link["url"],
-                        )
-                        for link in links
-                    }
+                    priorities = {link["url"]: link_key(link) for link in links}
                     for queued in queue:
-                        priorities.setdefault(
-                            queued,
-                            (
-                                *document_sort_key(queued, document_hints(queued, ""))[:2],
-                                not bool(categories(queued)),
-                                queued,
-                            ),
-                        )
+                        priorities.setdefault(queued, (page_priorities[queued], queued)
+                                              if screening_mode and queued in page_priorities
+                                              else link_key({"url": queued, "text": ""}))
                     queue = deque(sorted(queue, key=lambda target: priorities[target]))
                     page_record.document_links = sorted(set(page_record.document_links))
                 except (CollectionError, BrowserError, OSError) as exc:
@@ -309,9 +417,28 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                     if evidence.artifacts:
                         evidence.artifact_path = evidence.artifacts[0].path
                         evidence.sha256 = evidence.artifacts[0].sha256
-            if queue:
+                if screening_mode:
+                    signal_found = signal_found or screening_signal(page_record)
+                    if queue and signal_found and not any(
+                        page_priorities.get(queued, 4) < 0 for queued in queue
+                    ):
+                        early_stop = True
+                        break
+                    if queue and len(result.pages) >= target_pages and not any(
+                        page_priorities.get(queued, 4) < 4 for queued in queue
+                    ):
+                        target_stop = True
+                        break
+            if queue and not early_stop and not target_stop:
                 result.warnings.append("Page crawl limit reached")
+            if target_stop:
+                result.warnings.append(
+                    "Express screening reached its 5-page target; remaining unprioritized pages "
+                    "were not collected."
+                )
         finally:
+            if isinstance(session.fetcher, Fetcher):
+                session.fetcher.browser_playwright = None
             for close in (context.close, browser.close):
                 try:
                     close()
@@ -359,6 +486,7 @@ def _collect(url, limits, allowed, store, session, static_only=False):
             evidence.captured_at = now()
             document.final_url = response.url
             document.http_status = response.status
+            record_headers(response, eid)
             if not 200 <= response.status < 300:
                 raise CollectionError(f"HTTP {response.status}")
             if not response.body.startswith(b"%PDF-"):
@@ -375,6 +503,7 @@ def _collect(url, limits, allowed, store, session, static_only=False):
                 min(limits.timeout_seconds, session.remaining()),
                 limits.max_pdf_page_chars,
                 limits.max_pdf_total_chars,
+                metadata_dates=freshness_enabled and "privacy_policy" in document_urls[current],
             )
             document.reading = extracted.reading
             document.reading.original_saved = True
@@ -383,6 +512,12 @@ def _collect(url, limits, allowed, store, session, static_only=False):
             document.text, document.extraction_status, document.extraction_reason = legacy_result(
                 extracted
             )
+            if (freshness_enabled and result.site_freshness is not None
+                    and "privacy_policy" in document_urls[current]):
+                freshness_started = perf_counter()
+                signals = policy_signals(document.text, response.url, eid, extracted.metadata_dates)
+                result.site_freshness.signals = (result.site_freshness.signals or []) + signals
+                freshness_seconds += perf_counter() - freshness_started
             if document.extraction_status == "failed":
                 evidence.collection_errors.append(
                     document.extraction_reason or "PDF extraction failed"
@@ -391,13 +526,41 @@ def _collect(url, limits, allowed, store, session, static_only=False):
             evidence.collection_errors.append(str(exc)[:500])
         finally:
             finalize_evidence(evidence)
+    if result.site_freshness is not None:
+        prioritize_policy(result.site_freshness)
+        result.site_freshness.processing_seconds = freshness_seconds
     summary = session.finish(
-        "page_limit"
+        "screening_signal_found"
+        if early_stop
+        else "screening_target_reached"
+        if target_stop
+        else "page_limit"
         if queue
         else "document_limit"
         if len(pdf_urls) > limits.max_documents
         else "queue_exhausted"
     )
+    if screening_mode:
+        evidence_by_id = {e.id: e for e in result.evidence}
+        summary.update(
+            express_screening=True,
+            target_pages=target_pages,
+            page_limit=limits.max_pages,
+            pages_attempted=len(result.pages),
+            pages_html_captured=sum(
+                any(a.kind == "html" for a in evidence_by_id[p.evidence_id].artifacts)
+                for p in result.pages
+            ),
+            static_signal_found=signal_found,
+        )
+        (store.root / "crawl/summary.json").write_text(
+            json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+        )
+        if early_stop:
+            result.warnings.append(
+                "Express screening stopped early after observing a contact form and a "
+                "policy/consent link; this is not a legal finding."
+            )
     if session.stop_reason:
         result.warnings.append("Crawl stopped: " + summary["stop_reason"])
     result.warnings.extend(verify_integrity(result, store.root))

@@ -7,12 +7,14 @@ import io
 import json
 import re
 import shutil
+import time
 from collections import Counter
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from .audit_progress import waiting
 from .auditors.budget import Budget
 from .auditors.evidence import load_packet
 from .auditors.models import AnalysisReport
@@ -24,7 +26,47 @@ from .batch_qualification import analysis_digest, qualify
 from .client_proposal import render_client
 from .collector.network import CollectionError, canonical_url
 from .evidence_review import review
+from .policy3 import inspect_policy3
 from .single_auditor import MODEL, DeepSeekAdapter, RecordedA, commercial, messages_for, profile
+
+
+class BatchProgress:
+    def __init__(self, rows):
+        self.total = len(rows)
+        self.completed = sum(row["status"] != "pending" for row in rows)
+        self.counts = Counter(row["status"] for row in rows if row["status"] != "pending")
+        self.started = time.monotonic()
+        self.initial_completed = self.completed
+        self.stage = "подготовка"
+        print(f"Сайтов в пакете: {self.total}", flush=True)
+
+    def heartbeat(self, _stage):
+        elapsed = time.monotonic() - self.started
+        processed = self.completed - self.initial_completed
+        remaining = (
+            f"{elapsed / processed * (self.total - self.completed):.0f} с"
+            if processed else "неизвестно"
+        )
+        percent = self.completed / self.total * 100 if self.total else 100
+        print(
+            f"Этап: {self.stage}; завершено: {self.completed}/{self.total} "
+            f"({percent:.1f}%); SUCCESS: {self.counts['SUCCESS']}; "
+            f"SKIPPED: {self.counts['SKIPPED']}; прошло: {elapsed:.0f} с; "
+            f"осталось примерно: {remaining}",
+            flush=True,
+        )
+
+    def rows(self, rows):
+        for number, row in enumerate(rows, 1):
+            pending = row["status"] == "pending"
+            self.stage = f"сайт {number}/{self.total}: подготовка"
+            yield row
+            if pending and row["status"] != "pending":
+                self.completed += 1
+                self.counts[row["status"]] += 1
+            reason = f"; {row['reason']}" if row["status"] != "SUCCESS" else ""
+            print(f"Сайт {number}/{self.total}: {row['status']}{reason}", flush=True)
+        self.stage = "сохранение результатов"
 
 
 def read_csv(path):
@@ -81,17 +123,92 @@ def proposal(row, report, packet, path, *, demo, allowed_findings=None):
         for finding in report.runs[0].result.findings
         if finding.id in allowed
     ]
-    if not findings:
+    if not findings or not prepare_findings(packet):
         return False
     page = render_client(
         {"name": company, "url": row["url"]},
         findings,
         {"date": row["input"].get("date", "").strip() or date.today().strftime("%d.%m.%Y")},
+        policy_packet=packet,
     )
     temporary = safe_path(path.with_suffix(".html.tmp"))
     temporary.write_text(page, encoding="utf-8")
     temporary.replace(safe_path(path))
+    write_json(safe_path(path.with_name("policy3.json")), inspect_policy3(packet))
     return True
+
+
+def prepare_findings(packet):
+    """Only confirmed deficiency triggers from the saved evidence."""
+    from .proposal_rules import evaluate_rules
+
+    return evaluate_rules(packet)
+
+
+def write_prepared_proposal(row, packet, directory):
+    """Offline fixed-rule export; no trigger means no client files."""
+    from playwright.sync_api import Error as PDFError
+
+    from .pdf_export import write_html_pdf
+    from .operator_audit import clinic_name
+    from .policy5 import inspect_policy5, unread_pdf_policies
+    from .proposal_rules import inspect_form_signals
+
+    findings = prepare_findings(packet)
+    review = dict(
+        qualification="HOLD", reason="no_confirmed_triggers_1_2_3_5",
+        policy5=inspect_policy5(packet),
+        policy_pdf_review=unread_pdf_policies(packet),
+        form_signals=inspect_form_signals(packet),
+        packet_sha256=packet.sha256, findings=findings, manual_approval=None,
+        analysis_limitations=list(packet.limitations),
+        automatic_send_allowed=False, client_release_allowed=False, sent=False,
+        block4_without_evidence=bool(findings), pdf_ready=False,
+    )
+    if not findings:
+        write_json(directory / "review.json", review)
+        return []
+    name = clinic_name(packet)
+    review["clinic_name"] = name
+    review["identity_verification_required"] = not bool(name)
+    page = render_client(
+        {"name": name, "url": row["url"],
+         "recipient": "Руководителю " + (name or "клиники")},
+        findings,
+        {"date": row["input"].get("date", "").strip() or date.today().strftime("%d.%m.%Y")},
+        policy_packet=packet,
+    )
+    (directory / "proposal.html").write_text(page, encoding="utf-8")
+    review["reason"] = "manual_review_required_including_unverified_constant_block4"
+    try:
+        write_html_pdf(page, directory / "proposal.pdf")
+        review["pdf_ready"] = True
+    except (PDFError, OSError) as exc:
+        review["pdf_error"] = str(exc)
+    write_json(directory / "review.json", review)
+    return findings
+
+
+def collection_skip_reason(collection):
+    errors = dict.fromkeys(
+        error
+        for evidence in collection.evidence
+        for error in evidence.collection_errors
+    )
+    reason = "; ".join(errors) or "No artifacts captured"
+    if reason.startswith("robots_"):
+        return reason
+    for marker, description in (
+        ("HTTP 403", "Доступ запрещён сервером"),
+        ("HTTP 415", "Сервер отклонил формат HTTP-запроса"),
+        ("SSLCertVerificationError", "Не удалось безопасно проверить TLS-сертификат"),
+        ("crawl_duration_limit", "Исчерпан лимит времени сбора материалов"),
+        ("Content-Encoding", "Неподдерживаемое кодирование ответа"),
+        ("compressed response", "Не удалось безопасно распаковать ответ"),
+    ):
+        if marker in reason:
+            return f"{description}: {reason}"
+    return reason
 
 
 def export(root, state):
@@ -113,6 +230,8 @@ def export(root, state):
         "historical_cost_usd",
         "ai_calls",
         "mode",
+        "html_pages_attempted",
+        "html_pages_captured",
     ]
     buffer = io.StringIO(newline="")
     writer = csv.DictWriter(buffer, fieldnames=columns)
@@ -128,10 +247,17 @@ def export(root, state):
         Counter(r.get("qualification", "unevaluated") for r in state["rows"])
     )
     write_json(root / "manifest.json", state)
+    page_stats = (
+        f"HTML pages attempted/captured: {sum(r.get('html_pages_attempted', 0) for r in state['rows'])}/"
+        f"{sum(r.get('html_pages_captured', 0) for r in state['rows'])}. Express screening targets 5 pages and caps at 7.\n\n"
+        if state["mode"] == "prepare"
+        else ""
+    )
     safe_path(root / "report.md").write_text(
         f"# {state['mode'].upper()} batch\n\n"
         f"Model: {MODEL}; Qwen B disabled.\n\n{json.dumps(counts)}\n\n"
         f"Qualification: {json.dumps(state['qualification_summary'])}\n\n"
+        f"{page_stats}"
         "See results.csv and sites/. GO is commercial qualification, not legal clearance.\n"
         "Automatic sending prohibited. Offline cost: 0 USD. Paid limit: 0.50 USD.\n",
         encoding="utf-8",
@@ -150,6 +276,7 @@ def run(
     packet_approval=None,
     mvp_no_screening=False,
     allow_site_collection=False,
+    ignore_robots=True,
     max_ai_calls=1,
     max_total_budget_usd="0.50",
     timeout_seconds=45,
@@ -183,10 +310,13 @@ def run(
         "model": MODEL,
         "mvp_no_screening": mvp_no_screening,
         "allow_site_collection": allow_site_collection,
+        "collection_profile": "express-screening-144" if mode == "prepare" else None,
         "max_ai_calls": max_ai_calls,
         "timeout_seconds": timeout_seconds,
         "max_total_budget_usd": str(total_budget),
     }
+    if ignore_robots:
+        plan["ignore_robots"] = True
     if resume:
         state = json.loads(safe_path(root / "manifest.json").read_text())
         if state["plan"] != plan:
@@ -221,15 +351,16 @@ def run(
     # A lock also prevents simultaneous resumptions from duplicating work.
     import fcntl
 
-    with safe_path(root / ".lock").open("a") as lock:
+    progress = BatchProgress(state["rows"])
+    with safe_path(root / ".lock").open("a") as lock, waiting(progress.heartbeat, interval=30):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if resume and json.loads((root / "manifest.json").read_text()) != state:
             raise ValueError("Resume state changed while acquiring lock; retry safely")
         used = sum(
-            r["status"] in {"SUCCESS", "ERROR"} and bool(r.get("directory")) for r in state["rows"]
+            r["status"] != "pending" and bool(r.get("directory")) for r in state["rows"]
         )
         export(root, state)
-        for row in state["rows"]:
+        for row in progress.rows(state["rows"]):
             if row["status"] != "pending":
                 continue
             if used >= max_sites:
@@ -254,14 +385,34 @@ def run(
                 if mode == "prepare":
                     from .collector import CrawlOptions, Limits, collect
 
-                    collect(
+                    progress.stage = "сбор материалов"
+                    collection = collect(
                         row["url"],
                         directory / "dossier",
-                        Limits(max_pages=3, max_documents=2),
+                        Limits(max_pages=7, max_documents=2),
                         static_only=True,
-                        crawl_options=CrawlOptions(max_requests=16, max_duration_seconds=60),
+                        screening_mode=True,
+                        crawl_options=CrawlOptions(
+                            max_requests=16, max_duration_seconds=60, ignore_robots=ignore_robots
+                        ),
                     )
+                    evidence_by_id = {e.id: e for e in collection.evidence}
+                    row["html_pages_attempted"] = len(collection.pages)
+                    row["html_pages_captured"] = sum(
+                        any(a.kind == "html" for a in evidence_by_id[p.evidence_id].artifacts)
+                        for p in collection.pages
+                    )
+                    if not any(evidence.available for evidence in collection.evidence):
+                        row.update(
+                            status="SKIPPED",
+                            qualification="HOLD",
+                            reason=collection_skip_reason(collection),
+                        )
+                        row["files"] = snapshot(directory)
+                        export(root, state)
+                        continue
                 else:
+                    progress.stage = "проверка и копирование досье"
                     source = safe_path(Path(row["input"].get("dossier", "")))
                     if root.resolve().is_relative_to(source.resolve()):
                         raise ValueError("Output must be outside the source dossier")
@@ -270,7 +421,8 @@ def run(
                     if canonical_url(str(packet.data.target_url)) != row["url"]:
                         raise ValueError("Dossier URL mismatch")
                     shutil.copytree(source, directory / "dossier")
-                packet = load_packet(directory / "dossier", profile().max_input_bytes)
+                progress.stage = "проверка пакета доказательств"
+                packet = load_packet(directory / "dossier", 20_000_000 if mode == "prepare" else profile().max_input_bytes)
                 if not any(e.available for e in packet.data.evidence):
                     raise ValueError("No usable evidence; not proof of absence")
                 row["stages"] += ["collection:local_verified", "evidence_packet:SUCCESS"]
@@ -284,14 +436,26 @@ def run(
                 )
                 row["dossier"] = str((directory / "dossier").absolute())
                 if mode == "prepare":
+                    progress.stage = "подготовка КП и PDF"
+                    findings = write_prepared_proposal(row, packet, directory)
+                    if not findings:
+                        row.update(status="SKIPPED", qualification="HOLD",
+                                   reason="no_confirmed_triggers_1_2_3_5")
+                        row["stages"].append("proposal:SKIPPED")
+                        row["files"] = snapshot(directory)
+                        export(root, state)
+                        continue
+                    row["proposal"] = str((directory / "proposal.html").relative_to(root))
+                    row["stages"].append("proposal:SUCCESS")
                     row.update(
                         status="SUCCESS",
                         qualification="HOLD",
-                        reason="packet_ready_requires_separate_human_approval",
+                        reason="manual_review_required_including_unverified_constant_block4",
                     )
                     row["files"] = snapshot(directory)
                     export(root, state)
                     continue
+                progress.stage = "подготовка анализа"
                 kwargs = {}
                 saved_report = None
                 if mode == "saved":
@@ -338,12 +502,16 @@ def run(
                         packet_approval=packet_approval,
                         mvp_no_screening=mvp_no_screening,
                     )
+                progress.stage = "анализ"
                 report = saved_report or analyze(
                     directory / "dossier",
                     directory / "analysis",
                     config,
                     message_builder=messages_for,
                     **kwargs,
+                )
+                row["signals"] = sum(
+                    len(run.result.findings) for run in report.runs if run.result is not None
                 )
                 row["stages"].append("DeepSeek_A:" + ("SUCCESS" if report.completed else "ERROR"))
                 local_legal_review = None
@@ -353,6 +521,7 @@ def run(
                         raise ValueError("Oversized legal review")
                     local_legal_review = directory / "independent-legal-review.json"
                     write_json(local_legal_review, json.loads(legal_source.read_bytes()))
+                progress.stage = "проверка результатов"
                 allowed, reasons = qualify(
                     report,
                     packet,
@@ -403,6 +572,7 @@ def run(
                     new_cost_usd=row["cost_usd"],
                 )
                 row["stages"].append("qualification:" + row["qualification"])
+                progress.stage = "подготовка КП"
                 if not reasons and proposal(
                     row,
                     report,
@@ -449,7 +619,12 @@ def main(argv=None):
     parser.add_argument("--packet-approval", type=Path)
     parser.add_argument("--mvp-no-screening", action="store_true")
     parser.add_argument("--allow-site-collection", action="store_true")
+    parser.add_argument(
+        "--ignore-robots", action="store_true", default=True,
+        help="Skip robots.txt gate (default); retain request and access limits",
+    )
     args = parser.parse_args(argv)
+    started = time.monotonic()
     try:
         state = run(
             args.csv,
@@ -465,10 +640,40 @@ def main(argv=None):
             packet_approval=args.packet_approval,
             mvp_no_screening=args.mvp_no_screening,
             allow_site_collection=args.allow_site_collection,
+            ignore_robots=args.ignore_robots,
         )
     except (ValueError, OSError, PermissionError, csv.Error) as exc:
         parser.exit(1, f"Batch stopped safely: {exc}\n")
-    print(json.dumps(state["summary"], ensure_ascii=False) + f"; {args.output}/results.csv")
+    selected = [row for row in state["rows"] if row.get("directory")]
+    successful = [row for row in selected if row["status"] == "SUCCESS"]
+    skipped = [row for row in state["rows"] if row["status"] == "SKIPPED"]
+    errors = [row for row in selected if row["status"] == "ERROR"]
+    skip_reasons = Counter(row.get("reason") or "unspecified" for row in skipped)
+    signals = (
+        str(sum(row.get("signals", 0) for row in selected))
+        if any("signals" in row for row in selected)
+        else "не оценивались"
+    )
+    print(json.dumps(state["summary"], ensure_ascii=False), flush=True)
+    print(
+        f"Выбрано: {len(selected)}; "
+        f"успешно обследовано: {len(successful)}; "
+        f"пропущено: {len(skipped)}; ошибок: {len(errors)}; "
+        f"сигналов: {signals}; "
+        f"черновиков: {sum(bool(row.get('proposal')) for row in selected)}; "
+        f"время: {time.monotonic() - started:.1f} с",
+        flush=True,
+    )
+    print(
+        "Причины пропуска: "
+        + (json.dumps(skip_reasons, ensure_ascii=False) if skip_reasons else "нет"),
+        flush=True,
+    )
+    print(
+        f"Отчёты: {args.output}/report.md; {args.output}/results.csv; "
+        f"{args.output}/manifest.json",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

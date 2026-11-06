@@ -9,6 +9,11 @@ from .report import build_report
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "audit":
+        from .operator_audit import audit_main
+
+        audit_main(sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "mvp":
         from .mvp import main as mvp_main
 
@@ -168,6 +173,7 @@ def main() -> None:
         parser.add_argument("--min-delay", type=float, default=2)
         parser.add_argument("--max-requests", type=int, default=64)
         parser.add_argument("--max-duration", type=float, default=300)
+        parser.add_argument("--no-site-freshness", action="store_true")
         parser.add_argument("--max-pdf-pages", type=int, default=100)
         parser.add_argument("--max-pdf-page-chars", type=int, default=100_000)
         parser.add_argument("--max-pdf-total-chars", type=int, default=1_000_000)
@@ -186,6 +192,7 @@ def main() -> None:
                 max_pdf_total_chars=args.max_pdf_total_chars,
             ),
             crawl_options=CrawlOptions(
+                site_freshness_enabled=not args.no_site_freshness,
                 min_delay_seconds=args.min_delay,
                 max_requests=args.max_requests,
                 max_duration_seconds=args.max_duration,

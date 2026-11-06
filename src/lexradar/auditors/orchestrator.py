@@ -36,7 +36,13 @@ def analyze(
     mvp_no_screening: bool = False,
     sleep=time.sleep,
     message_builder=messages_for,
+    progress=None,
 ) -> AnalysisReport:
+    def emit(stage, **details):
+        if progress is not None:
+            progress(stage, **details)
+
+    emit("packet_check_started")
     if type(mvp_no_screening) is not bool:
         raise ValueError("MVP_NO_SCREENING must be an explicit boolean")
     if mvp_no_screening:
@@ -60,10 +66,15 @@ def analyze(
             and config.auditor_a.completion_price_cap <= base.auditor_a.completion_price_cap
             and config.max_budget_usd <= base.max_budget_usd
             and config.retries <= base.retries
-            and config == base.model_copy(update={
-                "auditor_a": config.auditor_a, "auditor_b": config.auditor_b,
-                "max_budget_usd": config.max_budget_usd, "retries": config.retries,
-            })
+            and config
+            == base.model_copy(
+                update={
+                    "auditor_a": config.auditor_a,
+                    "auditor_b": config.auditor_b,
+                    "max_budget_usd": config.max_budget_usd,
+                    "retries": config.retries,
+                }
+            )
         )
         experiment = config == experiment_profile() and message_builder is experiment_messages
         if not (legacy or tightened or experiment):
@@ -77,6 +88,7 @@ def analyze(
     if parallel and mode != "offline":
         raise PermissionError("Parallel execution is offline only; paid budget stays sequential")
     packet = load_packet(root, config.max_input_bytes)
+    emit("packet_check_completed", packet_bytes=len(packet.payload.encode()))
 
     def approve():
         if mvp_no_screening:
@@ -106,6 +118,7 @@ def analyze(
         auditor, settings = item
         local_logs = []
         messages, version, prompt_hash = message_builder(auditor, packet)
+        emit("model_and_prompt", model=settings.model, prompt=version)
         run = AuditorRun(
             auditor=auditor, model=settings.model, prompt_version=version, status="provider_error"
         )
@@ -129,18 +142,36 @@ def analyze(
                     reserved = charge = budget.reserve(settings, messages)
                 # Reconstruct fresh messages even if an injected test provider mutates its input.
                 sent = mode == "openrouter"
-                reply = provider.complete(settings, [dict(m) for m in messages])
+                emit("request_sending", attempt=attempt + 1)
+                if progress is not None:
+                    from ..audit_progress import waiting
+
+                    with waiting(emit):
+                        reply = provider.complete(settings, [dict(m) for m in messages])
+                else:
+                    reply = provider.complete(settings, [dict(m) for m in messages])
+                emit("response_received", duration_seconds=round(time.monotonic() - timer, 3))
                 if not (capture.root / "original.txt").exists():
                     capture.response(reply.content)
                 usage = reply.usage
+                emit(
+                    "usage",
+                    prompt_tokens=usage.prompt_tokens,
+                    completion_tokens=usage.completion_tokens,
+                    actual_cost_usd=str(usage.cost_usd) if usage.cost_usd is not None else None,
+                )
                 if mode == "openrouter":
                     charge = budget.settle(reserved, usage)
                     if budget.overrun:
                         raise BudgetExceeded("Unexpected provider cost; no further calls permitted")
+                emit("structure_and_evidence_check_started")
                 run.result, run.validation_notes = validate_result(
-                    reply.content, auditor, packet,
+                    reply.content,
+                    auditor,
+                    packet,
                     require_cookie_review=version == "single-a-v3-cookie",
                 )
+                emit("structure_and_evidence_check_completed")
                 run.status, status = "success", "success"
             except BudgetExceeded:
                 run.status, status = "budget_exceeded", "budget_exceeded"
@@ -155,6 +186,12 @@ def analyze(
                 if mode != "offline":
                     raise
                 run.status, status = "provider_error", "offline_provider_error"
+            emit(
+                "attempt_completed",
+                status=status,
+                duration_seconds=round(time.monotonic() - timer, 3),
+                cost_uncertain=sent and usage.cost_usd is None,
+            )
             capture.write("status.json", json.dumps({"status": status}))
             local_logs.append(
                 RequestLog(
@@ -218,6 +255,7 @@ def analyze(
             else "Budget depends on price/token caps; unexpected charges stop further calls",
         ],
     )
+    emit("saving_analysis_started")
     (output / "analysis.json").write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     (output / "requests.jsonl").write_text(
         "\n".join(log.model_dump_json() for log in logs) + "\n", encoding="utf-8"
@@ -243,4 +281,5 @@ def analyze(
         + "\n",
         encoding="utf-8",
     )
+    emit("saving_analysis_completed")
     return report

@@ -35,6 +35,23 @@ class EvidencePacket:
     limitations: tuple[str, ...]
 
 
+def policy_material_status(data):
+    from ..collector.document_priority import document_hints
+    from ..collector.extract import legal_link_kind
+
+    policies = [p for p in data.pages if legal_link_kind(
+        str(p.requested_url), p.title or "",
+    ) == "privacy_policy"]
+    policies += [d for d in data.documents if "privacy_policy" in document_hints(
+        str(d.requested_url), "",
+    )]
+    available = {e.id for e in data.evidence if e.available
+                 and any(a.kind == "text" for a in e.artifacts)}
+    if any(p.evidence_id in available and p.text for p in policies):
+        return "available"
+    return "unavailable" if policies else "not_collected"
+
+
 def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
     validate_packet_limit(max_bytes)
     root = root.resolve()
@@ -109,8 +126,94 @@ def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
     limitations.extend(recheck_text(data, root))
     if verify_integrity(data, root):
         raise DossierError("Artifact integrity changed during text reproduction")
-    serialized = data.model_dump(mode="json")
+    # Old saved dossiers may have lost forms after an unrelated malformed wrapper.
+    # Recover derived observations in memory; never rewrite original manifests/artifacts.
+    from ..collector.models import FormObservation, RelevantLinkObservation
+    from ..collector.static_renderer import StaticPage
+    from ..collector.extract import legal_link_kind
+    from ..primary.markup import link_kind
+
+    for page in data.pages:
+        original = next((a for a in data.evidence if a.id == page.evidence_id), None)
+        artifact = next((a for a in original.artifacts if a.kind == "html"), None)
+        if artifact is None:
+            continue
+        saved = StaticPage()
+        saved.url = str(page.final_url or page.requested_url)
+        saved.fulfill(body=(root / artifact.path).read_bytes())
+        extracted = saved.evaluate(None)
+        known_links = {link.url for link in page.relevant_links}
+        for link in extracted["links"]:
+            kind = legal_link_kind(link["url"], link["text"])
+            if kind and link["url"] not in known_links:
+                page.relevant_links.append(
+                    RelevantLinkObservation(
+                        url=link["url"],
+                        text=link["text"],
+                        kind=kind,
+                        visible_in_static_html=False,
+                    )
+                )
+                known_links.add(link["url"])
+        if page.forms:
+            continue
+        for form in extracted["forms"]:
+            page.forms.append(
+                FormObservation(
+                    page_url=saved.url,
+                    purpose=form["purpose"],
+                    fields=form["fields"],
+                    submission_context=form["submission_context"],
+                    unavailable_reason="Form recovered from saved HTML; screenshot not captured",
+                    policy_links=[
+                        link["url"]
+                        for link in form["links"]
+                        if link_kind(link["url"], link["text"]) == "policy"
+                    ],
+                    consent_links=[
+                        link["url"]
+                        for link in form["links"]
+                        if link_kind(link["url"], link["text"]) == "consent"
+                    ],
+                )
+            )
+        if page.forms:
+            limitations.append(
+                f"{page.evidence_id}: form observations recovered from SHA-256-checked "
+                "saved HTML; form pointers refer to derived packet, not original manifest"
+            )
+    if data.site_freshness is not None and data.site_freshness.policy_priority == "high":
+        from ..collector.document_priority import document_hints
+
+        # Keep packet indices aligned with packet.data, used by quotation validators.
+        data.pages.sort(key=lambda page: legal_link_kind(
+            str(page.requested_url), page.title or "",
+        ) != "privacy_policy")
+        data.documents.sort(key=lambda doc: "privacy_policy" not in document_hints(
+            str(doc.requested_url), "",
+        ))
+    serialized = data.model_dump(mode="json", exclude={"site_freshness"})
+    if data.site_freshness is not None:
+        # Technical claims guide order only; they are not quotation or violation evidence.
+        serialized["site_freshness"] = data.site_freshness.model_dump(
+            mode="json", exclude={"processing_seconds"}, exclude_none=True,
+        )
+        limitations.append(
+            "SITE_FRESHNESS contains unverified publisher claims, never proof of a violation. "
+            "Last-Modified is server-declared; ETag is opaque, not a date. "
+            "A stale copyright alone cannot justify a finding or READY/proposal."
+        )
+        if data.site_freshness.policy_priority == "high":
+            limitations.append(
+                "Review available privacy policy first; continue ordinary audit afterwards."
+            )
+        limitations.append(
+            f"SITE_FRESHNESS policy_material_status={policy_material_status(data)}; "
+            "unavailable or uncollected policy does not establish absence or a violation."
+        )
     for page in serialized["pages"]:
+        # Diagnostic recovery is searchable locally, never supplied as quotation evidence.
+        page["reading"].pop("diagnostic_html", None)
         evidence = next(e for e in data.evidence if e.id == page["evidence_id"])
         if not any(a.kind == "text" for a in evidence.artifacts):
             page["text"] = None
@@ -118,6 +221,7 @@ def load_packet(root: Path, max_bytes: int) -> EvidencePacket:
                 f"{page['evidence_id']}: no integrity-checked text artifact supplied"
             )
     for document in serialized["documents"]:
+        document["reading"].pop("diagnostic_html", None)
         if document["extraction_status"] != "text":
             limitations.append(f"{document['evidence_id']}: visual/additional PDF review required")
             # Mixed/scanned pages must never be described as read by the LLM.

@@ -5,7 +5,9 @@ import hashlib
 import json
 from pathlib import Path
 
+from .auditors.evidence import load_packet
 from .client_proposal import APPROVED_GIT_BLOB, APPROVED_SHA256, document, esc, render_client
+from .policy3 import inspect_policy3
 
 
 def build(source: Path, collection_path: Path, config: dict, output: Path):
@@ -26,15 +28,19 @@ def build(source: Path, collection_path: Path, config: dict, output: Path):
         if item["source"] != collection["target_url"]:
             raise ValueError("Source URL mismatch")
         editorial = "пройти техническое обслуживание" in q["exact_quote"]
+        legally_proven = item.get("legal_violation_proven") is True
         findings.append(
             dict(
                 confirmed=True,
                 title=(
                     "В документе стоматологии — «техническое обслуживание»"
                     if editorial
-                    else item["documentary_defect"]
+                    else item["documentary_defect"] if legally_proven else "Фрагмент сохранённого источника"
                 ),
                 quote=("пройти техническое обслуживание" if editorial else q["exact_quote"]),
+                risk_text=(
+                    None if legally_proven or editorial else item.get("documentary_defect")
+                ),
                 meaning=(
                     "Формулировка не соответствует стоматологическим услугам. "
                     "Адаптируем текст к реальному обращению пациента."
@@ -56,8 +62,15 @@ def build(source: Path, collection_path: Path, config: dict, output: Path):
     for key in ("name", "city", "industry", "recipient"):
         if client.get(key) and client[key] not in primary_text:
             raise ValueError("Unconfirmed client identity")
-    proposal = render_client(client, findings, config["commercial"])
+    policy_packet = load_packet(collection_path.parent, 20_000_000)
+    proposal = render_client(
+        client,
+        findings,
+        config["commercial"],
+        policy_packet=policy_packet,
+    )
     state = dict(
+        policy3=inspect_policy3(policy_packet),
         status=audit["outcome"],
         legal_production_status=audit["legal_production_status"],
         legal_go=False,
@@ -72,13 +85,13 @@ def build(source: Path, collection_path: Path, config: dict, output: Path):
         proposal_sha256=hashlib.sha256(proposal.encode()).hexdigest(),
         new_ai_calls=0,
         network_requests=0,
-        template_version="approved-kp-v2.4",
+        template_version="approved-kp-v2.5",
         template_sha256=APPROVED_SHA256,
         template_git_blob=APPROVED_GIT_BLOB,
         reference_text_available=True,
         base_price_rub=45000,
         discount_percent=25,
-        discount_deadline_inclusive="2026-11-01",
+        discount_deadline_inclusive="2026-11-30",
         total_price_rub=33750,
         savings_rub=11250,
         free_consultations_months=2,
