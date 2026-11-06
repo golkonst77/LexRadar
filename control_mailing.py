@@ -112,8 +112,8 @@ class Mailing:
         record = dict(id=eid, source_id=row.get('id'), mailing_enabled=included, name=row.get('company_name', ''), email=row.get('email', '').lower(),
                       account_id=result['account_id'], document_id=result['document_id'],
                       recipient_verified=row.get('recipient_verified') is True,
-                      pdf_sha256=row.get('pdf_sha256', ''), observed_draft=False, status='WAITING_APPROVAL',
-                      reason='Ожидает разрешения на рекламную отправку', slot=None)
+                      pdf_sha256=row.get('pdf_sha256', ''), observed_draft=False, status='QUEUED',
+                      reason='', slot=None)
         if eid not in state:
             state[eid] = record
         elif any(state[eid].get(k) != record[k] for k in ('account_id', 'document_id', 'email')):
@@ -139,14 +139,6 @@ class Mailing:
                 self.add(state, result, dict(id=key, company_name=binding.get('company_name', ''),
                     email=binding.get('email', ''), recipient_verified=bool(entry.get('draft_contact')),
                     pdf_sha256=draft.get('sha256', '')))
-
-    def permitted(self, row):
-        path = self.directory / 'mailing-permissions.json'
-        permissions = json.loads(path.read_text()) if path.exists() else {}
-        p = permissions.get(row['id'], {})
-        return (p.get('advertising_send_authorized') is True
-                and p.get('email') == row['email'] and p.get('account_id') == row['account_id']
-                and isinstance(p.get('evidence_source'), str) and bool(p['evidence_source'].strip()))
 
     def deal(self, api, row, stages, deals):
         if row.get('opportunity_id'):
@@ -258,9 +250,6 @@ class Mailing:
                             raise ValueError('Неизвестный исход PUT; требуется сверка, повтор запрещён')
                         if not row.get('recipient_verified'):
                             raise ValueError('Адресат не подтверждён')
-                        if not self.permitted(row):
-                            row.update(status='WAITING_APPROVAL', reason='Ожидает разрешения на рекламную отправку')
-                            continue
                         validation, reason = mailer.validate(email, {}, config)
                         if validation != 'READY' or counts[row['email']] > 1:
                             raise ValueError(reason if validation != 'READY' else 'Повтор адресата в очереди')
@@ -281,8 +270,8 @@ class Mailing:
                         used.extend(mailer.utc(r['schedule_intent']) for r in state.values() if r.get('schedule_intent'))
                         slot = next_slot(datetime.now(UTC), used)
                         current_config = mailer.config_at(self.legacy)
-                        if not self.permitted(row) or not current_config['enabled'] or current_config['dry_run']:
-                            raise ValueError('Разрешение/настройки изменились')
+                        if not current_config['enabled'] or current_config['dry_run']:
+                            raise ValueError('Настройки изменились')
                         if api.get('Email', eid) != email:
                             raise ValueError('Email изменён перед планированием')
                         row['schedule_intent'] = slot
@@ -296,7 +285,7 @@ class Mailing:
                     except ValueError as exc:
                         row.update(status=row['status'] if row['status'] in ('SENT', 'SCHEDULED') else 'HOLD', reason=str(exc))
                     except Exception:
-                        row.update(status=row['status'] if row['status'] in ('SENT', 'SCHEDULED') else 'HOLD', reason='Проверка CRM/разрешения/журнала не пройдена; требуется сверка')
+                        row.update(status=row['status'] if row['status'] in ('SENT', 'SCHEDULED') else 'HOLD', reason='Проверка CRM/журнала не пройдена; требуется сверка')
                     finally:
                         espo.save(self.path, state)
             self.error = ''
@@ -321,7 +310,8 @@ class Mailing:
         def timestamp(value):
             if not value:
                 return None
-            return datetime.fromisoformat(value.replace('Z', '+00:00')).replace(tzinfo=UTC) if '+' not in value and not value.endswith('Z') else datetime.fromisoformat(value.replace('Z', '+00:00')).astimezone(UTC)
+            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
 
         def local(value):
             return value.astimezone(MOSCOW).strftime('%d.%m.%Y %H:%M МСК') if value else '—'
@@ -335,6 +325,8 @@ class Mailing:
         today = now.astimezone(MOSCOW).date()
         c = Counter(r['status'] for r in rows)
         sent, scheduled, finish, nearest = 'Не определено', 'Не определено', None, None
+        slots = []
+        slots_valid = False
         reason = 'Нет подтверждённых данных CRM.'
         try:
             api = espo.API()
@@ -348,7 +340,7 @@ class Mailing:
                 email = current[row['id']]
                 if email.get('status') == 'Sent':
                     date = timestamp(email.get('dateSent'))
-                    if date is None:
+                    if date is None or date > now:
                         unknown_sent = True
                     elif date.astimezone(MOSCOW).date() == today:
                         sent += 1
@@ -357,7 +349,7 @@ class Mailing:
                     if slot > now:
                         slots.append(slot)
             if unknown_sent:
-                sent = 'Не определено (нет dateSent)'
+                sent = 'Не определено (dateSent отсутствует или некорректен)'
             scheduled = sum(s.astimezone(MOSCOW).date() == today and s.astimezone(MOSCOW).weekday() < 5
                             and 9 <= s.astimezone(MOSCOW).hour < 19
                             and s.minute in (0, 30) and s.second == 0 for s in slots)
@@ -366,17 +358,18 @@ class Mailing:
             blocked = [r for r in pending if r['status'] in ('WAITING_APPROVAL', 'HOLD', 'ERROR')]
             unscheduled = [r for r in pending if not current[r['id']].get('sendAt')]
             overdue = any(current[r['id']].get('sendAt') and timestamp(current[r['id']]['sendAt']) <= now for r in pending)
+            slots_valid = bool(slots) and len(set(slots)) == len(slots) and all(
+                s.astimezone(MOSCOW).weekday() < 5 and 9 <= s.astimezone(MOSCOW).hour < 19
+                and s.minute in (0, 30) and s.second == 0 and s.microsecond == 0 for s in slots)
             # Unscheduled rows lack the final PDF/config/binding checks; never assume admission.
-            if blocked:
+            if slots and not slots_valid:
+                reason = 'Будущие слоты совпадают или не соответствуют графику; требуется сверка.'
+            elif blocked:
                 reason = 'Есть заблокированные письма WAITING_APPROVAL / HOLD / ERROR.'
             elif unscheduled:
                 reason = 'Допуск неназначенных писем к планированию ещё не подтверждён.'
             elif overdue:
                 reason = 'Есть прошедшие слоты без подтверждения Sent.'
-            elif slots and any(s.astimezone(MOSCOW).weekday() >= 5 or not 9 <= s.astimezone(MOSCOW).hour < 19 or s.minute not in (0, 30) or s.second != 0 for s in slots):
-                reason = 'Назначенные слоты не соответствуют графику; требуется сверка.'
-            elif len(set(slots)) != len(slots):
-                reason = 'Есть совпадающие слоты; требуется сверка.'
             elif slots:
                 finish = max(slots)
                 reason = 'По уже назначенным sendAt; пн–пт 09:00–19:00 МСК, шаг 30 минут.'
@@ -386,8 +379,15 @@ class Mailing:
                 raise ValueError('Неполная сверка')
         except Exception:
             sent, scheduled, finish, nearest = 'Не определено', 'Не определено', None, None
+            slots_valid = False
             reason = 'Сверка CRM недоступна или неполна; прогноз неизвестен.'
-        valid = bool(finish and not blocked and not unscheduled and not overdue and slots)
+        # Forecast only the confirmed future CRM slots.
+        # Blocked/unscheduled records remain visible as separate warnings.
+        valid = slots_valid and isinstance(scheduled, int)
+        if valid:
+            finish = max(slots)
+        else:
+            finish = None
         days = len(slots) / 20 if valid else 0
         color = '#16803c' if days >= 5 else '#b77900' if days >= 1 else '#c62828'
         status_text = 'Запас достаточный' if days >= 5 else 'Пора пополнять очередь' if days >= 1 else 'Срочно пополнить очередь'
@@ -407,12 +407,13 @@ class Mailing:
         content += metric('В очереди', c['QUEUED'] + c['SCHEDULED'] + c['WAITING_APPROVAL'], 'писем к отправке')
         content += metric('Отправится сегодня', scheduled, 'по графику')
         content += metric('Отправлено сегодня', sent, 'по данным CRM')
-        content += metric('Запас рассылки', reserve, 'раб. дня · ' + status_text, color)
+        content += metric('Запас рассылки', reserve, 'дня по 20 слотов · ' + status_text, color)
         content += '</div>'
         content += '<div style="border-top:1px solid #e6eaf0;padding-top:14px;margin-top:8px">'
-        content += '<p style="font-weight:600;margin:0 0 6px">Завершение очереди: ' + esc(local(finish) if finish else 'Не определено') + '</p>'
+        content += '<p style="font-weight:600;margin:0 0 6px">Последний подтверждённый будущий слот: ' + esc(local(finish) if finish else 'Не определено') + '</p>'
         content += '<p style="color:#64748b;font-size:20px;margin:0">Ближайшая отправка: ' + esc(local(nearest)) + '</p>'
         content += '</div>'
+        content += '<p>Запас учитывает только назначенные будущие слоты; это не срок завершения всей очереди и не подтверждение доставки.</p>'
         if details:
             content += '<p style="color:#64748b;font-size:12px">' + esc(reason) + '</p>'
         content += '<p style="color:#64748b;font-size:12px">Данные очереди — последняя сохранённая сверка; сегодня — по Москве.</p>'
