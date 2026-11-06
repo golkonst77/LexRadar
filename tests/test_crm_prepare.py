@@ -144,6 +144,7 @@ class PrepareTests(unittest.TestCase):
         self.assertEqual(len(self.api.records['Email']), 1)
 
     def test_web_no_email_and_identity_conflict(self):
+        self.row['identity_verified'] = False
         self.api = FakeAPI()
         self.row['email'] = ''
         self.web_prepare()
@@ -155,6 +156,49 @@ class PrepareTests(unittest.TestCase):
             self.assertEqual(self.web_prepare(True)['status'], 'HOLD_IDENTITY')
         self.assertEqual(len(self.api.posts), count)
 
+    def test_web_unconfirmed_legal_entity_prepares_pdf_and_draft_without_duplicates(self):
+        for text in (None, 'Клиника Тест', '© ООО «Тест». ООО «Другая клиника»'):
+            with self.subTest(text=text):
+                self.journal.unlink(missing_ok=True)
+                self.api = FakeAPI()
+                if text is None:
+                    self.row['identity_verified'] = False
+                else:
+                    AutomaticIdentityTests.capture(self, text)
+                self.row.update(company_name='Клиника Тест', email='test@test.invalid',
+                                recipient_verified=True)
+                account = self.web_prepare()
+                self.assertEqual(account['status'], 'ACCOUNT_VERIFIED')
+                self.assertFalse(account['identity_verified'])
+                self.assertIsNone(account['identity']['legal_name'])
+                self.assertEqual(account['identity']['identifiers'], {})
+                record = self.api.records['Account'][account['account_id']]
+                self.assertEqual(record['name'], 'Клиника Тест')
+                self.assertIn('Юридическое лицо не подтверждено', record['description'])
+                draft = self.web_prepare(True)
+                self.assertEqual(draft['status'], 'DRAFT_VERIFIED')
+                self.assertFalse(draft['identity_verified'])
+                count = len(self.api.posts)
+                self.assertEqual(self.web_prepare(True)['status'], 'DRAFT_VERIFIED')
+                self.assertEqual(len(self.api.posts), count)
+                self.assertEqual(len(self.api.records['Account']), 1)
+                self.assertEqual(len(self.api.records['Document']), 1)
+                email = self.api.records['Email'][draft['email_id']]
+                self.assertEqual(email['status'], 'Draft')
+                self.assertNotIn('sendAt', email)
+                self.assertTrue(email['attachmentsIds'])
+                # A changed CRM domain cannot be used to create a duplicate Account.
+                record['website'] = 'https://other.invalid'
+                self.assertEqual(self.web_prepare(True)['status'], 'HOLD_IDENTITY')
+                self.assertEqual(len(self.api.posts), count)
+
+    def test_web_unconfirmed_identity_keeps_evidence_integrity_gate(self):
+        AutomaticIdentityTests.capture(self, 'Клиника Тест')
+        self.row['company_name'] = 'Клиника Тест'
+        (self.root / 'dossier/artifacts/page-0001.html').write_text('changed')
+        self.assertEqual(self.web_prepare()['status'], 'HOLD_IDENTITY')
+        self.assertFalse(self.api.posts)
+
     def test_preview_never_contacts_crm(self):
         with patch.object(self.api, 'request', side_effect=AssertionError('network')):
             result = self.run_prepare(False)
@@ -163,7 +207,7 @@ class PrepareTests(unittest.TestCase):
         self.assertFalse(self.journal.exists())
 
     def test_repeat_no_duplicates_no_mail_and_unverified_email(self):
-        self.row['website'] = 'https://aclinic-krd.ru/'
+        self.row['website'] = 'https://clinic-a.example.invalid/'
         first = self.run_prepare()
         self.assertEqual(first['status'], 'PENDING_REVIEW')
         count = len(self.api.posts)
@@ -295,7 +339,7 @@ class PrepareTests(unittest.TestCase):
         state = json.loads(self.journal.read_text())
         entry = state[self.row['id']]
         account = entry['account_id']
-        known = '6ae3566554a3b0e47'
+        known = 'example-crm-026'
         self.api.records['Account'][known] = self.api.records['Account'].pop(account)
         self.api.records['Account'][known]['id'] = known
         self.api.records['Note'].clear()

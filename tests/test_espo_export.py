@@ -70,6 +70,13 @@ class FakeAPI:
         if method == 'PUT':
             kind, eid = route.split('/')
             self.records[kind][eid].update(copy.deepcopy(payload))
+            if kind == 'Attachment' and 'name' in payload:
+                for doc in self.records['Document'].values():
+                    if doc.get('fileId') == eid:
+                        doc['fileName'] = payload['name']
+                for email in self.records['Email'].values():
+                    if eid in email.get('attachmentsIds', []):
+                        email['attachmentsNames'][eid] = payload['name']
             if kind == 'Email' and 'attachmentsIds' in payload:
                 self.records[kind][eid]['attachmentsNames'] = {
                     i: self.records['Attachment'][i]['name'] for i in payload['attachmentsIds']}
@@ -109,17 +116,21 @@ class ExportTests(unittest.TestCase):
                    confirm=confirm, template_path=self.template)
 
     def test_read_only_sample_checks_actual_pdf_and_saves_private_template(self):
-        self.api.records['Account']['6ae1d3a08e4e3972a'] = {'id': '6ae1d3a08e4e3972a'}
-        self.api.records['Email']['6ae1e6ebf0fd5a377'] = {
-            'id': '6ae1e6ebf0fd5a377', 'parentType': 'Account',
-            'parentId': '6ae1d3a08e4e3972a', 'attachmentsIds': ['pdf'],
+        self.api.records['Account']['example-crm-002'] = {'id': 'example-crm-002'}
+        self.api.records['Email']['example-crm-012'] = {
+            'id': 'example-crm-012', 'parentType': 'Account',
+            'parentId': 'example-crm-002', 'attachmentsIds': ['pdf'],
             'name': 'Original subject', 'body': 'Original copy', 'isHtml': False,
             'to': 'private@example.invalid'}
-        self.api.records['Document']['6ae1d8069a608b987'] = {
-            'id': '6ae1d8069a608b987', 'fileId': 'pdf'}
+        self.api.records['Document']['example-crm-003'] = {
+            'id': 'example-crm-003', 'fileId': 'pdf'}
         self.api.records['Attachment']['pdf'] = {
             'id': 'pdf', 'type': 'application/pdf',
             'file': 'data:application/pdf;base64,' + base64.b64encode(b'%PDF-fixture').decode()}
+        # The diagnostic selects fixed production IDs; fixtures stay anonymous.
+        get = self.api.get
+        self.api.get = lambda kind, eid: get(
+            kind, next(iter(self.api.records[kind])) if kind in ('Account', 'Email', 'Document') else eid)
         output = self.root / 'private'
         result = inspect_sample(self.api, output)
         self.assertEqual(result['status'], 'READ_ONLY_VERIFIED')
@@ -155,7 +166,9 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(email['from'], 'golwebstudio@bk.ru')
         self.assertEqual(email['parentId'], first['account_id'])
         self.assertNotIn('sendAt', email)
-        self.assertTrue(email['name'].startswith('Approved subject [LexRadar-'))
+        self.assertEqual(email['name'], 'Approved subject')
+        self.assertEqual(next(iter(email['attachmentsNames'].values())),
+                         'Коммерческое предложение — Fictional Company.pdf')
         self.assertEqual(email['body'], 'Approved body')
         self.assertNotIn('messageId', email)
 
@@ -301,15 +314,15 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(self.export()[0]['status'], 'DRAFT_VERIFIED')
 
     def manual_draft(self):
-        self.row.update(company_name='Клиника А', website='https://aclinic-krd.ru/',
-                        phones=['+78619922327', '+79189381920'])
-        account = '6ae32c46426f8cdb3'
-        document = '6ae32e009a0f5cc31'
-        email = '6ae3374166673d4cf'
-        source = '6ae32da53033facf1'
+        self.row.update(company_name='Клиника А', website='https://clinic-a.example.invalid/',
+                        phones=['+12025550101', '+12025550102'])
+        account = 'example-crm-022'
+        document = 'example-crm-024'
+        email = 'example-crm-025'
+        source = 'example-crm-023'
         self.api.records['Account'][account] = dict(
-            id=account, name=self.row['company_name'], website='aclinic-krd.ru',
-            emailAddress=self.row['email'], phoneNumber='+7 (861) 992-23-27')
+            id=account, name=self.row['company_name'], website='clinic-a.example.invalid',
+            emailAddress=self.row['email'], phoneNumber='+1 (202) 555-0101')
         self.api.records['Document'][document] = dict(id=document, fileId=source, accountsIds=[account])
         for eid in (source, 'email-pdf'):
             self.api.records['Attachment'][eid] = dict(id=eid, name='proposal.pdf',
@@ -338,7 +351,7 @@ class ExportTests(unittest.TestCase):
         self.assertFalse(self.api.posts)
 
     def test_saved_clinic_draft_is_verified_without_body_repair(self):
-        self.row['website'] = 'https://aclinic-krd.ru/'
+        self.row['website'] = 'https://clinic-a.example.invalid/'
         first = self.export()[0]
         self.assertEqual(first['status'], 'DRAFT_VERIFIED')
         before_posts = len(self.api.posts)
@@ -403,6 +416,11 @@ class ExportTests(unittest.TestCase):
                 self.journal.unlink(missing_ok=True)
                 self.api = FakeAPI()
                 self.api.lose = kind
+                if kind == 'Email':
+                    self.assertEqual(self.export()[0]['status'], 'HOLD')
+                    self.assertEqual(self.export()[0]['status'], 'HOLD')
+                    self.assertEqual(len(self.api.posts), 4)
+                    continue
                 self.assertEqual(self.export()[0]['status'], 'DRAFT_VERIFIED')
                 self.assertEqual(len(self.api.posts), 4)
                 self.assertEqual(self.export()[0]['status'], 'DRAFT_VERIFIED')
@@ -490,13 +508,13 @@ class ExportTests(unittest.TestCase):
         self.assertFalse(self.api.posts)
 
     def test_clinic_bare_domain_uses_explicit_document_and_any_account_id(self):
-        self.row.update(company_name='Клиника А', website='https://aclinic-krd.ru/',
+        self.row.update(company_name='Клиника А', website='https://clinic-a.example.invalid/',
                         email='')
-        account_id = '6ae32c46426f8cdb3'
-        document_id = '6ae32e009a0f5cc31'
-        file_id = '6ae32da53033facf1'
+        account_id = 'example-crm-022'
+        document_id = 'example-crm-024'
+        file_id = 'example-crm-023'
         self.api.records['Account'][account_id] = dict(
-            id=account_id, name=self.row['company_name'], website='aclinic-krd.ru')
+            id=account_id, name=self.row['company_name'], website='clinic-a.example.invalid')
         self.api.records['Document'][document_id] = dict(
             id=document_id, fileId=file_id, fileName='proposal.pdf', accountsIds=[account_id])
         self.api.records['Attachment'][file_id] = dict(
@@ -551,7 +569,7 @@ class ExportTests(unittest.TestCase):
         self.assertFalse(self.journal.exists())
 
     def test_contacts_and_document_relation(self):
-        self.row.update(phones=['+78619922327', '+79189381920'],
+        self.row.update(phones=['+12025550101', '+12025550102'],
                         segment='Медицинские организации', industry_verified=True)
         result = self.export()[0]
         self.assertEqual(result['status'], 'DRAFT_VERIFIED')
@@ -586,11 +604,11 @@ class ExportTests(unittest.TestCase):
         count = len(self.api.posts)
         result = self.export()[0]
         self.assertEqual(result['status'], 'HOLD')
-        self.assertIn('source relation', result['reason'])
+        self.assertIn('reconcile', result['reason'])
         self.assertEqual(len(self.api.posts), count)
 
     def test_missing_clinic_created_normally_without_duplicates(self):
-        self.row['website'] = 'https://aclinic-krd.ru/'
+        self.row['website'] = 'https://clinic-a.example.invalid/'
         result = self.export()[0]
         self.assertEqual(result['status'], 'DRAFT_VERIFIED')
         count = len(self.api.posts)

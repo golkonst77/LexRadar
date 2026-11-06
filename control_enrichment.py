@@ -33,6 +33,8 @@ def commercial_decision(root, base, engine):
     try:
         if engine['status'] == 'ERROR':
             return 'ERROR', engine['reason'] or 'analysis_error'
+        if engine['status'] == 'SKIPPED' and engine.get('qualification') == 'HOLD':
+            return 'HOLD', engine['reason'] or 'site_unavailable_for_analysis'
         review = json.loads(read_file(root, base / 'sites/row-000002/review.json', 1_000_000))
         findings = review['findings']
         if not isinstance(findings, list):

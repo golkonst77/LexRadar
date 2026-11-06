@@ -100,7 +100,7 @@ def test_commercial_overrides_cannot_change_approved_copy():
     assert render() == render(
         price=1, discount_percent=99, term="tomorrow", discount_deadline_inclusive="2099-01-01"
     )
-    assert "01.11.2026 включительно" in render()
+    assert "30.11.2026 включительно" in render()
 
 
 def test_template_tampering_fails_closed(tmp_path, monkeypatch):

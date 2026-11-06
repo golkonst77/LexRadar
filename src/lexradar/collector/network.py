@@ -20,6 +20,12 @@ class CollectionError(Exception):
     pass
 
 
+class CompatibilityError(CollectionError):
+    def __init__(self, url):
+        super().__init__("Encoded response unsupported")
+        self.url = url
+
+
 def canonical_url(url: str) -> str:
     if "\\" in url or any(ord(c) < 33 or ord(c) == 127 for c in url):
         raise CollectionError("Invalid URL characters")
@@ -129,8 +135,36 @@ class Fetcher:
         self.limits = limits
         self.policy = policy or AddressPolicy(limits.timeout_seconds)
         self.received = 0
+        self.browser_playwright = None
 
-    def get(
+    def get(self, url, allowed_origin, **kwargs) -> Response:
+        redirects = 0
+        on_event = kwargs.get("on_event")
+
+        def event(name, target, status=None):
+            nonlocal redirects
+            if name == "redirect_target":
+                redirects += 1
+            if on_event:
+                on_event(name, target, status)
+
+        kwargs["on_event"] = event
+        try:
+            response = self._get(url, allowed_origin, **kwargs)
+        except CompatibilityError as exc:
+            url = exc.url
+        else:
+            if response.status not in {406, 415, 505}:
+                return response
+            url = response.url
+        from .browser_transport import browser_get
+
+        if on_event:
+            on_event("browser_fallback", url)
+        return browser_get(self, url, allowed_origin,
+                           max_redirects=self.limits.max_redirects - redirects, **kwargs)
+
+    def _get(
         self,
         url: str,
         allowed_origin: tuple[str, str, int],
@@ -208,6 +242,8 @@ class Fetcher:
                         on_event("redirect_target", current)
                     continue
                 if response.getheader("Content-Encoding", "identity").lower() != "identity":
+                    if 200 <= response.status < 300 or response.status in {406, 415, 505}:
+                        raise CompatibilityError(current)
                     raise CollectionError("Encoded response unsupported")
                 lengths = response.headers.get_all("Content-Length", [])
                 transfer = response.getheader("Transfer-Encoding")

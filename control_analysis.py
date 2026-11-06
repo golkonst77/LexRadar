@@ -31,7 +31,7 @@ def target(value):
         try:
             address = ipaddress.ip_address(host)
         except ValueError:
-            if '.' not in host or not host.rsplit('.', 1)[1].isalpha() or host.endswith(('.localhost', '.local', '.internal', '.test', '.example')):
+            if '.' not in host or not host.rsplit('.', 1)[1].encode('ascii').decode('idna').isalpha() or host.endswith(('.localhost', '.local', '.internal', '.test', '.example')):
                 raise ValueError()
         else:
             if not address.is_global or address.is_multicast or address.is_reserved:

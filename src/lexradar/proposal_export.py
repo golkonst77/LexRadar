@@ -91,7 +91,7 @@ def build(source: Path, collection_path: Path, config: dict, output: Path):
         reference_text_available=True,
         base_price_rub=45000,
         discount_percent=25,
-        discount_deadline_inclusive="2026-11-01",
+        discount_deadline_inclusive="2026-11-30",
         total_price_rub=33750,
         savings_rub=11250,
         free_consultations_months=2,

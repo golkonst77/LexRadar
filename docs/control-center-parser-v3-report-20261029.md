@@ -1,5 +1,9 @@
 # Control Center / реальный Parser v3 — 29.10.2026
 
+> Архивный отчёт этапа разработки. Команды запуска, перезапуска и старые
+> ограничения ниже не являются текущим runbook. Рабочий порядок:
+> [OPERATIONS](OPERATIONS.md); не перезапускать старый systemd unit вслепую.
+
 Работа в `/home/golkonst/src/LexRadar-web-control`, ветка
 `web-control-development`, исходный HEAD `b91ceb0`. Основной LexRadar,
 Parser v3 и прежние данные не изменялись. Сервер 127.0.0.1:8080 не

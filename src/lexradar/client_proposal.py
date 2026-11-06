@@ -43,8 +43,8 @@ def pricing(config):
 APPROVED_TEMPLATE = (
     Path(__file__).resolve().parents[2] / "approved-templates" / "КП LexRadar__v2_5.html"
 )
-APPROVED_SHA256 = "b7ad845dfb4db7dbbf3dc9b6316ce76d1c0e41be0262a6b49bf2dbffeb2afc33"
-APPROVED_GIT_BLOB = "9f129eb3a617832e7ea9fa1004f5123d2a79321f"
+APPROVED_SHA256 = "00aa963be0a21103beb188203c2958408e603177714a39434efa14779fc5bcf9"
+APPROVED_GIT_BLOB = "7aae9c659f06d6aa76645615b7107264441e5106"
 PERSONALIZATION = re.compile(r"(<span\s+contenteditable\s*=\s*true\s*>)(.*?)(</span>)", re.I | re.S)
 
 

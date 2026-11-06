@@ -162,6 +162,8 @@ def _collect(url, limits, allowed, store, session, static_only=False, screening_
             accept_downloads=False,
             viewport={"width": 1280, "height": 900},
         )
+        if isinstance(session.fetcher, Fetcher) and not static_only:
+            session.fetcher.browser_playwright = playwright
         try:
             while queue and len(result.pages) < limits.max_pages:
                 try:
@@ -395,6 +397,8 @@ def _collect(url, limits, allowed, store, session, static_only=False, screening_
                     "were not collected."
                 )
         finally:
+            if isinstance(session.fetcher, Fetcher):
+                session.fetcher.browser_playwright = None
             for close in (context.close, browser.close):
                 try:
                     close()

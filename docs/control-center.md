@@ -1,4 +1,9 @@
-# LexRadar Control Center
+# LexRadar Control Center — архив базовой панели 29–30.10.2026
+
+> Архивное описание `control_center.py`. Текущая четырёхшаговая панель —
+> `control_mvp.py`, с аудитом, CRM-подготовкой и mailing worker.
+> Для ежедневной работы и перезапуска используйте [OPERATIONS](OPERATIONS.md).
+> Утверждения ниже «не подключены» и «только чтение» относятся к старому входу.
 
 Локальная панель на стандартной библиотеке Python 3, Linux/POSIX.
 Источники открываются только на чтение. Очередь выполняет локальные проверки
@@ -9,6 +14,8 @@
 
 ```bash
 cd /home/golkonst/src/LexRadar-web-control
+
+# Исторический запуск базовой панели; не применять для текущего MVP.
 python3 control_center.py --parser-dir /home/golkonst/lexradar-data --results-dir /home/golkonst/src/LexRadar-compact --port 8080
 ```
 

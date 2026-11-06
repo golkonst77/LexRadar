@@ -1,5 +1,9 @@
 # Анализ организаций из Control Center
 
+> Архивный отчёт этапа разработки. Команды запуска, перезапуска и старые
+> ограничения ниже не являются текущим runbook. Рабочий порядок:
+> [OPERATIONS](OPERATIONS.md); не перезапускать старый systemd unit вслепую.
+
 Панель запускает реальный существующий `lexradar.mvp_batch.run` из
 `/home/golkonst/src/LexRadar-compact/src` через Python
 `/home/golkonst/src/LexRadar/.venv/bin/python`. Основной движок и Parser v3

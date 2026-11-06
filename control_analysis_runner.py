@@ -36,6 +36,8 @@ def recipient(name):
 def personalize(page, name):
     from lexradar.client_proposal import PERSONALIZATION
 
+    # Apply commercial copy before the external engine renders the PDF.
+    page = page.replace("ПростоБюро", "GØL Web Studio").replace("01.11.2026", "30.11.2026")
     fields = list(PERSONALIZATION.finditer(page))
     if len(fields) != 3:
         raise ValueError('Unexpected proposal personalization fields')
@@ -73,6 +75,8 @@ def main():
     row = state['rows'][0]
     print(json.dumps({'status': row['status'], 'reason': row.get('reason'),
                       'stages': row.get('stages', [])}, ensure_ascii=False), flush=True)
+    if row['status'] == 'SKIPPED' and row.get('qualification') == 'HOLD':
+        return 0
     return 0 if 'evidence_packet:SUCCESS' in row.get('stages', []) and row['status'] != 'ERROR' else 1
 
 

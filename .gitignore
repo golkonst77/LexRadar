@@ -37,3 +37,15 @@ runs-069/
 *.key
 # Client PDFs stay local; synthetic fixtures are added explicitly when needed.
 *.pdf
+
+# Private local databases, dated source copies and operational archives
+*.sqlite
+*.sqlite-*
+*.backup-*
+*.bak-*
+*.before-*
+*.bundle
+/backup-anikina-20261102-152931/
+/backup-offers-20261102-154026/
+/commercial-refresh-20261102/
+/current-ready-pdfs.txt
