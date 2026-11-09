@@ -3,6 +3,7 @@ import argparse
 import fcntl
 import hmac
 import json
+import re
 import secrets
 import sqlite3
 from contextlib import closing
@@ -20,14 +21,14 @@ from control_analysis import target
 from control_pages import esc, link, crm_status, crm_entity_links
 from control_enrichment import observation
 from control_results import read_file
-from control_mailing import Mailing
-from control_followup import Followup, ID
+from control_mailing import Mailing, validate_settings
+from control_followup import Followup, ID, call_available
 
 
 NAV = '''<a href="/">Обзор</a><a href="/collect">Сбор организаций</a>
 <a href="/analysis">Проверка сайтов</a><a href="/proposals">Готовые предложения</a>
 <a href="/crm">Передача в CRM</a><a href="/mailing">Рассылка</a>
-<a href="/followup">Контроль после отправки</a><a href="/service">Служебное</a>'''
+<a href="/followup">Контроль КП</a><a href="/service">Служебное</a>'''
 
 
 def hold_category(row):
@@ -105,6 +106,8 @@ class MVPJobs(Jobs):
         if identifiers is not None and (not identifiers or len(identifiers) > 200
                                        or not set(identifiers) <= {r['id'] for r in records}):
             raise ValueError('Выберите от 1 до 200 организаций из текущего списка')
+        if identifiers is not None:
+            return super().preview_analysis(records, identifiers, completed=completed)
         with self.lock:
             excluded = set(completed) | {key[1] for key in self.analysis_history()}
             candidates, seen = [], set()
@@ -154,6 +157,11 @@ class MVPHandler(ControlHandler):
         if run:
             form = form.replace('action="/analysis/preview"',
                                 'action="/analysis/preview?' + esc(urlencode({'run': run})) + '"')
+        if identifier == 'analysis-selection':
+            form += ('<form method="post" action="/holds/retry">'
+                     '<input type="hidden" name="csrf" value="' + esc(self.server.csrf_token) + '">'
+                     '<input type="hidden" name="batch" value="30">'
+                     '<button>Повторно проверить HOLD (30)</button></form>')
         return form
 
     def respond(self, status, body, content_type):
@@ -226,7 +234,10 @@ class MVPHandler(ControlHandler):
                     continue
                 from src.lexradar.proposal_rules import BLOCKS
                 basis = [BLOCKS.get(f['rule_id'], {}).get('title', 'Подтверждённый признак №' + str(f['rule_id']))
-                         for f in review['findings']]
+                         for f in review.get('findings', [])]
+                basis.insert(0, 'Основание КП: коммерческая возможность'
+                             if saved['reason'] == 'commercial_opportunity'
+                             else 'Основание КП: подтверждённое замечание')
                 offers.append(dict(lead=lead, job=job, saved=saved, base=base, basis=basis, latest_status=latest_status))
         counts['READY'] = len(offers)
         counts['crm_ready'] = sum(bool(o['lead'].get('phone') or o['lead'].get('email')
@@ -265,14 +276,14 @@ class MVPHandler(ControlHandler):
             content += self.analysis_form('<input type="hidden" name="retry_errors" value="yes"><input type="hidden" name="all" value="' + ','.join(r['id'] for r in records[:200]) + '">', 'Повторить ошибки (до 200)')
             content += '<p>Без парсинга и повторения успешных сайтов. Перед запуском будет предпросмотр.</p>'
         if records:
-            if errors_only or available:
+            if errors_only or available or checked:
                 content += self.analysis_form('<input type="hidden" name="retry_errors" value="' + ('yes' if errors_only else 'no') + '">', 'Проверить выбранные', 'analysis-selection')
             content += '<div class="table-scroll" tabindex="0" role="region" aria-label="Список организаций"><table><thead><tr><th>Выбор</th><th>Организация</th><th>Сайт</th><th>Статус</th></tr></thead><tbody>'
             for record in records[:200]:
                 badge, report = self.analysis_status(record, history, compact=True)
                 if record['id'] in checked and not analysis_rows(record, history):
                     badge = '<span class="qualification">Уже проверен (сохранённый аудит)</span>'
-                content += '<tr><td><input type="checkbox" form="analysis-selection" name="lead" value="' + esc(record['id']) + ('" disabled' if not errors_only and record['id'] not in available else '"') + ' aria-label="Выбрать ' + esc(record['name']) + '"></td><td>' + link('/organizations/' + record['id'], record['name']) + '</td><td>'
+                content += '<tr><td><input type="checkbox" form="analysis-selection" name="lead" value="' + esc(record['id']) + ('" disabled' if not errors_only and record['id'] not in available | checked else '"') + ' aria-label="Выбрать ' + esc(record['name']) + '"></td><td>' + link('/organizations/' + record['id'], record['name']) + '</td><td>'
                 content += '<br>'.join(link(url, urlsplit(url).hostname or url) for url in record['websites'] if url)
                 content += '</td><td>' + badge + ' ' + report + '</td></tr>'
             content += '</tbody></table></div><p>Показано ' + str(min(200, len(records))) + ' из ' + str(len(records)) + '. ' + link('/organizations', 'Все организации и фильтры') + '</p>'
@@ -554,7 +565,7 @@ class MVPHandler(ControlHandler):
             content += '<option value="' + key + '"' + (' selected' if category == key else '') + '>' + esc(title) + '</option>'
         content += '</select></label><label>Порядок <select name="sort"><option value="">По списку организаций</option><option value="category"' + (' selected' if sort == 'category' else '') + '>По категории и домену</option></select></label>'
         content += '<label>Поиск <input name="q" value="' + esc(params.get('q', [''])[0]) + '"></label><button>Показать</button></form>'
-        content += '<form method="post" action="/holds/retry"><input type="hidden" name="csrf" value="' + esc(self.server.csrf_token) + '"><input type="hidden" name="confirm" value="yes">'
+        content += '<form method="post" action="/holds/retry"><input type="hidden" name="csrf" value="' + esc(self.server.csrf_token) + '">'
         if category in {'technical', 'review'}:
             content += '<label><input type="checkbox" id="hold-all"> Выбрать все показанные в текущей категории</label>'
         content += '<p role="status" aria-live="polite">Выбрано организаций: <strong id="hold-count">0</strong></p><button>Повторно проверить выбранные</button>'
@@ -593,13 +604,19 @@ countHolds();
     def retry_holds(self, values):
         back = '<p>' + link('/holds', 'Вернуться к HOLD') + '</p>'
         try:
-            if set(values) - {'csrf', 'confirm', 'lead'}:
+            if set(values) - {'csrf', 'confirm', 'lead', 'batch'}:
+                raise ValueError('Некорректная форма')
+            batch = 'batch' in values
+            if batch and (values['batch'] != ['30'] or 'lead' in values):
                 raise ValueError('Некорректная форма')
             selected = set(values.get('lead', []))
             jobs = self.server.jobs
             with jobs.lock:
                 records = [row['lead'] for row in self.workflow()[0]['holds']
-                           if hold_category(row) in {'technical', 'review'}]
+                           if batch or hold_category(row) in {'technical', 'review'}]
+                if batch:
+                    records = records[:30]
+                    selected = {r['id'] for r in records}
                 if not selected or len(selected) > 200 or not selected <= {r['id'] for r in records}:
                     raise ValueError('Выбор пуст или HOLD уже изменился; обновите список')
                 # Explicit repeats use the existing queue; new-only filtering does not apply to HOLD.
@@ -713,7 +730,7 @@ countHolds();
         self.html(content + '<p>Передача не подтверждает согласие получателя на рекламную отправку. Без отдельного подтверждённого основания отправка заблокирована.</p>' + back)
 
     def do_POST(self):
-        if urlsplit(self.path).path not in {'/crm/preview', '/followup/action', '/holds/retry'}:
+        if urlsplit(self.path).path not in {'/crm/preview', '/followup/action', '/followup/tasks', '/holds/retry', '/mailing'}:
             return super().do_POST()
         if not self.valid_local_request():
             self.reject_post(403, 'local_host_required', 'invalid_host')
@@ -738,8 +755,51 @@ countHolds();
         token = getattr(self.server, 'csrf_token', '')
         if (not token or len(values.get('csrf', [])) != 1
                 or not hmac.compare_digest(values['csrf'][0].encode('utf-8'), token.encode('utf-8'))
-                or values.get('confirm') != ['yes']):
+                or (urlsplit(self.path).path in {'/followup/action', '/followup/tasks'} and values.get('confirm') != ['yes'])):
             self.reject_post(403, 'confirmation_required', 'csrf_or_confirmation_invalid')
+            return
+        if urlsplit(self.path).path == '/followup/tasks':
+            try:
+                eids = values.get('email_id', [])
+                if (set(values) - {'csrf', 'confirm', 'email_id'} or not 1 <= len(eids) <= 10
+                        or len(set(eids)) != len(eids) or any(not ID.fullmatch(eid) for eid in eids)):
+                    raise ValueError('Выберите от 1 до 10 организаций в разделе «Контроль КП».')
+                rows, warnings = self.server.followup.queue()
+                available = {r['email_id'] for r in rows if call_available(r)}
+                if not set(eids) <= available:
+                    raise ValueError('Выбор устарел или срок контроля не наступил; обновите список.')
+                from followup_tasks import run
+                results = run(self.server.state_dir, self.server.mailing.legacy, eids, apply=True)
+                content = '<h1>Результат создания задач CRM</h1><ul>'
+                names = {r['email_id']: r['name'] for r in rows}
+                for result in results:
+                    content += '<li>' + esc(names.get(result['email_id'], result['email_id'])) + ': ' + esc(result['status'])
+                    if result.get('error'):
+                        content += ' · ' + esc(result['error'])
+                    content += '</li>'
+                self.html(content + '</ul><p>' + link('/followup', 'Вернуться в Контроль КП') + '</p>')
+            except (OSError, ValueError, KeyError, sqlite3.Error):
+                self.html('<h1>Задачи не подтверждены</h1><p>Проверьте выбор (1–10 организаций), доступность журнала и блокировок. При сохранённом намерении POST повтор запрещён.</p>' + link('/followup', 'Вернуться в Контроль КП'), 400)
+            return
+        if urlsplit(self.path).path == '/mailing':
+            try:
+                if (set(values) - {'csrf', 'interval_minutes', 'weekdays', 'start_time', 'end_time', 'timezone'}
+                        or any(len(values.get(k, [])) != 1 for k in
+                               ('interval_minutes', 'start_time', 'end_time', 'timezone'))):
+                    raise ValueError('Некорректная форма расписания.')
+                settings = validate_settings(dict(
+                    interval_minutes=int(values['interval_minutes'][0]),
+                    weekdays=[int(day) for day in values.get('weekdays', [])],
+                    start_time=values['start_time'][0], end_time=values['end_time'][0],
+                    timezone=values['timezone'][0]))
+                self.server.mailing.save_settings(settings)
+            except ValueError:
+                self.mailing_page('Укажите целый интервал 5–120 минут, хотя бы один день и время HH:MM: начало раньше окончания. Часовой пояс — Europe/Moscow.', 400)
+                return
+            except OSError:
+                self.mailing_page('Не удалось сохранить расписание: локальное хранилище недоступно.', 503)
+                return
+            self.mailing_page('Расписание сохранено. Оно применяется только к будущим назначениям.')
             return
         if urlsplit(self.path).path == '/holds/retry':
             self.retry_holds(values)
@@ -963,6 +1023,9 @@ countHolds();
                              ('Передано в CRM', transferred), ('Отправлено клиентам', sent)):
             content += '<article><h2>' + label + '</h2><strong class="metric">' + str(value) + '</strong></article>'
         content += '</div><p>Всего подготовлено — актуальные сохранённые КП по доменам. ' + link('/proposals?view=history', 'Все подготовленные КП / история') + '</p><p>' + crm_description + '</p>'
+        followup = getattr(self.server, 'followup', None)
+        if followup:
+            content += followup.summary_html()
         mailing = getattr(self.server, 'mailing', None)
         if mailing:
             content += mailing.summary_html()
@@ -1011,9 +1074,62 @@ countHolds();
     def followup_page(self):
         self.followup_nonce = secrets.token_urlsafe(24)
         try:
-            self.html(self.server.followup.html(self))
+            content = self.server.followup.html(self)
+            content = content.replace('</caption><thead>', '</caption><colgroup>'
+                                      + '<col>' * 8 + '</colgroup><thead>', 1)
+            content = re.sub(r'<td>(Высокий|Средний|Низкий)<br>([^<]*)</td>',
+                             r'<td><span>\1</span><div class="fu-reason">\2</div></td>', content)
+            self.html(content + '''<style>
+#followup .table-scroll { width:100%; max-width:100%; overflow-x:auto; }
+#followup table.fu-table { table-layout:fixed; width:1560px; min-width:1560px; }
+#followup table.fu-table th, #followup table.fu-table td {
+    box-sizing:border-box; height:60px; padding:8px 12px; font-size:14px; line-height:20px;
+    vertical-align:middle; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    overflow-wrap:normal; word-break:normal;
+}
+#followup table.fu-table th:nth-child(n) { width:auto; }
+#followup table.fu-table col:nth-child(1) { width:260px; }
+#followup table.fu-table col:nth-child(2) { width:150px; }
+#followup table.fu-table col:nth-child(3), #followup table.fu-table col:nth-child(4) { width:145px; }
+#followup table.fu-table col:nth-child(5) { width:190px; }
+#followup table.fu-table col:nth-child(6) { width:110px; }
+#followup table.fu-table col:nth-child(7) { width:300px; }
+#followup table.fu-table col:nth-child(8) { width:260px; }
+#followup .fu-reason {
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+    max-height:36px; overflow:hidden; white-space:normal; overflow-wrap:anywhere;
+    font-size:13px; line-height:18px;
+}
+#followup .fu-links, #followup .fu-status {
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+#followup .fu-table .fu-open { font-size:14px; line-height:20px; white-space:nowrap; padding:6px 10px; }
+</style>''')
         finally:
             self.followup_nonce = None
+
+    def mailing_page(self, message='', status=200):
+        content = '<h1>Рассылка</h1>'
+        if message:
+            content += '<p role="status">' + esc(message) + '</p>'
+        try:
+            settings = self.server.mailing.load_settings()
+        except ValueError as exc:
+            self.html(content + '<p role="alert">' + esc(exc) + '</p>', 400)
+            return
+        content += '<article><h2>График новых КП</h2><form method="post" action="/mailing">'
+        content += '<input type="hidden" name="csrf" value="' + esc(self.server.csrf_token) + '">'
+        content += '<label>Интервал, минут <input type="number" name="interval_minutes" min="5" max="120" required value="' + str(settings['interval_minutes']) + '"></label>'
+        content += '<fieldset><legend>Дни отправки</legend>'
+        for day, label in enumerate(('Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'), 1):
+            content += '<label><input type="checkbox" name="weekdays" value="' + str(day) + '"' + (' checked' if day in settings['weekdays'] else '') + '> ' + label + '</label> '
+        content += '</fieldset>'
+        for key, label in (('start_time', 'Начало'), ('end_time', 'Окончание (не включается)')):
+            content += '<label>' + label + ' <input type="time" name="' + key + '" required value="' + esc(settings[key]) + '"></label> '
+        content += '<label>Часовой пояс <input name="timezone" value="Europe/Moscow" readonly></label>'
+        content += '<button>Сохранить расписание</button></form><p>Только будущие назначения. Уже назначенные и отправленные письма сохраняют свой график.</p></article>'
+        content += self.server.mailing.html(details=True, status=parse_qs(urlsplit(self.path).query).get('status', [''])[0])
+        self.html(content, status)
 
     def do_GET(self):
         if not self.valid_local_request():
@@ -1025,7 +1141,7 @@ countHolds();
         elif path == '/mailing/summary.json':
             self.respond_json(200, self.server.mailing.summary())
         elif path == '/mailing':
-            self.html(self.server.mailing.html(details=True, status=parse_qs(urlsplit(self.path).query).get('status', [''])[0]))
+            self.mailing_page()
         elif path == '/service':
             self.service()
         elif path == '/holds':
@@ -1061,12 +1177,14 @@ def main():
         server.followup = Followup(server.state_dir)
         server.mailing = Mailing(server.state_dir)
         server.mailing.start()
+        server.followup.start()
         print(f'LexRadar Control Center: http://127.0.0.1:{args.port}', flush=True)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             pass
         finally:
+            server.followup.stop.set()
             server.mailing.close()
             server.jobs.close()
 

@@ -3,6 +3,7 @@ import ast
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 import subprocess
 from urllib.parse import urlsplit
@@ -69,15 +70,16 @@ with sync_playwright() as p:
                 errors.append('Chromium Playwright недоступен')
         except (OSError, ValueError, subprocess.SubprocessError):
             errors.append('Python / Playwright / Chromium недоступен для локальной проверки')
-        if industry != '1' and not os.environ.get('DISPLAY'):
-            errors.append('Orgpage запускает Chromium с окном: нужен доступный DISPLAY')
+        if industry != '1' and not os.environ.get('DISPLAY') and not shutil.which('xvfb-run', path=os.defpath):
+            errors.append('Orgpage запускает Chromium с окном: нужен доступный DISPLAY или xvfb-run')
         return errors
 
     def command(self, params, directory):
         params = self.validate(params['industry'], str(params['target']), params['name'])
         database = (directory.parent / 'medadvisor-sequential' / 'parser.sqlite'
                     if params['industry'] == '1' else directory / 'parser.sqlite')
-        return [self.python, '-B', '-u', str(self.source / 'parser_run.py'),
+        xvfb = shutil.which('xvfb-run', path=os.defpath) if params['industry'] != '1' else None
+        return ([xvfb, '-a'] if xvfb else []) + [self.python, '-B', '-u', str(self.source / 'parser_run.py'),
                 '--industry', params['industry'], '--target', str(params['target']),
                 '--max-cards', str(max(200, 10 * params['target'])), '--max-pages', '200',
                 '--database', str(database), '--output', str(directory / 'parser.csv'),

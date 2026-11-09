@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from control_leads import load_leads, website
-from control_organizations import EXCLUDED, load_organizations
+from control_organizations import EXCLUDED, load_organizations, working_directory
 from control_results import document_id, read_file
 
 
@@ -46,6 +46,8 @@ def discover(root):
                         continue
                     relative = directory / entry.name
                     if entry.is_dir(follow_symlinks=False):
+                        if not working_directory(root, relative):
+                            continue
                         if depth < 8:
                             pending.append((relative, depth + 1))
                         else:

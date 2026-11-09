@@ -6,6 +6,9 @@ import json
 import re
 from pathlib import Path
 
+from pypdf import PdfReader
+from pypdf.errors import PyPdfError
+
 from control_analysis import target
 from control_results import read_file
 
@@ -39,31 +42,61 @@ def commercial_decision(root, base, engine):
         findings = review['findings']
         if not isinstance(findings, list):
             raise ValueError('Invalid findings')
+        consent_findings = [f for f in findings if isinstance(f, dict)
+                            and f.get('rule_id') == 3 and f.get('confirmed') is True
+                            and f.get('commercial_ready') is True
+                            and isinstance(f.get('evidence'), list)
+                            and any(isinstance(p, dict)
+                                    and p.get('form_check') == 'name_contact_consent'
+                                    and p.get('checkbox_state') in {'missing', 'preset'}
+                                    and p.get('quote') and p.get('checked')
+                                    and isinstance(p.get('artifacts'), list) and p['artifacts']
+                                    and all(isinstance(a, dict) and isinstance(a.get('path'), str)
+                                            and a['path'] and isinstance(a.get('sha256'), str)
+                                            and re.fullmatch(r'[0-9a-fA-F]{64}', a['sha256'])
+                                            for a in p['artifacts'])
+                                    for p in f['evidence'])]
+        findings = [f for f in findings if isinstance(f, dict)
+                    and f.get('confirmed') is True and f.get('evidence')
+                    and f.get('rule_id') in {1, 2, 3, 5, 6, 7, 8}
+                    and (not f.get('manual_review') or f in consent_findings)]
+        # Internal opportunities survive HOLD in review.json; they are not client claims.
+        findings = [f for f in findings if f['rule_id'] in {1, 2, 3, 5}
+                    and f.get('legal_violation_established') is not False
+                    and all(isinstance(p, dict) and p.get('legal_violation_established') is not False
+                            for p in f['evidence'])]
         if not findings:
-            return 'REJECT', 'no_usable_findings'
-        if any(not isinstance(f, dict) or f.get('confirmed') is not True
-               or f.get('manual_review') or not f.get('evidence')
-               or f.get('rule_id') not in {1, 2, 3, 5, 6, 7, 8} for f in findings):
-            return 'HOLD', 'finding_reliability_requires_review'
-        if engine['reason'] != 'manual_review_required_including_unverified_constant_block4':
-            return 'HOLD', engine['reason'] or 'engine_result_requires_review'
+            return 'HOLD', review.get('pdf_error') or 'no_confirmed_approved_block_basis'
         if (engine['status'] != 'SUCCESS' or not review.get('pdf_ready')
                 or review.get('pdf_error')):
-            return 'HOLD', 'proposal_generation_requires_review'
+            return 'HOLD', review.get('pdf_error') or review.get('reason') or 'proposal_generation_requires_review'
         directory = base / 'sites/row-000002'
         page = read_file(root, directory / 'proposal.html', 8_000_000).decode('utf-8-sig')
-        pdf = read_file(root, directory / 'proposal.pdf', 8_000_000, prefix=5)
-        if not pdf.startswith(b'%PDF-') or any(
-                f'data-rule="{f["rule_id"]}"' not in page for f in findings):
+        pdf = read_file(root, directory / 'proposal.pdf', 8_000_000)
+        from src.lexradar.client_proposal import proposal_text
+        from src.lexradar.proposal_rules import BLOCKS
+
+        rules = {f['rule_id'] for f in findings} | {4}
+        rendered = {int(n) for n in re.findall(r'data-rule="(\d+)"', page)}
+        text = ' '.join(proposal_text(page).split())
+        if (not pdf.startswith(b'%PDF-') or b'%%EOF' not in pdf[-1024:]
+                or len(text) < 500 or rendered != rules
+                or 'data-commercial-opportunity=' in page
+                or 'Вопрос, требующий проверки' in text
+                or any(' '.join(paragraph.split()) not in text
+                       for number in rules for paragraph in BLOCKS[number]['paragraphs'])):
             return 'HOLD', 'proposal_content_requires_review'
+        if not PdfReader(io.BytesIO(pdf)).pages:
+            return 'HOLD', 'proposal_pdf_has_no_pages'
         return 'READY', 'usable_findings_and_substantive_proposal'
-    except (OSError, ValueError, TypeError, KeyError, RecursionError):
+    except (OSError, ValueError, TypeError, KeyError, RecursionError, PyPdfError):
         return 'HOLD', 'saved_proposal_requires_review'
 
 
 def observation(root, job, host):
     base = Path(job['id']) / 'analysis'
-    result = dict(contacts=[], status='', qualification='', reason='', warning='')
+    result = dict(contacts=[], status='', qualification='', reason='', warning='',
+                  commercial_opportunity_count=0)
     try:
         raw = read_file(root, base / 'results.csv', 1_000_000).decode('utf-8-sig')
         rows = list(csv.DictReader(io.StringIO(raw), strict=True))
@@ -77,6 +110,10 @@ def observation(root, job, host):
         result['qualification'], result['reason'] = commercial_decision(root, base, result)
         try:
             review = json.loads(read_file(root, base / 'sites/row-000002/review.json', 1_000_000))
+            result['commercial_opportunity_count'] = sum(
+                isinstance(o, dict) and o.get('status') == 'READY'
+                for o in review.get('commercial_opportunities', [])
+            )
             binding = review.get('control_center')
             if binding and (not isinstance(binding, dict) or binding.get('job_id') != job['id'] or binding.get('domain') != host):
                 result.update(qualification='HOLD', reason='review_run_mismatch')

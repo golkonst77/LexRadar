@@ -10,6 +10,7 @@ import selectors
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -207,6 +208,7 @@ class Jobs(AnalysisJobs):
             return
         identifier = row['id']
         process = None
+        parser_tmp = None
         output = bytearray()
         truncated = False
         status, error = 'failed', ''
@@ -222,10 +224,12 @@ class Jobs(AnalysisJobs):
                 command = [sys.executable, '-B', str(Path(__file__).with_name('control_parser_runner.py').absolute()), *command]
             if self.stopping.is_set() or self.get(identifier)['cancel']:
                 return
+            if row['kind'] == 'parser-v3' and params['industry'] != '1':
+                parser_tmp = tempfile.TemporaryDirectory(prefix='orgpage-', dir='/tmp')
             process = subprocess.Popen(command, cwd=directory, start_new_session=True,
                                        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                        env={'PATH': os.defpath, 'LANG': 'C.UTF-8', 'PYTHONIOENCODING': 'utf-8',
-                                            'HOME': str(directory), 'TMPDIR': str(directory),
+                                            'HOME': str(directory), 'TMPDIR': parser_tmp.name if parser_tmp else str(directory),
                                             'PLAYWRIGHT_BROWSERS_PATH': str(self.parser.browsers),
                                             **({k: os.environ[k] for k in ('DISPLAY', 'XAUTHORITY') if k in os.environ} if row['kind'] == 'parser-v3' else {})})
             deadline = time.monotonic() + (ANALYSIS_TIMEOUT if row['kind'] == 'analysis-site' else PARSER_TIMEOUT if row['kind'] == 'parser-v3' else TIMEOUT)
@@ -270,6 +274,8 @@ class Jobs(AnalysisJobs):
                 for stream in (process.stdout, process.stderr):
                     if stream:
                         stream.close()
+            if parser_tmp is not None:
+                parser_tmp.cleanup()
             if truncated:
                 error = (error + '; ' if error else '') + 'Журнал ограничен 64 КиБ'
             with self.lock:

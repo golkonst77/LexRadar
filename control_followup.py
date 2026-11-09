@@ -1,4 +1,4 @@
-"""Read-only CRM observations and independent, local operator follow-up actions."""
+"""Automatic Sent observations and explicitly selected CRM call tasks."""
 import fcntl
 import json
 import os
@@ -6,6 +6,7 @@ import re
 import sqlite3
 import threading
 import time
+from collections import Counter
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -23,6 +24,7 @@ GROUPS = ('Ожидают срока', 'Пора проверить', 'Отло�
 GROUP_ORDER = (1, 0, 2, 3)
 LABELS = {'pending': 'Ожидает обработки', 'deferred': 'Отложено', 'no_answer': 'Не дозвонился',
           'completed': 'Обработано', 'do_not_contact': 'Не связываться'}
+PDF_WARNING = 'Связь части КП не подтверждена; ссылки на них скрыты.'
 JOURNALS = (Path.home() / '.local/state/lexradar/crm-prepare.json',
             Path.home() / '.local/state/lexradar/espo-export.json')
 
@@ -48,6 +50,149 @@ def control_date(sent):
         result += timedelta(days=1)
         days += result.weekday() < 5
     return result
+
+
+def check_local_call_action(directory, eid, aid):
+    """Do not turn a local refusal or an already handled call into a new CRM task."""
+    path = Path(directory) / 'followup.sqlite3'
+    if not path.exists():
+        return
+    with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=2)) as db:
+        if db.execute('SELECT 1 FROM blocked WHERE account_id=?', (aid,)).fetchone():
+            raise ValueError('Task: для Account сохранён отказ от контактов')
+        action = db.execute('SELECT account_id,status FROM actions WHERE email_id=?', (eid,)).fetchone()
+        if action and (action[0] != aid or action[1] != 'pending'):
+            raise ValueError('Task: сохранено действие оператора; требуется ручная сверка контроля')
+
+
+def task_create_acl(api):
+    data = api.request('GET', 'App/user')
+    acl = data.get('acl') if isinstance(data, dict) else None
+    table = acl.get('table') if isinstance(acl, dict) else None
+    task = table.get('Task') if isinstance(table, dict) else None
+    if (not isinstance(task, dict) or task.get('create') != 'yes'
+            or acl.get('assignmentPermission') != 'all'):
+        raise ValueError('Task: App/user не подтвердил create=yes и assignmentPermission=all; POST запрещён')
+
+
+# The original POST outcome is unresolved; recovery is GET-only even if its intent is damaged.
+TASK_POST_BLOCKED = frozenset({'6ae97b4789921f041'})
+
+
+def ensure_call_task(api, row, email, save, *, apply=True):
+    """Both mailing locks must be held; apply=False performs GET checks without saving."""
+    if 'task_id' in row:
+        if not isinstance(row['task_id'], str) or not ID.fullmatch(row['task_id']):
+            raise ValueError('Task: повреждён task_id; требуется сверка')
+        return 'CONFIRMED'
+    eid, aid = row['id'], row.get('account_id')
+    if (not isinstance(eid, str) or not ID.fullmatch(eid)
+            or not isinstance(aid, str) or not ID.fullmatch(aid) or row.get('binding_hold')
+            or email.get('id') != eid or email.get('deleted') or email.get('sendAt')
+            or email.get('status') != 'Sent' or email.get('parentType') != 'Account'
+            or email.get('parentId') != aid):
+        raise ValueError('Task: не подтверждена привязка отправленного Email к Account')
+    sent = sent_time(email.get('dateSent'))
+    if sent > datetime.now(UTC):
+        raise ValueError('Task: дата отправки находится в будущем')
+    marker = 'LexRadar followup Email/' + eid
+    matches = api.request('GET', 'Task?' + urlencode({'maxSize': 2,
+        'where[0][type]': 'startsWith', 'where[0][attribute]': 'description', 'where[0][value]': marker + '\n'}))
+    tasks = matches.get('list')
+    if (not isinstance(tasks, list) or len(tasks) > 1
+            or matches.get('total', len(tasks)) != len(tasks)
+            or any(not isinstance(t, dict) or not isinstance(t.get('id'), str)
+                   or not ID.fullmatch(t['id']) for t in tasks)):
+        raise ValueError('Task: неоднозначный результат сверки задач')
+    if tasks:
+        task = api.get('Task', tasks[0]['id'])
+        if (task.get('id') != tasks[0]['id'] or task.get('deleted')
+                or not isinstance(task.get('description'), str)
+                or not task['description'].startswith(marker + '\n')
+                or not (task.get('parentType') == 'Account' and task.get('parentId') == aid
+                        or task.get('accountId') == aid and not task.get('parentId')
+                        and not task.get('parentType'))):
+            raise ValueError('Task: изменена привязка найденной задачи')
+        if not apply:
+            return 'FOUND'
+    else:
+        if 'task_intent' in row or 'task_post_id' in row or eid in TASK_POST_BLOCKED:
+            raise ValueError('Task: неизвестный исход POST; повтор запрещён, требуется сверка')
+        task_create_acl(api)
+        try:
+            metadata = api.request('GET', 'Metadata')
+        except (espo.Hold, OSError) as exc:
+            raise ValueError('Task: GET Metadata недоступен; схема не проверена: ' + str(exc)) from exc
+        definitions = metadata.get('entityDefs') if isinstance(metadata, dict) else None
+        definition = definitions.get('Task') if isinstance(definitions, dict) else None
+        fields = definition.get('fields') if isinstance(definition, dict) else None
+        if not isinstance(fields, dict):
+            keys = ', '.join(sorted(metadata)) if isinstance(metadata, dict) else type(metadata).__name__
+            raise ValueError('Task: структура GET Metadata не подтверждена '
+                             '(ожидался entityDefs.Task.fields; корневые ключи: ' + keys +
+                             '). Это не означает отсутствия Task; нужна сверка ответа API')
+        required = {'parent', 'name', 'description', 'assignedUser', 'dateEnd', 'status'}
+        missing = sorted(required - fields.keys())
+        invalid = sorted(k for k in required & fields.keys() if not isinstance(fields[k], dict))
+        if missing or invalid:
+            raise ValueError('Task: Metadata: отсутствуют поля: ' + ', '.join(missing) +
+                             '; некорректные определения: ' + ', '.join(invalid))
+        readonly = sorted(k for k in required if fields[k].get('readOnly'))
+        if readonly:
+            raise ValueError('Task: Metadata: readOnly у полей ' + ', '.join(readonly) +
+                             '; наличие поля не подтверждает запись; POST запрещён')
+        parent = fields['parent']
+        if (parent.get('type') != 'linkParent'
+                or not isinstance(parent.get('entityList'), list)
+                or 'Account' not in parent['entityList']):
+            raise ValueError('Task: Metadata: parent не подтверждает linkParent с Account; POST запрещён')
+        for attribute in ('parentType', 'parentId'):
+            if attribute in fields and (not isinstance(fields[attribute], dict)
+                                        or fields[attribute].get('readOnly')):
+                raise ValueError('Task: Metadata: запись ' + attribute + ' не подтверждена; POST запрещён')
+        options = fields['status'].get('options')
+        if not isinstance(options, list) or 'Not Started' not in options:
+            raise ValueError('Task: Metadata: status.options не подтверждает Not Started; POST запрещён')
+        users = api.request('GET', 'User?' + urlencode({'maxSize': 2,
+            'where[0][type]': 'equals', 'where[0][attribute]': 'userName', 'where[0][value]': 'admin'}))
+        admins = users.get('list')
+        if (not isinstance(admins, list) or len(admins) != 1 or users.get('total', 1) != 1
+                or not isinstance(admins[0], dict) or admins[0].get('userName') != 'admin'
+                or admins[0].get('isActive') is not True or admins[0].get('deleted')
+                or not isinstance(admins[0].get('id'), str) or not ID.fullmatch(admins[0]['id'])):
+            raise ValueError('Task: единственный активный пользователь admin не подтверждён')
+        account = api.get('Account', aid)
+        if account.get('id') != aid or account.get('deleted') or not isinstance(account.get('name'), str) or not account['name']:
+            raise ValueError('Task: организация недоступна или не имеет названия')
+        due = control_date(sent).astimezone(UTC).strftime('%Y-%m-%d %H:%M:%S')
+        url = espo.API_URL.split('/api/')[0] + '/#Email/view/' + eid
+        payload = dict(name='Контрольный звонок LexRadar · ' + account['name'],
+            parentType='Account', parentId=aid, assignedUserId=admins[0]['id'], status='Not Started', dateEnd=due,
+            description=marker + '\nОрганизация: ' + account['name'] +
+                '\nТелефон: ' + (account_phone(account) or 'не указан') +
+                '\nКП отправлено: ' + sent.astimezone(MOSCOW).strftime('%d.%m.%Y %H:%M МСК') +
+                '\nПисьмо: ' + url)
+        if not apply:
+            return 'READY'
+        if api.get('Email', eid) != email:
+            raise ValueError('Task: Email изменён перед созданием задачи')
+        row['task_intent'] = payload
+        save()
+        created = api.request('POST', 'Task', payload)
+        if not isinstance(created.get('id'), str) or not ID.fullmatch(created['id']):
+            raise ValueError('Task: CRM не вернула корректный ID; повтор POST запрещён')
+        row['task_post_id'] = created['id']
+        save()
+        task = api.get('Task', created['id'])
+        if (task.get('id') != created['id'] or task.get('deleted')
+                or any(task.get(key) != value for key, value in payload.items())):
+            raise ValueError('Task: создание не подтверждено контрольным GET')
+    if row.get('task_post_id') and row['task_post_id'] != task['id']:
+        raise ValueError('Task: найденная задача не совпадает с сохранённым ответом POST')
+    row['task_id'] = task['id']
+    row.pop('task_error', None)
+    save()
+    return 'CONFIRMED'
 
 
 def campaign_bindings(journals=JOURNALS):
@@ -92,62 +237,186 @@ def campaign_bindings(journals=JOURNALS):
                     conflicts.add(eid)
                 bindings[eid] = binding
         except (OSError, ValueError, TypeError, AttributeError):
-            warnings.append('Часть истории экспорта недоступна или повреждена; её письма не включены.')
+            warnings.append('История экспорта недоступна или повреждена; журналов: 1; число непроверенных записей в нём неизвестно.')
     for eid in conflicts:
         bindings.pop(eid, None)
     if conflicts:
-        warnings.append('Письма с противоречивой привязкой исключены.')
-    return bindings, warnings
+        warnings.append('Непроверенных записей: ' + str(len(conflicts)) + '; категория: противоречивая привязка экспорта.')
+    return bindings, [message + (' Случаев: ' + str(count) + '.' if count > 1 else '')
+                      for message, count in Counter(warnings).items()]
+
+
+def task_state(row):
+    if 'task_id' in row:
+        return 'CONFIRMED' if isinstance(row['task_id'], str) and ID.fullmatch(row['task_id']) else 'RECONCILE_ONLY'
+    if row.get('id') in TASK_POST_BLOCKED or any(k in row for k in ('task_intent', 'task_post_id')):
+        return 'RECONCILE_ONLY'
+    return 'AVAILABLE'
+
+
+def call_available(row):
+    return (row['group'] == 1 and row['status'] == 'pending'
+            and row['task_state'] == 'AVAILABLE' and not row['account_task_blocked'])
+
+
+def deadline_label(row):
+    if row['group'] == 3:
+        return 'Контроль завершён'
+    if row['group'] == 1 and row['status'] == 'deferred':
+        return 'Отсрочка просрочена'
+    if row['group'] == 1 and row['status'] == 'no_answer':
+        return 'Пора повторить контроль'
+    return GROUPS[row['group']]
+
+
+def local_phones(rows, leads, journals):
+    """Use an exact saved export identity, never a similar name or domain."""
+    sources = {alias: lead for lead in leads for alias in lead.get('aliases', [lead['id']])}
+    candidates, matched, failures = {}, set(), Counter()
+    for path in journals:
+        if not path.exists():
+            continue
+        try:
+            with path.with_suffix('.lock').open('r') as lock:
+                fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                if path.stat().st_size > 8_000_000:
+                    raise ValueError()
+                journal = json.loads(path.read_text())
+            for key, entry in journal.items():
+                lead = sources.get(key.removesuffix(':draft').removeprefix('web-account-'))
+                if not lead:
+                    continue
+                eid = entry.get('steps', {}).get('email', {}).get('id')
+                aid = entry.get('account_id')
+                matched.add((eid, aid))
+                for member in lead.get('members', [lead]):
+                    for phone in re.split(r'[;\n]', member.get('phone', '')):
+                        if safe_phone(phone):
+                            candidates.setdefault((eid, aid), {})[safe_phone(phone)] = (phone.strip(),
+                                'Импортный CSV' if str(member.get('source', '')).endswith('.csv') else 'Локальная организация Parser')
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            failures[type(exc).__name__] += 1
+    for row in rows:
+        phones = candidates.get((row['email_id'], row['account_id']), {})
+        if safe_phone(row.get('phone')):
+            row['phone_source'] = row.get('phone_source') or 'EspoCRM Account; сохранённая сверка'
+            continue
+        if len(phones) == 1:
+            row['phone'], row['phone_source'] = next(iter(phones.values()))
+            row['phone_source'] += '; точная привязка экспорта'
+        else:
+            reason = ('найдено несколько разных локальных номеров' if len(phones) > 1 else
+                      'в привязанной локальной организации/CSV нет пригодного номера'
+                      if (row['email_id'], row['account_id']) in matched else
+                      'нет точной связи с локальной организацией/CSV в журнале экспорта')
+            row['phone_reason'] = (row.get('phone_reason') or 'В снимке Account нет пригодного телефона.') + ' ' + reason + '.'
+            if failures:
+                row['phone_reason'] += ' Часть журналов источников недоступна или повреждена.'
+    return ['Источники локальных телефонов: ' + category + ' — журналов ' + str(count)
+            for category, count in sorted(failures.items())]
+
+
+def mailing_records(directory):
+    records = {}
+    for name in ('mailing-archive.json', 'mailing.json'):
+        path = Path(directory) / name
+        if not path.exists():
+            continue
+        data = json.loads(path.read_text())
+        if not isinstance(data, dict) or any(not isinstance(r, dict) or r.get('id') != eid
+                or not ID.fullmatch(eid) for eid, r in data.items()):
+            raise ValueError('Повреждён журнал рассылки')
+        records.update(data)
+    return records
+
+
+def control_bindings(directory, journals):
+    bindings, warnings = campaign_bindings(journals)
+    for eid, row in mailing_records(directory).items():
+        aid = row.get('account_id')
+        if row.get('binding_hold') or not isinstance(aid, str) or not ID.fullmatch(aid):
+            bindings.pop(eid, None)
+            warnings.append('Непроверенная привязка очереди: 1 запись требует сверки.')
+        elif eid in bindings and bindings[eid]['account_id'] != aid:
+            bindings.pop(eid)
+            warnings.append('Противоречивая привязка очереди: 1 запись исключена.')
+        else:
+            bindings.setdefault(eid, dict(account_id=aid, document_id=None,
+                                          attachment_id=None, source_id=None))
+    return bindings, [message + (' Случаев: ' + str(count) + '.' if count > 1 else '')
+                      for message, count in Counter(warnings).items()]
+
+
+def call_priority(review):
+    findings = [f for f in review.get('findings', []) if isinstance(f, dict)
+                and f.get('confirmed') is True]
+    rules = {f.get('rule_id') for f in findings}
+    if rules & {1, 2, 3, 5, 6, 7}:
+        return 0, 'Существенные замечания: политика, формы, согласия, документы или сбор данных'
+    opportunities = [o for o in review.get('commercial_opportunities', [])
+                     if isinstance(o, dict) and o.get('status') == 'READY']
+    texts = [str(o.get('site_object', '')) + ' ' + str(o.get('observed_fact', '')) for o in opportunities]
+    if not findings and texts and all(re.search(r'футер|footer|копирайт|copyright', text, re.I)
+            and re.search(r'устар|прошл|неактуаль|год|20[0-9]{2}', text, re.I) for text in texts):
+        return 2, 'Только устаревший футер; низкий приоритет звонка'
+    return 1, 'Сверить КП: прочие замечания или недостаточно данных о существенности'
+
+
+def call_priorities(journals):
+    result = {}
+    for path in journals:
+        if not path.exists():
+            continue
+        try:
+            with path.with_suffix('.lock').open('r') as lock:
+                fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                journal = json.loads(path.read_text())
+            for key, entry in journal.items():
+                try:
+                    eid = entry.get('steps', {}).get('email', {}).get('id')
+                    source = journal.get(key.removesuffix(':draft'), {})
+                    materials = source.get('result', {}).get('materials', [])
+                    if not eid or not materials:
+                        continue
+                    material = materials[0]
+                    if not material.get('pdf') or material.get('sha256') != entry.get('sha256'):
+                        continue
+                    path_review = Path(material['path']).with_name('review.json')
+                    if path_review.stat().st_size > 1_000_000:
+                        continue
+                    review = json.loads(path_review.read_text())
+                    if review.get('control_center', {}).get('hashes', {}).get('pdf') == entry['sha256']:
+                        result[eid] = call_priority(review)
+                except (OSError, ValueError, TypeError, KeyError, AttributeError):
+                    continue
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            continue
+    return result
 
 
 def read_sent(api, bindings):
-    """Bounded GET-only pagination; no mailing imports or write-capable workflows."""
-    deadline, calls = time.monotonic() + 8, 0
-    rows, warnings, seen, excluded = [], [], set(), set()
-
-    def get(route):
-        nonlocal calls
-        if calls >= 200 or time.monotonic() >= deadline:
-            raise ValueError('limit')
-        calls += 1
-        return api.request('GET', route)
-
+    """GET every exact campaign ID, including historical mailing records."""
+    rows, warnings, excluded = [], [], set()
+    failures = Counter()
+    get = lambda route: api.request('GET', route)
     try:
-        candidates = []
-        # shortcut: first 1000 Sent only; add a cursor if campaign history exceeds this window.
-        for offset in range(0, 1000, 200):
-            query = urlencode({'maxSize': 200, 'offset': offset, 'orderBy': 'id', 'order': 'asc',
-                               'select': 'id,status,dateSent,parentType,parentId',
-                               'where[0][type]': 'equals', 'where[0][attribute]': 'status',
-                               'where[0][value]': 'Sent'})
-            data = get('Email?' + query)
-            page = data.get('list')
-            if not isinstance(page, list) or len(page) > 200:
-                raise ValueError('page')
-            for row in page:
-                eid = row.get('id') if isinstance(row, dict) else None
-                if not isinstance(eid, str) or not ID.fullmatch(eid) or eid in seen:
-                    raise ValueError('page')
-                seen.add(eid)
-                if eid in bindings:
-                    candidates.append(eid)
-            if len(page) < 200:
-                if isinstance(data.get('total'), int) and data['total'] > len(seen):
-                    warnings.append('CRM вернула неполный список отправок.')
-                break
-        else:
-            warnings.append('Показана ограниченная выборка: просмотрены первые 1000 писем Sent.')
+        candidates = sorted(bindings)
         accounts = {}
         for eid in candidates:
+            stage = 'Email: чтение'
             try:
                 email = get('Email/' + eid)
                 binding = bindings[eid]
                 aid = binding['account_id']
-                if (email.get('id') != eid or email.get('deleted') or email.get('status') != 'Sent'
+                if (email.get('id') != eid or email.get('deleted') or email.get('status') != 'Sent' or email.get('sendAt')
                         or email.get('parentType') != 'Account' or email.get('parentId') != aid):
                     excluded.add(eid)
-                    warnings.append('Письмо с изменённой привязкой или статусом исключено.')
+                    if (email.get('id') == eid and not email.get('deleted')
+                            and email.get('status') in {'Draft', 'Sending', 'Failed', 'Archived'}):
+                        continue
+                    failures['Email: привязка или статус'] += 1
                     continue
+                stage = 'Дата отправки'
                 try:
                     sent = sent_time(email.get('dateSent'))
                     if sent > datetime.now(UTC):
@@ -155,6 +424,7 @@ def read_sent(api, bindings):
                 except ValueError:
                     excluded.add(eid)
                     raise
+                stage = 'Account: чтение или привязка'
                 if aid not in accounts:
                     accounts[aid] = get('Account/' + aid)
                 account = accounts[aid]
@@ -174,18 +444,34 @@ def read_sent(api, bindings):
                             raise ValueError('document binding')
                     except (espo.Hold, OSError, ValueError, TypeError, AttributeError):
                         doc = None
-                        warnings.append('Связь части КП не подтверждена; ссылки на них скрыты.')
+                        warnings.append(PDF_WARNING)
+                if not doc:
+                    warnings.append(PDF_WARNING)
+                phone_account = dict(account)
+                numbers = account.get('phoneNumberData')
+                if isinstance(numbers, list) and any(isinstance(n, dict)
+                        and safe_phone(n.get('phoneNumber')) == safe_phone(account.get('phoneNumber'))
+                        and (n.get('invalid') or n.get('optOut')) for n in numbers):
+                    phone_account['phoneNumber'] = ''
+                phone = account_phone(phone_account)
                 rows.append(dict(email_id=eid, account_id=aid, document_id=doc,
                                  date_sent=sent.isoformat(), source_id=binding.get('source_id'), name=str(account.get('name') or 'Без названия')[:500],
-                                 phone=account_phone(account),
+                                 phone=phone,
+                                 phone_source='EspoCRM Account' if phone else '',
+                                 phone_reason='' if phone else
+                                     'В Account нет пригодного телефона (номер отсутствует, некорректен или исключён).',
                                  website=str(account.get('website') or '')[:2000],
                                  checked_at=datetime.now(UTC).isoformat()))
-            except (espo.Hold, OSError, ValueError, TypeError, AttributeError):
-                warnings.append('Часть отправок или карточек не проверена: ошибка CRM, дата или лимит чтения.')
-                if time.monotonic() >= deadline or calls >= 200:
-                    break
+            except (espo.Hold, OSError, ValueError, TypeError, AttributeError) as exc:
+                # Report categories only: exception bodies can contain CRM credentials.
+                http = re.search(r'CRM HTTP ([0-9]{3})', str(exc))
+                category = 'HTTP ' + http[1] if http else type(exc).__name__
+                failures[stage + ' / ' + category] += 1
     except (espo.Hold, OSError, ValueError, TypeError, AttributeError):
         warnings.append('CRM недоступна или список неполон; полнота очереди не подтверждена.')
+    if failures:
+        warnings.append('Непроверенных записей: ' + str(sum(failures.values())) + '. Категории: ' +
+                        '; '.join(category + ' — ' + str(count) for category, count in sorted(failures.items())) + '.')
     return rows, list(dict.fromkeys(warnings)), excluded
 
 
@@ -197,6 +483,7 @@ class Followup:
         self.refreshed = 0
         self.warnings = []
         self.unavailable = False
+        self.stop = threading.Event()
 
     def connect(self):
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -219,37 +506,54 @@ class Followup:
             raise
         return db
 
+    def start(self):
+        self.unavailable = True
+        self.warnings = ['Автоматическая сверка контроля выполняется; показан сохранённый снимок.']
+        def work():
+            while not self.stop.is_set():
+                try:
+                    self.refresh()
+                except Exception as exc:
+                    self.unavailable = True
+                    self.warnings = ['Автоматическая сверка контроля не завершена; число непроверенных записей неизвестно; категория: ' + type(exc).__name__ + '. Показан сохранённый снимок.']
+                self.stop.wait(60)
+        threading.Thread(target=work, name='lexradar-followup', daemon=True).start()
+
     def refresh(self, api_factory=None):
         with self.lock:
             if time.monotonic() - self.refreshed < 60:
                 return
-            bindings, warnings = campaign_bindings(self.journals)
+            bindings, warnings = control_bindings(self.path.parent, self.journals)
             rows, excluded = [], set()
             if bindings:
                 try:
                     rows, errors, excluded = read_sent((api_factory or espo.API)(), bindings)
                     warnings += errors
-                except (espo.Hold, OSError, ValueError):
-                    warnings.append('CRM недоступна; новые отправки не проверены.')
+                except (espo.Hold, OSError, ValueError) as exc:
+                    warnings.append('Непроверенных записей: ' + str(len(bindings)) +
+                                    '; категория: подключение CRM / ' + type(exc).__name__ + '.')
             else:
                 warnings.append('Нет достоверных привязок Email к кампании LexRadar; посторонние письма исключены.')
             with closing(self.connect()) as db, db:
-                if not warnings:
+                if not any(w != PDF_WARNING for w in warnings):
                     db.execute('DELETE FROM snapshot')
                 db.executemany('DELETE FROM snapshot WHERE email_id=?', [(eid,) for eid in excluded])
                 db.executemany('INSERT OR REPLACE INTO snapshot VALUES (?, ?)',
                                [(r['email_id'], json.dumps(r, ensure_ascii=False)) for r in rows])
-            self.unavailable = bool(warnings)
+            self.unavailable = any(w != PDF_WARNING for w in warnings)
             self.warnings = list(dict.fromkeys(warnings))
             self.refreshed = time.monotonic()
 
     def queue(self, now=None):
         now = now or datetime.now(UTC)
-        bindings, warnings = campaign_bindings(self.journals)
+        bindings, warnings = control_bindings(self.path.parent, self.journals)
         with closing(self.connect()) as db:
             actions = {r[0]: r for r in db.execute('SELECT * FROM actions')}
             blocked = {r[0] for r in db.execute('SELECT account_id FROM blocked')}
             records = [json.loads(r[0]) for r in db.execute('SELECT record FROM snapshot')]
+        mailing = mailing_records(self.path.parent)
+        task_accounts = {r.get('account_id') for r in mailing.values() if task_state(r) != 'AVAILABLE'}
+        priorities = call_priorities(self.journals)
         rows = []
         for row in records:
             eid, aid = row['email_id'], row['account_id']
@@ -258,6 +562,9 @@ class Followup:
             if (bindings[eid].get('document_id') != row.get('document_id')
                     or bindings[eid].get('source_id') != row.get('source_id')):
                 row['document_id'] = None
+            if sent_time(row['date_sent']) > now:
+                warnings.append('Дата отправки в будущем; запись исключена.')
+                continue
             action = actions.get(eid)
             if action and action[1] != aid:
                 warnings.append('Сохранённое действие относится к другой организации; письмо исключено.')
@@ -270,9 +577,36 @@ class Followup:
                 status = 'do_not_contact'
             group = (3 if status in {'completed', 'do_not_contact'} else
                      1 if due <= now else 2 if status in {'deferred', 'no_answer'} else 0)
-            rows.append({**row, 'status': status, 'due': due, 'comment': comment,
+            task = mailing.get(eid, {})
+            priority, recommendation = priorities.get(eid, call_priority({}))
+            rows.append({**row, 'task_state': task_state({**task, 'id': eid}),
+                         'account_task_blocked': aid in task_accounts,
+                         'call_selected': bool(task.get('call_selected_at')),
+                         'priority': priority, 'recommendation': recommendation, 'status': status, 'due': due, 'comment': comment,
                          'revision': revision, 'group': group})
-        return sorted(rows, key=lambda r: (GROUP_ORDER.index(r['group']), r['due'], r['email_id'])), warnings
+        if any(not r.get('document_id') for r in rows):
+            warnings.append(PDF_WARNING)
+        return sorted(rows, key=lambda r: (GROUP_ORDER.index(r['group']), r['priority'], sent_time(r['date_sent']), r['email_id'])), warnings
+
+    def summary_html(self, now=None):
+        values = ['—'] * 4
+        try:
+            if not self.path.is_file() or self.unavailable:
+                raise ValueError('Очередь недоступна')
+            rows, warnings = self.queue(now)
+            if any(w != PDF_WARNING for w in warnings):
+                raise ValueError('Очередь неполна')
+            pending = [r for r in rows if r['status'] not in {'completed', 'do_not_contact'}]
+            values = [len(pending), sum(call_available(r) and r['priority'] < 2 for r in pending),
+                      sum(r['call_selected'] for r in rows),
+                      sum(r['task_state'] == 'CONFIRMED' for r in rows)]
+        except (OSError, sqlite3.Error, ValueError, TypeError, KeyError, AttributeError, OverflowError):
+            pass
+        content = '<a href="/followup"><article><h2>Контроль КП</h2><div class="grid">'
+        for label, value in zip(('Всего КП ожидают контроля', 'Рекомендовано к звонку',
+                                 'Выбрано для звонка', 'Задачи CRM подтверждены'), values):
+            content += '<div><span>' + label + '</span><br><strong class="metric">' + str(value) + '</strong></div>'
+        return content + '</div><p>По сохранённой сверке. Выбрано — новые решения оператора о создании задач; подтверждённые задачи включают прежние. «—» — данные неполны.</p></article></a>'
 
     def update(self, eid, status, due, comment, revision, now=None):
         now = now or datetime.now(UTC)
@@ -291,7 +625,7 @@ class Followup:
                 next_due = datetime.fromisoformat(due).replace(hour=10, tzinfo=MOSCOW)
             if not now < next_due <= now + timedelta(days=730):
                 raise ValueError('Дата контроля должна быть в будущем, не далее двух лет.')
-        bindings, errors = campaign_bindings(self.journals)
+        bindings, errors = control_bindings(self.path.parent, self.journals)
         if eid not in bindings:
             raise ValueError('Привязка к LexRadar недоступна; действие не сохранено.')
         with closing(self.connect()) as db, db:
@@ -326,14 +660,23 @@ class Followup:
 
     def html(self, handler):
         try:
-            self.refresh()
             rows, warnings = self.queue()
+            try:
+                index = handler.index()
+                warnings += local_phones(rows, index['leads'], self.journals)
+                if index.get('warnings'):
+                    warnings.append('Локальный индекс организаций/CSV: ошибок или ограничений — ' + str(index['warnings']) + '; полнота телефонов не подтверждена.')
+            except (OSError, sqlite3.Error, ValueError, TypeError, KeyError, AttributeError):
+                warnings.append('Локальные телефоны недоступны; показаны только номера снимка CRM.')
+                for row in rows:
+                    if not safe_phone(row.get('phone')):
+                        row['phone_reason'] = 'Номер Account не получен; локальные организации/CSV недоступны.'
             params = parse_qs(urlsplit(getattr(handler, 'path', '/followup')).query)
             selected = next((r for r in rows if r['email_id'] == params.get('email', [''])[0]), None)
             history = self.history(selected) if selected else []
         except (OSError, sqlite3.Error, ValueError, TypeError, KeyError, AttributeError, OverflowError):
-            return '<h1>Контроль после отправки</h1><p role="alert">Локальное хранилище недоступно или повреждено. Действия отключены; данные не сброшены.</p>'
-        content = FOLLOWUP_STYLE + '<section id="followup"><h1>Контроль после отправки</h1>'
+            return '<h1>Контроль КП</h1><p role="alert">Локальное хранилище недоступно или повреждено. Действия отключены; данные не сброшены.</p>'
+        content = FOLLOWUP_STYLE + '<section id="followup"><h1>Контроль КП</h1>'
         content += '<p>Сначала — кому пора проверить ответ и позвонить. Контроль через три рабочих дня после отправки; все даты — МСК.</p>'
         if rows:
             checked = [sent_time(r['checked_at']) for r in rows]
@@ -345,13 +688,14 @@ class Followup:
             content += '<p class="fu-note">Время успешной проверки записей CRM недоступно: снимок пуст.</p>'
         for warning in dict.fromkeys(self.warnings + warnings):
             content += '<p role="alert" class="fu-warning">' + esc(warning) + '</p>'
-        if self.unavailable and rows:
+        if self.unavailable:
             content += '<p role="status" class="fu-warning">Данные неполные. Показан последний подтверждённый снимок; часть записей может устареть. Сверьте CRM перед контактом.</p>'
-        content += '<details class="fu-rules"><summary>Правила контроля и источник данных</summary><p>Срок — три рабочих дня по Москве (пн–пт; праздничные дни отдельно не учитываются). Отправка не доказывает доставку. Ответы/ошибки доставки автоматически не проверяются. Перед контактом вручную сверьте переписку, отказы и основание контакта. Наличие задачи не разрешает рекламный звонок. Решение о контакте принимает оператор; автоматических звонков и повторных писем нет. Результаты сохраняются локально: CRM и очередь рассылки не изменяются.</p><p>Источник: полные карточки CRM Email (Sent и dateSent), только точные ID из штатных журналов экспорта LexRadar. Письма без привязки не включены. Телефон — связанный Account; «—» означает, что достоверный номер не получен.</p></details>'
+        content += '<details class="fu-rules"><summary>Правила контроля и источник данных</summary><p>Срок — три рабочих дня по Москве (пн–пт; праздничные дни отдельно не учитываются). Отправка не доказывает доставку. Ответы/ошибки доставки автоматически не проверяются. Перед контактом вручную сверьте переписку, отказы и основание контакта. Наличие задачи не разрешает рекламный звонок. Решение о контакте принимает оператор; автоматических звонков и повторных писем нет. Результаты контакта сохраняются локально. Task в CRM создаются только для явно выбранных организаций по кнопке; отправленные письма не изменяются.</p><p>Источник: полные карточки CRM Email (Sent и dateSent), точные ID из штатных журналов экспорта и очереди LexRadar. Письма без привязки не включены. Телефон — связанный Account либо локальный Parser по точной сохранённой привязке экспорта; «—» означает, что однозначный достоверный номер не получен.</p></details>'
         content += '<div class="fu-counts" aria-label="Категории контроля">'
         for index in GROUP_ORDER:
             content += '<div' + (' class="fu-priority"' if index == 1 else '') + '><span>' + GROUPS[index] + '</span><strong>' + str(sum(r['group'] == index for r in rows)) + '</strong></div>'
-        content += '</div>'
+        content += '<div><span>Доступны для звонка</span><strong>' + str(len({r['account_id'] for r in rows if call_available(r)})) + '</strong></div>'
+        content += '</div><p class="fu-note">«Пора проверить» — все КП с наступившим сроком. «Доступны для звонка» — уникальные организации, доступные для ручного выбора по сохранённой сверке.</p>'
         if selected:
             content += self.detail(handler, selected, history, params)
         elif params.get('email'):
@@ -361,23 +705,36 @@ class Followup:
         content += '''<div class="fu-filters" hidden>
 <label>Категория <select id="fu-group"><option value="">Все категории</option>'''
         for index in GROUP_ORDER:
-            content += '<option value="' + str(index) + '">' + GROUPS[index] + '</option>'
+            content += '<option value="' + str(index) + '"' + (' selected' if index == 1 else '') + '>' + GROUPS[index] + '</option>'
         content += '''</select></label><label class="fu-search">Поиск по названию, домену или телефону
 <input type="search" id="fu-search" placeholder="Название, сайт или номер" autocomplete="off"></label>
 <button type="button" id="fu-reset">Сбросить</button></div>
 <p id="fu-count" role="status">Всего записей: ''' + str(len(rows)) + '</p>'
         content += '<noscript><p>Для быстрого поиска и фильтра включите JavaScript. Все записи и действия доступны ниже.</p></noscript>'
-        content += '<div class="table-scroll" tabindex="0" role="region" aria-label="Очередь контроля: прокрутка таблицы"><table class="fu-table"><caption class="fu-note">Сначала просроченные, затем ближайшие сроки. Даты и время — МСК.</caption><thead><tr>'
-        content += ''.join('<th scope="col">' + label + '</th>' for label in ('Организация', 'Телефон', 'КП отправлено', 'Контроль', 'Статус', 'Действия')) + '</tr></thead><tbody>'
+        fields = '<p>Выберите до 10 организаций. Подтверждённые задачи и неизвестные исходы POST пропускаются. Ничего не выбрано заранее.</p>'
+        fields += '<p id="fu-selected" role="status">Выбрано сейчас: 0</p>'
+        form = handler.form('/followup/tasks', 'Создать задачи в CRM для выбранных', fields, confirm=False)
+        content += form.replace('<form ', '<form id="fu-task-selection" ', 1)
+        content += '<div class="table-scroll" tabindex="0" role="region" aria-label="Очередь контроля: прокрутка таблицы"><table class="fu-table"><caption class="fu-note">Сначала готовые к контролю; выше существенные замечания, при равенстве — старые КП. Даты и время — МСК.</caption><thead><tr>'
+        content += ''.join('<th scope="col">' + label + '</th>' for label in ('Организация', 'Телефон', 'КП отправлено', 'Срок контроля', 'Результат обработки', 'Действия', 'Приоритет и причина', 'Выбор')) + '</tr></thead><tbody>'
         for row in rows:
             eid = row['email_id']
             search = ' '.join(str(row.get(k) or '') for k in ('name', 'website', 'phone'))
             content += '<tr id="fu-row-' + esc(eid) + '" data-group="' + str(row['group']) + '" data-search="' + esc(search) + '"' + (' class="fu-overdue"' if row['group'] == 1 else '') + '>'
             content += '<th scope="row"><span class="fu-name">' + esc(row['name']) + '</span><div class="fu-links">' + record_links(row) + '</div></th>'
-            content += '<td class="fu-phone">' + phone_html(row.get('phone')) + '</td>'
-            content += '<td class="fu-date">' + display_time(sent_time(row['date_sent'])) + '</td><td class="fu-date">' + display_time(row['due']) + '</td>'
-            content += '<td><span class="fu-badge">' + GROUPS[row['group']] + '</span><small class="fu-status">' + LABELS[row['status']] + '</small></td>'
-            content += '<td><a class="cta fu-open" href="/followup?' + esc(urlencode({'email': eid})) + '#followup-detail" aria-label="' + esc('Открыть: ' + row['name']) + '">Открыть</a></td></tr>'
+            content += '<td class="fu-phone">' + phone_html(row.get('phone'))
+            if row.get('phone_source'):
+                content += '<small class="fu-status">' + esc(row['phone_source']) + '</small>'
+            content += '</td>'
+            content += '<td class="fu-date">' + display_time(sent_time(row['date_sent'])) + '</td><td class="fu-date">' + display_time(row['due']) + '<small class="fu-status">' + deadline_label(row) + '</small></td>'
+            content += '<td><span class="fu-badge">' + LABELS[row['status']] + '</span></td>'
+            content += '<td><a class="cta fu-open" href="/followup?' + esc(urlencode({'email': eid})) + '#followup-detail" aria-label="' + esc('Открыть: ' + row['name']) + '">Открыть</a></td>'
+            content += '<td>' + ('Высокий', 'Средний', 'Низкий')[row['priority']] + '<br>' + esc(row['recommendation']) + '</td><td>'
+            if call_available(row):
+                content += '<input form="fu-task-selection" type="checkbox" name="email_id" value="' + esc(eid) + '" aria-label="Выбрать ' + esc(row['name']) + '">'
+            else:
+                content += esc({'CONFIRMED': 'Задача подтверждена', 'RECONCILE_ONLY': 'Требуется сверка; повтор запрещён'}.get(row['task_state'], 'У Account уже есть задача или неизвестный исход' if row['account_task_blocked'] else 'Срок не наступил или контроль обработан'))
+            content += '</td></tr>'
         content += '</tbody></table></div><p id="fu-empty" hidden>По этому фильтру ничего не найдено.</p>'
         nonce = getattr(handler, 'followup_nonce', '')
         if nonce:
@@ -388,9 +745,13 @@ class Followup:
         content = '<article id="followup-detail" tabindex="-1" aria-labelledby="fu-detail-title"><h2 id="fu-detail-title">' + esc(row['name']) + '</h2>'
         if row['revision'] and params.get('saved') == [str(row['revision'])]:
             content += '<p role="status" class="fu-success">Результат сохранён. Версия записи: ' + str(row['revision']) + '.</p>'
-        content += '<p><strong>' + LABELS[row['status']] + '</strong> · ' + GROUPS[row['group']] + '</p>'
+        content += '<p>Результат: <strong>' + LABELS[row['status']] + '</strong> · Срок: ' + deadline_label(row) + '</p>'
         content += '<p>КП отправлено: ' + display_time(sent_time(row['date_sent'])) + ' · Контроль: ' + display_time(row['due']) + '</p>'
         content += '<p>Телефон: ' + phone_html(row.get('phone')) + '</p><p class="fu-links">' + record_links(row) + '</p>'
+        if row.get('phone_source'):
+            content += '<p class="fu-note">' + esc(row['phone_source']) + '</p>'
+        if not safe_phone(row.get('phone')):
+            content += '<p class="fu-note">' + esc(row.get('phone_reason') or 'В снимке Account нет пригодного номера; локальный источник не подтверждён.') + '</p>'
         content += '<p class="fu-note">Проверка этой записи CRM: ' + display_time(sent_time(row['checked_at'])) + '</p>'
         if not row.get('document_id'):
             content += '<p class="fu-note">Привязка отправленного КП не подтверждена; ссылка скрыта.</p>'
@@ -483,7 +844,8 @@ FOLLOWUP_STYLE = '''<style>
 #followup .fu-filters { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin:20px 0 8px; }
 #followup [hidden] { display:none !important; }
 #followup .fu-search { flex:1; min-width:200px; }
-#followup .fu-table { min-width:920px; table-layout:fixed; }
+#followup .fu-table { min-width:1200px; }
+#followup .fu-table th:nth-child(7) { width:24%; }
 #followup .fu-table th, #followup .fu-table td { padding:10px 12px; vertical-align:middle; }
 #followup .fu-table th:nth-child(1) { width:30%; }
 #followup .fu-table th:nth-child(2) { width:15%; }
@@ -514,6 +876,10 @@ FOLLOWUP_STYLE = '''<style>
 
 FOLLOWUP_SCRIPT = '''(() => {
 const root = document.getElementById('followup');
+const choices = Array.from(root.querySelectorAll('input[form="fu-task-selection"]'));
+const selectionCount = () => { root.querySelector('#fu-selected').textContent = 'Выбрано сейчас: ' + choices.filter(c => c.checked).length; };
+choices.forEach(c => c.addEventListener('change', selectionCount));
+if (root.querySelector('#fu-selected')) selectionCount();
 const group = root.querySelector('#fu-group'), search = root.querySelector('#fu-search');
 const rows = Array.from(root.querySelectorAll('tbody tr'));
 const params = new URLSearchParams(location.search);

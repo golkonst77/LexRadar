@@ -132,8 +132,7 @@ def cleanup(jobs):
                         continue
                     if not verified(jobs, active):
                         continue
-                    for path in files:
-                        (jobs.state_dir / path).unlink()
+                    # Retain obsolete PDF/HTML for safe manual reanalysis and external references.
                 except (OSError, ValueError, TypeError):
                     continue
     except (OSError, ValueError, TypeError):

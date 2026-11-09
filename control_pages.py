@@ -15,6 +15,10 @@ from control_leads import website, merge_leads, analysis_rows
 from control_results import read_file
 
 
+CHECKBOX_FREE_ACTIONS = frozenset({'/collect/preview', '/collect', '/analysis/preview',
+                                  '/analysis', '/holds/retry', '/crm/preview'})
+
+
 def esc(value):
     return escape(str(value), quote=True)
 
@@ -78,7 +82,7 @@ class Pages:
         token = getattr(self.server, 'csrf_token', '')
         return ('<form method="post" action="' + esc(action) + '">'
                 '<input type="hidden" name="csrf" value="' + esc(token) + '">' + fields
-                + ('<label><input type="checkbox" name="confirm" value="yes" required> Подтверждаю действие</label> ' if confirm else '<input type="hidden" name="confirm" value="yes">')
+                + ('' if action in CHECKBOX_FREE_ACTIONS else '<label><input type="checkbox" name="confirm" value="yes" required> Подтверждаю действие</label> ' if confirm else '<input type="hidden" name="confirm" value="yes">')
                 + '<button type="submit">' + esc(label) + '</button></form>')
 
     def analysis_form(self, fields, label='Анализ', identifier=''):
@@ -106,6 +110,11 @@ class Pages:
             content += '<br>' + link('/jobs/' + row['id'], 'Сохранённый успешный анализ')
         qualification = saved['qualification']
         content += '<br>Квалификация сайта: ' + esc('Требует ручной проверки' if qualification == 'HOLD' else qualification or 'Нет данных')
+        if qualification == 'READY':
+            content += '<br>Основание КП: ' + ('коммерческая возможность'
+                        if saved['reason'] == 'commercial_opportunity' else 'подтверждённое замечание')
+        if saved.get('commercial_opportunity_count'):
+            content += '<br>Внутренние коммерческие сигналы: ' + str(saved['commercial_opportunity_count']) + ' (не подтверждают нарушение или готовность КП)'
         content += '<details><summary>Подробности анализа</summary>'
         content += 'Сохранённый анализ UTC: ' + esc(row['ended'] or row['started'] or row['created'])
         content += '<br>Статус движка: ' + esc(saved['status'] or 'Нет данных')
@@ -333,7 +342,7 @@ class Pages:
         try:
             options = '<label>Отрасль <select name="industry">' + ''.join('<option value="' + esc(k) + '">' + esc(v) + '</option>' for k, v in jobs.parser.industries().items()) + '</select></label>'
             options += '<label>Количество пригодных организаций (N) <input type="number" name="target" min="1" max="1000" value="10" required></label><label>Название запуска (необязательно) <input name="name" maxlength="100"></label>'
-            content += self.form('/collect/preview', 'Начать сбор', options).replace('Подтверждаю действие', 'Подтверждаю подготовку сетевого сбора; параметры проверю на следующем шаге')
+            content += self.form('/collect/preview', 'Начать сбор', options)
         except (OSError, ValueError, SyntaxError, KeyError, StopIteration):
             content += '<p>Конфигурация Parser v3 недоступна.</p>'
         errors = jobs.parser.diagnostic()
@@ -546,7 +555,7 @@ class Pages:
             return
         path = urlsplit(self.path).path
         token = getattr(self.server, 'csrf_token', '')
-        if not token or not hmac.compare_digest(values.get('csrf', [''])[0].encode('utf-8'), token.encode('utf-8')) or (path != '/analysis/preview' and values.get('confirm') != ['yes']):
+        if not token or not hmac.compare_digest(values.get('csrf', [''])[0].encode('utf-8'), token.encode('utf-8')) or (path not in CHECKBOX_FREE_ACTIONS and values.get('confirm') != ['yes']):
             self.reject_post(403, 'confirmation_required', 'csrf_or_confirmation_invalid')
             return
         jobs = getattr(self.server, 'jobs', None)

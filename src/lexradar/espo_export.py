@@ -69,7 +69,7 @@ class API:
             raise
         except HTTPError as exc:
             detail = ''
-            if exc.code == 400:
+            if exc.code in (400, 403):
                 try:
                     body = exc.read(8192).decode('utf-8', errors='replace')
                     body = body.replace(self.key, '[REDACTED]')

@@ -143,6 +143,8 @@ def load_leads(root):
                             warnings += 1
                             continue
                         company, url, phone, email, card, status = [text(row, k) for k in keys]
+                        if name == 'parser.csv':
+                            phone = phone.removeprefix("'")
                         if len(records) >= 20000:
                             return sorted(records, key=lambda r: (r['name'].casefold(), r['id'])), warnings + 1
                         records.append({

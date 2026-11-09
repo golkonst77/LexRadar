@@ -3,11 +3,27 @@
 import hashlib
 import json
 import os
+import re
 import stat
 from pathlib import Path
 
 MAX_BYTES = 8_000_000
 EXCLUDED = {"examples", "tests", "docs", "node_modules", "__pycache__"}
+
+
+def working_directory(root, relative):
+    """Keep repository scans in production trees; focused roots remain usable."""
+    name = relative.name
+    if (name.startswith(('.', 'backup-', 'archive-'))
+            or name.endswith(('.bak', '.backup'))
+            or name in EXCLUDED | {'backup', 'backups', 'archive', 'archives'}
+            or re.fullmatch(r'runs-\d+', name)):
+        return False
+    if len(relative.parts) == 1 and (root / '.git').exists():
+        return name in {'runs', 'work'} or name.startswith('commercial-refresh-')
+    if relative.parent == Path('runs'):
+        return name.startswith(('production-', 'recheck-', 'aclinic-rebuilt-'))
+    return True
 
 
 def load_organizations(root):
@@ -34,9 +50,7 @@ def load_organizations(root):
                 break
             dirs[:] = sorted(
                 d for d in dirs
-                if not d.startswith(('.', 'backup-', 'archive-'))
-                and not d.endswith(('.bak', '.backup'))
-                and d not in EXCLUDED | {'backup', 'backups', 'archive', 'archives'}
+                if working_directory(root, Path(directory).relative_to(root) / d)
             )
             if len(Path(directory).relative_to(root).parts) >= 8 and dirs:
                 warnings += 1

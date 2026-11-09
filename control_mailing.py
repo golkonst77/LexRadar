@@ -18,6 +18,7 @@ LEGACY = Path('/home/golkonst/lexradar-mailer')
 JOURNAL = Path.home() / '.local/state/lexradar/crm-prepare.json'
 MOSCOW = ZoneInfo('Europe/Moscow')
 UTC = timezone.utc
+SETTINGS_PATH = Path(__file__).resolve().parent / '.control-center-state/mailing-settings.json'
 
 
 def legacy_modules():
@@ -26,17 +27,53 @@ def legacy_modules():
     return importlib.import_module('mailer_v2'), importlib.import_module('lexradar_deals')
 
 
-def next_slot(now, used):
+def validate_settings(settings):
+    error = 'Некорректные настройки расписания рассылки'
+    if not isinstance(settings, dict) or set(settings) != {
+            'interval_minutes', 'weekdays', 'start_time', 'end_time', 'timezone'}:
+        raise ValueError(error)
+    interval, weekdays = settings['interval_minutes'], settings['weekdays']
+    if (type(interval) is not int or not 5 <= interval <= 120
+            or not isinstance(weekdays, list) or not weekdays
+            or any(type(day) is not int or not 1 <= day <= 7 for day in weekdays)
+            or len(set(weekdays)) != len(weekdays)
+            or settings['timezone'] != 'Europe/Moscow'):
+        raise ValueError(error)
+    for key in ('start_time', 'end_time'):
+        value = settings[key]
+        if not isinstance(value, str) or not espo.re.fullmatch(r'(?:[01][0-9]|2[0-3]):[0-5][0-9]', value):
+            raise ValueError(error)
+    if settings['start_time'] >= settings['end_time']:
+        raise ValueError(error)
+    return settings
+
+
+def load_settings(path=SETTINGS_PATH):
+    try:
+        settings = json.loads(Path(path).read_text(encoding='utf-8'))
+    except FileNotFoundError:
+        settings = dict(interval_minutes=15, weekdays=[1, 2, 3, 4, 5, 6],
+                        start_time='09:00', end_time='18:00', timezone='Europe/Moscow')
+    except (OSError, ValueError) as exc:
+        raise ValueError('Не удалось прочитать настройки расписания рассылки') from exc
+    return validate_settings(settings)
+
+
+def next_slot(now, used, settings_path=SETTINGS_PATH):
+    settings = load_settings(settings_path)
+    start, end = (int(settings[key][:2]) * 60 + int(settings[key][3:])
+                  for key in ('start_time', 'end_time'))
+    interval = settings['interval_minutes']
     # Append after every existing future sendAt, including the protected old batch.
     after = max([now + timedelta(minutes=10), *used])
     local = after.astimezone(MOSCOW)
     for day in range(366):
         date = local.date() + timedelta(days=day)
-        if date.weekday() < 5:
-            for minute in range(9 * 60, 19 * 60, 30):
+        if date.isoweekday() in settings['weekdays']:
+            for minute in range(start, end, interval):
                 slot = datetime(date.year, date.month, date.day, minute // 60,
                                 minute % 60, tzinfo=MOSCOW)
-                if slot > after:
+                if slot > after and all(slot - occupied >= timedelta(minutes=interval) for occupied in used):
                     return slot.astimezone(UTC).strftime('%Y-%m-%d %H:%M:%S')
     raise ValueError('Нет свободного слота в течение года')
 
@@ -78,6 +115,14 @@ class Mailing:
             if not isinstance(state, dict):
                 raise ValueError('Повреждён журнал очереди')
             yield state
+
+    def load_settings(self):
+        return load_settings(self.directory / 'mailing-settings.json')
+
+    def save_settings(self, settings):
+        settings = validate_settings(settings)
+        with self.locked():
+            espo.save(self.directory / 'mailing-settings.json', settings)
 
     def select(self, selected, included):
         with self.locked() as state:
@@ -270,7 +315,7 @@ class Mailing:
                             raise ValueError('Account удалён')
                         used = [mailer.utc(e['sendAt']) for e in mailer.API.scheduled(api)]
                         used.extend(mailer.utc(r['schedule_intent']) for r in state.values() if r.get('schedule_intent'))
-                        slot = next_slot(datetime.now(UTC), used)
+                        slot = next_slot(datetime.now(UTC), used, self.directory / 'mailing-settings.json')
                         current_config = mailer.config_at(self.legacy)
                         if not current_config['enabled'] or current_config['dry_run']:
                             raise ValueError('Настройки изменились')
@@ -328,6 +373,15 @@ class Mailing:
                       checked_at='—', updated_at=local(now), stale=True,
                       freshness='Данные устарели: сохранённая сверка недоступна.')
         try:
+            settings = self.load_settings()
+            start, end = (int(settings[k][:2]) * 60 + int(settings[k][3:]) for k in ('start_time', 'end_time'))
+            capacity = len(range(start, end, settings['interval_minutes']))
+            days = ', '.join(('Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс')[d - 1] for d in settings['weekdays'])
+            result['schedule'] = f"{days}, {settings['start_time']}–{settings['end_time']}, каждые {settings['interval_minutes']} мин · Europe/Moscow"
+        except ValueError as exc:
+            result['schedule'] = str(exc)
+            capacity = None
+        try:
             state = json.loads(self.path.read_text())
             if not isinstance(state, dict) or any(not isinstance(r, dict) or not isinstance(r.get('status'), str)
                                                   for r in state.values()):
@@ -363,12 +417,10 @@ class Mailing:
                               f' «Отправлено сегодня»: данные неполны, у {unknown_sent} SENT дата отправки неизвестна или некорректна; они не учтены.')
             result.update(scheduled=sum(s.astimezone(MOSCOW).date() == today for s in slots),
                           nearest=local(min(slots)) if slots else '—')
-            valid = slots and len(set(slots)) == len(slots) and all(
-                s.astimezone(MOSCOW).weekday() < 5 and 9 <= s.astimezone(MOSCOW).hour < 19
-                and s.minute in (0, 30) and s.second == 0 and s.microsecond == 0 for s in slots)
+            valid = slots and len(set(slots)) == len(slots)
             result['finish'] = local(max(slots)) if valid else 'Не определено'
-            if valid:
-                days = len(slots) / 20
+            if valid and capacity:
+                days = len(slots) / capacity
                 result.update(reserve=f'{days:.1f}'.replace('.', ','),
                               reserve_status='Запас достаточный' if days >= 5 else 'Пора пополнять очередь' if days >= 1 else 'Срочно пополнить очередь',
                               reserve_color='#16803c' if days >= 5 else '#b77900' if days >= 1 else '#c62828')
@@ -398,6 +450,7 @@ class Mailing:
         content += '<p style="font-weight:600;margin:0 0 6px">Завершение очереди: <span data-mailing="finish">' + esc(summary['finish']) + '</span></p>'
         content += '<p style="color:#64748b;font-size:20px;margin:0">Ближайшая отправка: <span data-mailing="nearest">' + esc(summary['nearest']) + '</span></p>'
         content += '</div>'
+        content += '<p>Новые назначения: <span data-mailing="schedule">' + esc(summary['schedule']) + '</span></p>'
         content += '<p style="color:#64748b;font-size:12px">Данные очереди — последняя сохранённая сверка; сегодня — по Москве. <span data-mailing="freshness">' + esc(summary['freshness']) + '</span></p>'
         return content + '<a href="/mailing">Подробнее</a></article>'
 
@@ -411,109 +464,15 @@ class Mailing:
         def local(value):
             return value.astimezone(MOSCOW).strftime('%d.%m.%Y %H:%M МСК') if value else '—'
 
-        content = '<article><h2>Рассылка LexRadar</h2>'
+        content = self.summary_html()
+        if not details:
+            return content
+        content += '<article><h2>Очередь рассылки</h2>'
         try:
             rows = list(json.loads(self.path.read_text()).values())
-        except (OSError, ValueError, AttributeError):
-            return content + '<p>Не определено: журнал очереди недоступен.</p><a href="/mailing">Подробнее</a></article>'
-        now = datetime.now(UTC)
-        today = now.astimezone(MOSCOW).date()
-        c = Counter(r['status'] for r in rows)
-        sent, scheduled, finish, nearest = 'Не определено', 'Не определено', None, None
-        slots = []
-        slots_valid = False
-        reason = 'Нет подтверждённых данных CRM.'
-        try:
-            api = espo.API()
-            emails = all_rows(api, 'Email')
-            indexed = {e['id']: e for e in emails}
-            current = {r['id']: api.get('Email', r['id']) for r in rows}
-            sent = 0
-            slots = []
-            unknown_sent = False
-            for row in rows:
-                email = current[row['id']]
-                if email.get('status') == 'Sent':
-                    date = timestamp(email.get('dateSent'))
-                    if date is None or date > now:
-                        unknown_sent = True
-                    elif date.astimezone(MOSCOW).date() == today:
-                        sent += 1
-                if email.get('status') == 'Draft' and email.get('sendAt'):
-                    slot = timestamp(email['sendAt'])
-                    if slot > now:
-                        slots.append(slot)
-            if unknown_sent:
-                sent = 'Не определено (dateSent отсутствует или некорректен)'
-            scheduled = sum(s.astimezone(MOSCOW).date() == today and s.astimezone(MOSCOW).weekday() < 5
-                            and 9 <= s.astimezone(MOSCOW).hour < 19
-                            and s.minute in (0, 30) and s.second == 0 for s in slots)
-            nearest = min(slots) if slots else None
-            pending = [r for r in rows if current[r['id']].get('status') != 'Sent']
-            blocked = [r for r in pending if r['status'] in ('WAITING_APPROVAL', 'HOLD', 'ERROR')]
-            unscheduled = [r for r in pending if not current[r['id']].get('sendAt')]
-            overdue = any(current[r['id']].get('sendAt') and timestamp(current[r['id']]['sendAt']) <= now for r in pending)
-            slots_valid = bool(slots) and len(set(slots)) == len(slots) and all(
-                s.astimezone(MOSCOW).weekday() < 5 and 9 <= s.astimezone(MOSCOW).hour < 19
-                and s.minute in (0, 30) and s.second == 0 and s.microsecond == 0 for s in slots)
-            # Unscheduled rows lack the final PDF/config/binding checks; never assume admission.
-            if slots and not slots_valid:
-                reason = 'Будущие слоты совпадают или не соответствуют графику; требуется сверка.'
-            elif blocked:
-                reason = 'Есть заблокированные письма WAITING_APPROVAL / HOLD / ERROR.'
-            elif unscheduled:
-                reason = 'Допуск неназначенных писем к планированию ещё не подтверждён.'
-            elif overdue:
-                reason = 'Есть прошедшие слоты без подтверждения Sent.'
-            elif slots:
-                finish = max(slots)
-                reason = 'По уже назначенным sendAt; пн–пт 09:00–19:00 МСК, шаг 30 минут.'
-            else:
-                reason = 'Нет ожидающих отправлений.'
-            if len(indexed) != len(emails):
-                raise ValueError('Неполная сверка')
-        except Exception:
-            sent, scheduled, finish, nearest = 'Не определено', 'Не определено', None, None
-            slots_valid = False
-            reason = 'Сверка CRM недоступна или неполна; прогноз неизвестен.'
-        # Forecast only the confirmed future CRM slots.
-        # Blocked/unscheduled records remain visible as separate warnings.
-        valid = slots_valid and isinstance(scheduled, int)
-        if valid:
-            finish = max(slots)
-        else:
-            finish = None
-        days = len(slots) / 20 if valid else 0
-        color = '#16803c' if days >= 5 else '#b77900' if days >= 1 else '#c62828'
-        status_text = 'Запас достаточный' if days >= 5 else 'Пора пополнять очередь' if days >= 1 else 'Срочно пополнить очередь'
-        reserve = f'{days:.1f}'.replace('.', ',') if valid else '—'
-        if not valid:
-            color, status_text = '#64748b', 'Прогноз недоступен'
-
-        def metric(title, number, subtitle, accent=None):
-            style = ('color:' + accent + ';') if accent else ''
-            return ('<div style="background:#f5f7fb;border:1px solid #e6eaf0;'
-                    'border-radius:12px;padding:24px;min-width:0">'
-                    '<div style="font-size:22px;color:#64748b;margin-bottom:10px">' + esc(title) + '</div>'
-                    '<div style="font-size:52px;font-weight:750;line-height:1.2;' + style + '">' + esc(str(number)) + '</div>'
-                    '<div style="font-size:20px;color:#64748b;margin-top:8px">' + esc(subtitle) + '</div></div>')
-
-        content += '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0">'
-        content += metric('В очереди', c['QUEUED'] + c['SCHEDULED'] + c['WAITING_APPROVAL'], 'писем к отправке')
-        content += metric('Отправится сегодня', scheduled, 'по графику')
-        content += metric('Отправлено сегодня', sent, 'по данным CRM')
-        content += metric('Запас рассылки', reserve, 'дня по 20 слотов · ' + status_text, color)
-        content += '</div>'
-        content += '<div style="border-top:1px solid #e6eaf0;padding-top:14px;margin-top:8px">'
-        content += '<p style="font-weight:600;margin:0 0 6px">Последний подтверждённый будущий слот: ' + esc(local(finish) if finish else 'Не определено') + '</p>'
-        content += '<p style="color:#64748b;font-size:20px;margin:0">Ближайшая отправка: ' + esc(local(nearest)) + '</p>'
-        content += '</div>'
-        content += '<p>Запас учитывает только назначенные будущие слоты; это не срок завершения всей очереди и не подтверждение доставки.</p>'
-        if details:
-            content += '<p style="color:#64748b;font-size:12px">' + esc(reason) + '</p>'
-        content += '<p style="color:#64748b;font-size:12px">Данные очереди — последняя сохранённая сверка; сегодня — по Москве.</p>'
-        if not details:
-            return content + '<a href="/mailing">Подробнее</a></article>'
+            c = Counter(r['status'] for r in rows)
+        except (OSError, ValueError, AttributeError, TypeError, KeyError):
+            return content + '<p>Журнал очереди недоступен.</p></article>'
         content += '<form method="get" action="/mailing"><label>Статус <select name="status"><option value="">Все</option>'
         for value in sorted(c):
             content += '<option value="' + esc(value) + '"' + (' selected' if status == value else '') + '>' + esc(value) + '</option>'
