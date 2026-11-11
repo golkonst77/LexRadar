@@ -1,0 +1,194 @@
+{
+  "schema_version": "research-0.1",
+  "status": "unverified_research_queue",
+  "law": "Федеральный закон от 27.07.2006 № 152-ФЗ",
+  "as_of": "2026-10-12",
+  "revision_claim": "редакция от 26.07.2026 по вторичным правовым источникам; не удостоверена по официальному оригиналу",
+  "source_candidates": [
+    "https://www.pravo.gov.ru/",
+    "https://www.consultant.ru/document/cons_doc_LAW_61801/"
+  ],
+  "not_production_registry": true,
+  "items": [
+    {
+      "id": "pd-policy-publication",
+      "article": "18.1",
+      "question": "Публикация политики и доступ к ней на страницах сбора ПДн",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-processing-basis",
+      "article": "6",
+      "question": "Правовые основания обработки по каждой цели",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-consent",
+      "article": "9",
+      "question": "Условия и доказательства согласия, если оно выбрано как основание",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-principles",
+      "article": "5",
+      "question": "Цели, минимизация и сроки обработки",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-data-collection",
+      "article": "18",
+      "question": "Обязанности при сборе персональных данных",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-operator-measures",
+      "article": "18.1",
+      "question": "Меры оператора и внутренние документы",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-special-categories",
+      "article": "10",
+      "question": "Специальные категории персональных данных",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-cross-border",
+      "article": "12",
+      "question": "Трансграничная передача и предварительные условия",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-notification",
+      "article": "22",
+      "question": "Уведомление уполномоченного органа и исключения",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    },
+    {
+      "id": "pd-security",
+      "article": "19",
+      "question": "Меры безопасности персональных данных",
+      "source_card_id": null,
+      "exact_norm_text": null,
+      "official_publication_id": null,
+      "original_sha256": null,
+      "revision_verified": false,
+      "applicability_verified": false,
+      "required_work": [
+        "Получить официальный текст соответствующего положения",
+        "Проверить редакцию на контрольную дату и переходные правила",
+        "Сохранить оригинал, цитату, SHA-256 и метаданные",
+        "Установить условия применимости и исключения",
+        "Проверить на фактических доказательствах сайта"
+      ]
+    }
+  ]
+}
