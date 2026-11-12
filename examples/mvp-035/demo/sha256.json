@@ -1,0 +1,20 @@
+{
+  "analysis/compact-analysis.json": "d63a1d90d46fa5a8e94002a41f65c6338b5daf0732eba89e9f826f86fd0cb59f",
+  "analysis/compact-preview.json": "e43969b753cd7bbb7b4f33b9879f501019944db04a774d40cceb91fbcec586ac",
+  "analysis/packet.json": "6c70345f4a59103fe744c706be2b351be4596a1419e1d0ca97df4cf31fe4b815",
+  "analysis/preflight.json": "75fcc669d59e1f1759215e8e70e6308b3a0d89df84a8f974d9c307d4dc5ab3e9",
+  "analysis/primary.local.json": "eb38fa5bb125aad371ce5b63e27ebfc103873bed1211367400de4ee80666a1e5",
+  "analysis/trace-map.local.json": "f1f98a76e6ad38b27aee2d65e0009d78560d12b88f07e0692cd3394fad3a7de2",
+  "config.json": "b3ef2bd4e9ff724a376cc4ad730c76ff3c98b9caf9d157358c6c22991349c4f4",
+  "dossier/artifacts/document-0001.pdf": "092adecf71e0516faabcb77a043160c5f2db6ed82107c946061b3cbd84a4e304",
+  "dossier/artifacts/page-0001.html": "812ddb8b3f1c5bc0ce6e907dd4f9b5e3ae9a99e29bc7443140eda7e2d1ebde4f",
+  "dossier/artifacts/page-0001.txt": "7f969af2f636f271241eb65b1ec69f2d8675a89d5af4cac188cbe300eaecb611",
+  "dossier/artifacts/page-0002.html": "c26cae5139c72fb541db8e1f490624e9c0995100a773e04642f9ba67b51ef704",
+  "dossier/artifacts/page-0002.txt": "c2d4f15aff136439fccb1eee1355629e9b02bd728adef23ab003a110eeb334b3",
+  "dossier/collection.json": "885fcc3f70bd7de830bd5572cf9f4050cf3053a7e1d4dfd65f3ab32fc04f6282",
+  "dossier/crawl/requests.jsonl": "078429b415393d4e55eb8f48cbc336151a23d7cbc73ae5ddbae7f35b92cdf06d",
+  "dossier/crawl/robots-response.txt": "f363a770d956ad84113a26de3deafa2cf395f27cdaedcdc17aa284e70f2d283b",
+  "dossier/crawl/summary.json": "e44bd480ceeaddce2e7daf998f6960017a0c8df0f917e34b42b85de0e4061e0e",
+  "proposal.html": "02bb4b9df74fde8bc484f05d0f9f995a9b43c21508e319e2d52c89d3b99c0f50",
+  "run.json": "3ff66f8b1f2e57c394c686b69bd058dc23e902a29de2d9e5131d6dc3c5a723ab"
+}

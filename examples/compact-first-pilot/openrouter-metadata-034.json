@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-10-14T13:46:34.622922+00:00",
+  "source": "https://openrouter.ai/api/v1/models/deepseek/deepseek-v3.2/endpoints",
+  "retrieval": "Public GET via web; selected fields transcribed from current response, not full response",
+  "model_id": "deepseek/deepseek-v3.2",
+  "provider_name": "SiliconFlow",
+  "tag": "siliconflow/fp8",
+  "quantization": "fp8",
+  "pricing_per_token": {
+    "prompt": "0.000000259",
+    "completion": "0.0000008",
+    "input_cache_read": "0.00000014",
+    "discount": 0
+  },
+  "context_length": 163840,
+  "max_completion_tokens": 147456,
+  "supported_parameters": [
+    "reasoning",
+    "include_reasoning",
+    "temperature",
+    "top_p",
+    "top_k",
+    "frequency_penalty",
+    "response_format",
+    "tools",
+    "tool_choice",
+    "structured_outputs",
+    "max_tokens"
+  ],
+  "observed_endpoint_status": 0,
+  "real_request_verified": false,
+  "verified_until": "2026-10-15T12:00:00+00:00",
+  "reasoning_docs": "https://openrouter.ai/docs/guides/best-practices/reasoning-tokens",
+  "json_mode_docs": "https://openrouter.ai/docs/client-sdks/python/api-reference/chat"
+}

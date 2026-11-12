@@ -1,0 +1,21 @@
+{
+  "single_auditor": true,
+  "auditor_a": {
+    "model": "synthetic/compact-a",
+    "prompt_price_cap": "0.10",
+    "completion_price_cap": "0.10",
+    "max_output_tokens": 2000
+  },
+  "auditor_b": {
+    "model": "synthetic/compact-a",
+    "prompt_price_cap": "0.10",
+    "completion_price_cap": "0.10",
+    "max_output_tokens": 2000
+  },
+  "max_budget_usd": "0.05",
+  "timeout_seconds": 30.0,
+  "retries": 0,
+  "max_backoff_seconds": 2.0,
+  "max_input_bytes": 200000,
+  "max_response_bytes": 1000000
+}

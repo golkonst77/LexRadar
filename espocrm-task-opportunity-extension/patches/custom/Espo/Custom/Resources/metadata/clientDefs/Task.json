@@ -1,0 +1,18 @@
+{
+  "menu": {
+    "detail": {
+      "buttons": [
+        "__APPEND__",
+        {
+          "name": "lrCreateOpportunity",
+          "label": "lrCreateOpportunity",
+          "acl": "read",
+          "aclScope": "Task",
+          "handler": "custom:lexradar/task-opportunity",
+          "actionFunction": "run",
+          "checkVisibilityFunction": "isVisible"
+        }
+      ]
+    }
+  }
+}

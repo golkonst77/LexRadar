@@ -1,0 +1,18 @@
+{
+  "compact_and_mvp": {
+    "result": "43 passed",
+    "duration_seconds": 25.95,
+    "command": "/tmp/lexradar-029-venv/bin/python -m pytest -q tests/test_mvp.py tests/test_compact.py tests/test_compact_pipeline.py tests/test_compact_paid.py tests/test_first_pilot.py"
+  },
+  "extended": {
+    "result": "252 passed, 51 errors",
+    "duration_seconds": 3.71,
+    "command": "/tmp/lexradar-029-venv/bin/python -m pytest -q tests/test_static_text.py tests/test_static_mechanisms.py tests/test_primary.py tests/test_crawl_policy.py tests/test_gateway.py",
+    "errors": "test_crawl_policy.py setup: TCP socket creation denied, PermissionError errno 1"
+  },
+  "ruff_check": "All checks passed",
+  "ruff_format": "152 files already formatted (final check)",
+  "diff_check": "passed",
+  "note": "Recorded command outcomes; not raw terminal logs. Full suite not run.",
+  "artifact_integrity": "18 demo files verified; no MVP approval files"
+}

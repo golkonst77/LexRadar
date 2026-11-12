@@ -1,0 +1,32 @@
+# Файлы комплекта
+
+- `README.md`
+- `build.py`
+- `check.sh`
+- `docs/CHECKS.md`
+- `docs/REFERENCE.md`
+- `files/client/custom/src/lexradar/opportunity-modal.js`
+- `files/client/custom/src/lexradar/task-opportunity.js`
+- `files/custom/Espo/Custom/Hooks/Opportunity/LexRadarSource.php`
+- `files/custom/Espo/Custom/Tools/LexRadar/Policy.php`
+- `files/custom/Espo/Custom/Tools/LexRadar/SchemaGuard.php`
+- `files/custom/Espo/Custom/Tools/LexRadar/TaskOpportunityAction.php`
+- `install.php`
+- `patches/custom/Espo/Custom/Resources/i18n/en_US/Opportunity.json`
+- `patches/custom/Espo/Custom/Resources/i18n/en_US/Task.json`
+- `patches/custom/Espo/Custom/Resources/i18n/ru_RU/Opportunity.json`
+- `patches/custom/Espo/Custom/Resources/i18n/ru_RU/Task.json`
+- `patches/custom/Espo/Custom/Resources/metadata/clientDefs/Task.json`
+- `patches/custom/Espo/Custom/Resources/metadata/entityDefs/Opportunity.json`
+- `patches/custom/Espo/Custom/Resources/routes.json`
+- `tests/action.php`
+- `tests/frontend.cjs`
+- `tests/hook.php`
+- `tests/install.py`
+- `tests/policy.php`
+- `tests/schema.php`
+- `verify-schema.php`
+- `FILES.md` — этот перечень.
+- `FILES.sha256` — SHA-256 файлов комплекта.
+- `dist/lexradar-task-opportunity-1.0.0.tar.gz` — установочный архив.
+- `dist/SHA256SUMS` — SHA-256 архива.

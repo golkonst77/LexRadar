@@ -1,0 +1,64 @@
+--- a/src/lexradar/mvp_batch.py
++++ b/src/lexradar/mvp_batch.py
+@@ -178,13 +178,20 @@
+     name = clinic_name(packet)
+     review["clinic_name"] = name
+     review["identity_verification_required"] = not bool(name)
+-    page = render_client(
+-        {"name": name, "url": row["url"],
+-         "recipient": "Руководителю " + (name or "клиники")},
+-        findings,
+-        {"date": row["input"].get("date", "").strip() or date.today().strftime("%d.%m.%Y")},
+-        policy_packet=packet, commercial_opportunities=opportunities,
+-    )
++    from .proposal_rules import NoProposalTriggers
++
++    try:
++        page = render_client(
++            {"name": name, "url": row["url"],
++             "recipient": "Руководителю " + (name or "клиники")},
++            findings,
++            {"date": row["input"].get("date", "").strip() or date.today().strftime("%d.%m.%Y")},
++            policy_packet=packet, commercial_opportunities=opportunities,
++        )
++    except NoProposalTriggers as exc:
++        review.update(reason=str(exc), pdf_ready=False)
++        write_json(directory / "review.json", review)
++        return []
+     (directory / "proposal.html").write_text(page, encoding="utf-8")
+     review["reason"] = ("manual_review_required_including_unverified_constant_block4"
+                         if review["block4_without_evidence"] else "manual_review_required")
+@@ -193,7 +200,7 @@
+         review["pdf_ready"] = True
+     except (PDFError, OSError) as exc:
+         review["pdf_error"] = str(exc)
+-    if commercial_ready:
++    if commercial_ready and review["pdf_ready"]:
+         review.update(qualification="READY", reason="commercial_opportunity" if opportunities else "name_contact_consent")
+     write_json(directory / "review.json", review)
+     return findings or opportunities
+@@ -449,8 +456,9 @@
+                     progress.stage = "подготовка КП и PDF"
+                     findings = write_prepared_proposal(row, packet, directory)
+                     if not findings:
++                        prepared_review = json.loads((directory / "review.json").read_text())
+                         row.update(status="SKIPPED", qualification="HOLD",
+-                                   reason="no_confirmed_triggers_1_2_3_5")
++                                   reason=prepared_review["reason"])
+                         row["stages"].append("proposal:SKIPPED")
+                         row["files"] = snapshot(directory)
+                         export(root, state)
+--- a/docs/espocrm_lexradar_reference.md
++++ b/docs/espocrm_lexradar_reference.md
+@@ -966,3 +966,11 @@
+ finding правила 3 с evidence и commercial_ready; юридическое нарушение не утверждается.
+ Неопознанный чекбокс требует ручной идентификации. READY не разрешает отправку
+ и не отменяет проверки личности, PDF и CRM. Parser v3, MedAdvisor и сбор не менялись.
++
++
++### Стабилизация prepare, 07.11.2026
++
++NoProposalTriggers сохраняется как HOLD с review.json и внутренними
++commercial_opportunities, без клиентского HTML/PDF. Ошибка PDF не повышается
++до READY. Тексты КП v2.5, схема CRM и отправка не меняются. Патч проверен
++offline, но требует отдельного применения; живая CRM не проверялась.

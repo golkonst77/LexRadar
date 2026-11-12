@@ -1,0 +1,23 @@
+{
+  "fields": {
+    "cLrSourceTask": {
+      "type": "link",
+      "duplicateIgnore": true,
+      "utility": true
+    }
+  },
+  "links": {
+    "cLrSourceTask": {
+      "type": "belongsTo",
+      "entity": "Task"
+    }
+  },
+  "indexes": {
+    "cLrSourceTaskUnique": {
+      "unique": true,
+      "columns": [
+        "cLrSourceTaskId"
+      ]
+    }
+  }
+}

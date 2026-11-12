@@ -1,0 +1,55 @@
+{
+  "schema_version": "preliminary-client-outline-0.1",
+  "audience": "internal_only",
+  "draft_only": true,
+  "dispatch_permitted": false,
+  "source_assessment_sha256": "664f0092b06f5b930b3a1ace5e07f709cca1834cb0adc985a9b315943e83eccf",
+  "directions": [
+    {
+      "category": "A",
+      "uncertainty": "requires_independent_review",
+      "attention_reason": "Без подтверждения роли лица нельзя определить адресата юридических документов",
+      "violation_confirmed": false
+    },
+    {
+      "category": "B",
+      "uncertainty": "requires_independent_review",
+      "attention_reason": "Без сопоставления текстов и процессов нельзя оценить пригодность документов",
+      "violation_confirmed": false
+    },
+    {
+      "category": "C",
+      "uncertainty": "requires_independent_review",
+      "attention_reason": "Для оценки оснований нужны конкретная форма и фактический порядок обработки",
+      "violation_confirmed": false
+    },
+    {
+      "category": "D",
+      "uncertainty": "requires_independent_review",
+      "attention_reason": "Сначала нужно установить характер сообщений и применимость отдельного согласия",
+      "violation_confirmed": false
+    },
+    {
+      "category": "F",
+      "uncertainty": "requires_independent_review",
+      "attention_reason": "Объявление ресурса не объясняет исполнение, cookies или получателей данных",
+      "violation_confirmed": false
+    },
+    {
+      "category": "G",
+      "uncertainty": "requires_independent_review",
+      "attention_reason": "Маркеры разделов не подтверждают лицензию, полноту и применимость сведений",
+      "violation_confirmed": false
+    },
+    {
+      "category": "H",
+      "uncertainty": "requires_independent_review",
+      "attention_reason": "Разные упоминания требуют раздельной проверки контекста и фактических ролей",
+      "violation_confirmed": false
+    }
+  ],
+  "uncertainty": "saved_materials_only_legal_research_incomplete",
+  "next_step_intent": "professional_review_then_documents_only_if_necessary",
+  "not_legal_conclusion": true,
+  "automatic_send_allowed": false
+}

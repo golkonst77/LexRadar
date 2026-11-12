@@ -1,0 +1,20 @@
+{
+  "auditor_a": {
+    "model": "replace-with-your-openrouter-model-a-id",
+    "prompt_price_cap": "1.00",
+    "completion_price_cap": "2.00",
+    "max_output_tokens": 2000
+  },
+  "auditor_b": {
+    "model": "replace-with-your-openrouter-model-b-id",
+    "prompt_price_cap": "1.00",
+    "completion_price_cap": "2.00",
+    "max_output_tokens": 2000
+  },
+  "max_budget_usd": "0.25",
+  "timeout_seconds": 30,
+  "retries": 1,
+  "max_backoff_seconds": 2,
+  "max_input_bytes": 200000,
+  "max_response_bytes": 1000000
+}

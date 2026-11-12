@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
+<title>Макет результата контакта LexRadar</title>
+<style>
+body{font:20px/1.5 system-ui,sans-serif;max-width:1100px;margin:40px auto;padding:0 24px;color:#172033;background:#f5f7fb}
+main{background:white;padding:32px;border-radius:12px}label{display:block;margin:18px 0}select,input,textarea,button{font:inherit;padding:10px;max-width:100%;box-sizing:border-box}textarea{width:100%}output{display:block;white-space:pre-wrap;margin-top:24px}
+</style>
+<main><h1>Результат контакта: учебная организация</h1>
+<p>Изолированный макет. Только вымышленные данные и память этой вкладки. CRM, рассылка и локальные журналы не подключены. После закрытия результат исчезнет.</p>
+<p>Перед контактом оператор вручную проверяет переписку и основание контакта. Срок задачи не подтверждает доставку письма.</p>
+<label>Результат <select id="outcome">
+<option>ожидает контакта</option><option>связались</option><option>интерес</option><option>перезвонить</option><option>отказ</option><option>договор</option><option>ошибка адреса</option>
+</select></label>
+<label>Следующее действие (МСК) <input id="next" type="datetime-local"></label>
+<label>Примечание <textarea id="note" rows="3" maxlength="2000"></textarea></label>
+<button type="button" id="preview">Показать учебный результат</button>
+<output id="result" aria-live="polite"></output>
+<p>В рабочем сценарии результат отношений фиксируется оператором в EspoCRM. Отказ, договор и ошибка адреса требуют ручной сверки; этот макет ничего не разрешает и не меняет.</p></main>
+<script>
+document.getElementById('preview').addEventListener('click', () => {
+  const outcome = document.getElementById('outcome').value;
+  const next = document.getElementById('next').value;
+  document.getElementById('result').textContent = outcome === 'перезвонить' && !next
+    ? 'Для повторного контакта выберите дату и время.'
+    : 'Учебный результат: ' + outcome + '\nСледующее действие (МСК): ' + (next || 'не назначено')
+      + '\nПримечание: ' + document.getElementById('note').value + '\nНикуда не сохранено.';
+});
+</script></html>

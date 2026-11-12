@@ -1,0 +1,110 @@
+{
+  "origin": {
+    "kind": "collector",
+    "acquisition_method": "bounded_static_http_collector",
+    "declared_source": "https://example.com/",
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "collection_observation",
+    "started_at_role": "collector_run",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Collector timestamps are local observations, not server response dates",
+      "Local acquisition metadata does not authenticate publisher identity"
+    ]
+  },
+  "schema_version": "0.2",
+  "target_url": "https://example.com/",
+  "started_at": "2026-10-14T14:24:53.172374Z",
+  "limits": {
+    "max_pages": 1,
+    "max_documents": 3,
+    "max_file_bytes": 5000000,
+    "max_total_bytes": 50000000,
+    "timeout_seconds": 8.0,
+    "max_redirects": 3,
+    "max_links_per_page": 200,
+    "max_pdf_pages": 100,
+    "max_pdf_page_chars": 100000,
+    "max_pdf_total_chars": 1000000
+  },
+  "pages": [
+    {
+      "origin": {
+        "kind": "collector",
+        "acquisition_method": "bounded_static_http_collector",
+        "declared_source": "https://example.com/",
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "collection_observation",
+        "started_at_role": "collector_run",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Collector timestamps are local observations, not server response dates",
+          "Local acquisition metadata does not authenticate publisher identity"
+        ]
+      },
+      "reading": {
+        "original_saved": null,
+        "source_sha256": null,
+        "extraction_state": "unknown",
+        "text_layer_extracted": null,
+        "text_truncated": null,
+        "original_chars": null,
+        "supplied_chars": 0,
+        "page_count": null,
+        "pages": [],
+        "unread_page_ranges": [],
+        "max_page_chars": 100000,
+        "max_total_chars": 1000000,
+        "page_limit": 100,
+        "provenance": "unknown",
+        "text_coverage_complete": false,
+        "visual_examined": false,
+        "legal_research_completed": false,
+        "limitations": []
+      },
+      "requested_url": "https://example.com/",
+      "final_url": null,
+      "captured_at": "2026-10-14T14:24:53.172640Z",
+      "http_status": null,
+      "title": null,
+      "text": null,
+      "categories": [],
+      "document_links": [],
+      "forms": [],
+      "evidence_id": "page-0001"
+    }
+  ],
+  "documents": [],
+  "entities": [],
+  "evidence": [
+    {
+      "id": "page-0001",
+      "source": "https://example.com/",
+      "captured_at": "2026-10-14T14:24:53.172640Z",
+      "observed_fact": "No artifacts captured; reason recorded without assumptions",
+      "available": false,
+      "artifact_path": null,
+      "sha256": null,
+      "signal": "substantive",
+      "status": "unavailable",
+      "collection_errors": [
+        "robots_unavailable"
+      ],
+      "unavailable_reason": "robots_unavailable",
+      "artifacts": []
+    }
+  ],
+  "warnings": [
+    "Static mode: no screenshots, scripts or dynamic behavior checked",
+    "Crawl stopped: robots_unavailable"
+  ],
+  "requires_independent_review": true
+}

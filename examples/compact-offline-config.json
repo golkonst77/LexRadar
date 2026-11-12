@@ -1,0 +1,16 @@
+{
+  "single_auditor": true,
+  "auditor_a": {
+    "model": "synthetic/compact-a",
+    "prompt_price_cap": "0.10",
+    "completion_price_cap": "0.10",
+    "max_output_tokens": 2000
+  },
+  "auditor_b": {
+    "model": "synthetic/unused-b",
+    "prompt_price_cap": "0.10",
+    "completion_price_cap": "0.10"
+  },
+  "max_budget_usd": "0.05",
+  "retries": 0
+}

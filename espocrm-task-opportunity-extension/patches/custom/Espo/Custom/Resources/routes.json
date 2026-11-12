@@ -1,0 +1,12 @@
+[
+  {
+    "route": "/LexRadar/Task/:id/opportunity",
+    "method": "get",
+    "actionClassName": "Espo\\Custom\\Tools\\LexRadar\\TaskOpportunityAction"
+  },
+  {
+    "route": "/LexRadar/Task/:id/opportunity",
+    "method": "post",
+    "actionClassName": "Espo\\Custom\\Tools\\LexRadar\\TaskOpportunityAction"
+  }
+]

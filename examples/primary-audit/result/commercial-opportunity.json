@@ -1,0 +1,172 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
+  "materials": [
+    {
+      "evidence_id": "page-0001",
+      "origin": {
+        "kind": "unknown",
+        "acquisition_method": null,
+        "declared_source": null,
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "unknown",
+        "started_at_role": "unknown",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Acquisition origin/timestamp roles unknown; not authenticated"
+        ]
+      },
+      "static_inspection": {
+        "status": "complete",
+        "diagnostics": [],
+        "text_spans": [
+          {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          }
+        ],
+        "recovered_text_chars": 0,
+        "limitations": [],
+        "original_modified": false
+      }
+    }
+  ],
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "work-0001",
+      "kind": "additional_legal_expertise",
+      "stage_ids": [
+        "05",
+        "06",
+        "09"
+      ],
+      "observation_ids": [
+        "observation-0005"
+      ],
+      "rationale": "Форма form-0001 имеет наблюдаемые элементы; возможна отдельная оценка основания и распределения ролей, необходимость документов не установлена",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    },
+    {
+      "id": "work-0002",
+      "kind": "additional_legal_expertise",
+      "stage_ids": [
+        "05",
+        "06",
+        "09"
+      ],
+      "observation_ids": [
+        "observation-0008"
+      ],
+      "rationale": "Форма form-0002 имеет наблюдаемые элементы; возможна отдельная оценка основания и распределения ролей, необходимость документов не установлена",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    },
+    {
+      "id": "work-0003",
+      "kind": "additional_legal_expertise",
+      "stage_ids": [
+        "04"
+      ],
+      "observation_ids": [
+        "observation-0013"
+      ],
+      "rationale": "Есть конкретные фрагменты документа для оценки; необходимость подготовки нового документа не установлена",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    },
+    {
+      "id": "work-0004",
+      "kind": "additional_legal_expertise",
+      "stage_ids": [
+        "06"
+      ],
+      "observation_ids": [
+        "observation-0014"
+      ],
+      "rationale": "Есть конкретные фрагменты документа для оценки; необходимость подготовки нового документа не установлена",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    },
+    {
+      "id": "work-0005",
+      "kind": "medical_disclosure_review",
+      "stage_ids": [
+        "12"
+      ],
+      "observation_ids": [
+        "observation-0020",
+        "observation-0021",
+        "observation-0022",
+        "observation-0023",
+        "observation-0024",
+        "observation-0025",
+        "observation-0026"
+      ],
+      "rationale": "Медицинские текстовые маркеры позволяют определить предмет проверки; необходимость доработки и её объём ещё не установлены",
+      "prerequisites": [
+        "Независимая правовая оценка, актуальная норма и применимость",
+        "Определить необходимость и объём услуги после проверки фактов"
+      ],
+      "status": "potential_scope_requires_review",
+      "violation_proof": false,
+      "proposal_generated": false,
+      "direct_site_implementation_offered": false
+    }
+  ]
+}

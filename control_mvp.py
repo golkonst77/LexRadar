@@ -730,7 +730,7 @@ countHolds();
         self.html(content + '<p>Передача не подтверждает согласие получателя на рекламную отправку. Без отдельного подтверждённого основания отправка заблокирована.</p>' + back)
 
     def do_POST(self):
-        if urlsplit(self.path).path not in {'/crm/preview', '/followup/action', '/followup/tasks', '/holds/retry', '/mailing'}:
+        if urlsplit(self.path).path not in {'/crm/preview', '/followup/action', '/followup/tasks', '/followup/plan', '/holds/retry', '/mailing'}:
             return super().do_POST()
         if not self.valid_local_request():
             self.reject_post(403, 'local_host_required', 'invalid_host')
@@ -757,6 +757,28 @@ countHolds();
                 or not hmac.compare_digest(values['csrf'][0].encode('utf-8'), token.encode('utf-8'))
                 or (urlsplit(self.path).path in {'/followup/action', '/followup/tasks'} and values.get('confirm') != ['yes'])):
             self.reject_post(403, 'confirmation_required', 'csrf_or_confirmation_invalid')
+            return
+        if urlsplit(self.path).path == '/followup/plan':
+            from daily_call_plan import DailyPlan, build_plan, espo
+            try:
+                if (set(values) - {'csrf', 'confirm', 'action', 'day', 'plan_token'}
+                        or any(len(v) != 1 for v in values.values())
+                        or values.get('action', [''])[0] not in {'generate', 'approve', 'refresh', 'transfer'}):
+                    raise ValueError('Некорректное действие плана')
+                action = values['action'][0]
+                store = DailyPlan(self.server.state_dir)
+                store.action(action, values.get('day', [''])[0], values.get('plan_token', [''])[0],
+                    build=lambda: build_plan(espo.API(), self.server.parser_dir, self.server.state_dir,
+                                            self.server.followup.journals),
+                    api=espo.API() if action == 'transfer' else None)
+            except (espo.Hold, OSError, sqlite3.Error, ValueError, TypeError, KeyError, AttributeError) as exc:
+                message = str(exc) if isinstance(exc, ValueError) else 'Чтение CRM или хранилища не подтверждено; данные сохранены, повтор PUT автоматически не выполняется.'
+                self.html('<h1>План не изменён или требует сверки</h1><p>' + esc(message) + '</p>'
+                          + link('/followup', 'Вернуться в Контроль КП'), 400)
+                return
+            self.send_response(303)
+            self.send_header('Location', '/followup#daily-call-plan')
+            self.write_response(b'', 'text/plain')
             return
         if urlsplit(self.path).path == '/followup/tasks':
             try:
@@ -1074,7 +1096,8 @@ countHolds();
     def followup_page(self):
         self.followup_nonce = secrets.token_urlsafe(24)
         try:
-            content = self.server.followup.html(self)
+            from daily_call_plan import plan_html
+            content = plan_html(self, self.server.state_dir) + self.server.followup.html(self)
             content = content.replace('</caption><thead>', '</caption><colgroup>'
                                       + '<col>' * 8 + '</colgroup><thead>', 1)
             content = re.sub(r'<td>(Высокий|Средний|Низкий)<br>([^<]*)</td>',

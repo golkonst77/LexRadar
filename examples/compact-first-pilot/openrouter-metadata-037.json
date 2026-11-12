@@ -1,0 +1,22 @@
+{
+  "checked_date_utc": "2026-10-15",
+  "source": "https://openrouter.ai/api/v1/models/deepseek/deepseek-v3.2/endpoints",
+  "method": "public unauthenticated GET via web tool; no dossier",
+  "model": "deepseek/deepseek-v3.2",
+  "provider": "siliconflow/fp8",
+  "status_observed": 0,
+  "context_length": 163840,
+  "max_completion_tokens": 147456,
+  "pricing_per_token": {
+    "prompt": "0.000000259",
+    "completion": "0.0000008"
+  },
+  "supported_parameters_verified": [
+    "reasoning",
+    "response_format",
+    "structured_outputs",
+    "max_tokens"
+  ],
+  "real_request_verified": false,
+  "account_balance_verified": false
+}

@@ -1,0 +1,86 @@
+{
+  "sample_type": "Synthetic scripted-regression metrics; not real LLM performance",
+  "scenarios": 19,
+  "overall_status": "manual_review_required",
+  "api_cost_usd": "0",
+  "metrics": {
+    "precision": {
+      "numerator": 4,
+      "denominator": 7,
+      "value": 0.5714285714285714,
+      "status": "measured"
+    },
+    "recall": {
+      "numerator": 4,
+      "denominator": 6,
+      "value": 0.6666666666666666,
+      "status": "measured"
+    },
+    "false_positive_rate": {
+      "numerator": 3,
+      "denominator": 13,
+      "value": 0.23076923076923078,
+      "status": "measured"
+    },
+    "false_negative_rate": {
+      "numerator": 2,
+      "denominator": 6,
+      "value": 0.3333333333333333,
+      "status": "measured"
+    },
+    "factual_detection": {
+      "numerator": 5,
+      "denominator": 6,
+      "value": 0.8333333333333334,
+      "status": "measured"
+    },
+    "applicability_accuracy": {
+      "numerator": 0,
+      "denominator": 1,
+      "value": 0.0,
+      "status": "measured"
+    },
+    "operator_identification_accuracy": {
+      "numerator": 0,
+      "denominator": 1,
+      "value": 0.0,
+      "status": "measured"
+    },
+    "evidence_coverage": {
+      "numerator": 22,
+      "denominator": 23,
+      "value": 0.9565217391304348,
+      "status": "measured"
+    },
+    "normative_verification_coverage": {
+      "numerator": 0,
+      "denominator": 19,
+      "value": 0.0,
+      "status": "measured"
+    },
+    "completeness_of_material_review": {
+      "numerator": 21,
+      "denominator": 24,
+      "value": 0.875,
+      "status": "measured"
+    },
+    "disagreement_resolution_rate": {
+      "numerator": 0,
+      "denominator": 1,
+      "value": 0.0,
+      "status": "measured"
+    },
+    "confirmed_legal_recall": {
+      "numerator": 0,
+      "denominator": 6,
+      "value": 0.0,
+      "status": "measured"
+    }
+  },
+  "limitations": [
+    "Synthetic/replayed response tests are not real LLM quality estimates.",
+    "Non-representative small reference suite; no arbitrary percentage pass threshold.",
+    "Ambiguous matches require human review and do not earn a true positive.",
+    "Current source registry cannot authenticate norms; confirmed issues are unavailable."
+  ]
+}

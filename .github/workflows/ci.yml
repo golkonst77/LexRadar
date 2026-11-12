@@ -1,0 +1,145 @@
+name: Python checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  windows-pdf:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m playwright install chromium
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: python -m pytest -vv --durations=20
+      - run: lexradar collect --help
+      - run: lexradar batch-screen --help
+      - run: lexradar ocr-document --help
+      - run: lexradar primary-audit examples/primary-audit/dossier --sector medical --as-of 2026-10-10T00:00:00Z --output work/windows-primary
+      - run: lexradar preflight examples/analysis-dossier --output work/windows-preflight
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m playwright install --with-deps chromium
+      - run: sudo apt-get install -y poppler-utils tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
+      - name: Check consolidated CLI options without external requests
+        run: |
+          lexradar collect --help
+          lexradar batch-screen --help
+          lexradar ocr-document --help
+      - run: lexradar primary-audit examples/primary-audit/dossier --sector medical --as-of 2026-10-10T00:00:00Z --output /tmp/lexradar-primary
+      - run: lexradar primary-audit examples/primary-audit/incomplete/dossier --as-of 2026-10-10T00:00:00Z --output /tmp/lexradar-primary-empty
+      - run: python -c "import json; a=json.load(open('/tmp/lexradar-primary/audit.json')); b=json.load(open('/tmp/lexradar-primary-empty/audit.json')); assert len(a['stages'])==len(b['stages'])==13; assert len(a['organizations'])==len(a['forms'])==2; assert not b['observations'] and not b['commercial_opportunity']; assert all(r['production_outcome']=='HOLD' and not r['audit_complete'] and not r['client_release_allowed'] and not r['automatic_send_allowed'] for r in (a,b)); assert all(not o['operator_confirmed'] for o in a['organizations'])"
+      - name: Check static declaration exports remain internal
+        run: |
+          python - <<'PYCODE'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/lexradar-primary')
+          audit = json.loads((root / 'audit.json').read_text())
+          for name in ('declarations', 'popup-relations', 'integration-groups'):
+              result = json.loads((root / (name + '.json')).read_text())
+              assert result['audience'] == 'internal_only'
+              assert not result['client_release_allowed']
+          assert audit['declarations'] and audit['integration_groups']
+          for row in audit['declarations']:
+              assert row['citation']['artifact_sha256'] and row['citation']['static_span']
+              assert not row['execution_confirmed'] and not row['data_transfer_confirmed']
+              assert row['actual_recipient'] == 'unknown'
+          PYCODE
+      - name: Check legal/commercial qualification never grants client release
+        run: |
+          python - <<'PYCODE'
+          import json
+          from pathlib import Path
+          from lexradar.primary.qualification_models import InternalAssessment, PreliminaryClientSummary
+          root = Path('/tmp/lexradar-primary')
+          assessment = InternalAssessment.model_validate_json((root / 'internal-assessment.json').read_text())
+          summary = PreliminaryClientSummary.model_validate_json((root / 'preliminary-client-summary.json').read_text())
+          assert assessment.legal_findings and len(assessment.assessed_stage_ids) == 13
+          assert assessment.production_outcome == 'HOLD' and not assessment.client_release_allowed
+          assert not assessment.automatic_send_allowed and not assessment.legal_research_completed
+          assert all(f.kind == 'review_question' and not f.possible_legal_consequences for f in assessment.legal_findings)
+          assert 'client_release_allowed' not in summary.model_dump() and not summary.dispatch_permitted
+          for name in ('legal-findings', 'commercial-work'):
+              report = json.loads((root / (name + '.json')).read_text())
+              assert report['audience'] == 'internal_only' and not report['client_release_allowed']
+          PYCODE
+      - name: Independent local verification of primary outputs
+        run: |
+          lexradar verify-primary examples/primary-audit/dossier --primary /tmp/lexradar-primary/audit.json --assessment /tmp/lexradar-primary/internal-assessment.json --registry examples/legal-sources/registry.json --output /tmp/lexradar-independent-local
+          python - <<'PYCODE'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/lexradar-independent-local')
+          assert len(list(root.glob('*.json'))) == 4
+          for p in root.glob('*.json'):
+              r = json.loads(p.read_text())
+              assert r['audience'] == 'internal_only' and r['production_outcome'] == 'HOLD'
+              assert not r['client_release_allowed'] and not r['automatic_send_allowed']
+          r = json.loads((root / 'independent-verification.json').read_text())
+          assert r['technical_fact_count'] > 0 and not r['legal_research_completed']
+          assert all(f['normative_status'] == 'normative_review_required' for f in r['findings'])
+          assert all(w['necessity_status'] == 'not_confirmed' for w in r['commercial_work'])
+          PYCODE
+      - name: Offline normative applicability remains unconfirmed
+        run: |
+          lexradar verify-norms examples/primary-audit/dossier --primary /tmp/lexradar-primary/audit.json --assessment /tmp/lexradar-primary/internal-assessment.json --registry examples/legal-sources/registry.json --event-date 2026-10-10 --as-of 2026-10-10T00:00:00Z --output /tmp/lexradar-normative
+          python - <<'PYCODE'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/lexradar-normative')
+          assert len(list(root.glob('*.json'))) == 3
+          for file in root.glob('*.json'):
+              r = json.loads(file.read_text())
+              assert r['audience'] == 'internal_only' and r['production_outcome'] == 'HOLD'
+              assert not r['client_release_allowed'] and not r['production_go_allowed']
+              assert not r['automatic_send_allowed'] and not r['sanctions']
+          req = json.loads((root / 'norm-requirements.json').read_text())
+          assert req['requirements'] and all(r['revision_check'] == 'revision_unverified' for r in req['requirements'])
+          app = json.loads((root / 'requirement-applicability.json').read_text())
+          assert app['question_summaries'] and all(r['status'] == 'source_unverified' for r in app['applicability'])
+          assert all(not r['absence_check']['absence_proven'] for r in app['applicability'])
+          assert all(not w['necessity_confirmed'] for w in app['commercial_work'])
+          PYCODE
+      - run: lexradar legal-source prepare --metadata examples/legal-sources/metadata-v1.json --text examples/legal-sources/originals/v1.txt --event-date 2025-06-01 --output /tmp/lexradar-source-prepared
+      - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2025-06-01 --output /tmp/lexradar-source-past
+      - run: lexradar legal-source check --registry examples/legal-sources/registry.json --event-date 2026-06-01 --output /tmp/lexradar-source-current
+      - run: python -c "import json; p=json.load(open('/tmp/lexradar-source-past/report.json')); c=json.load(open('/tmp/lexradar-source-current/report.json')); assert all(a['status']=='unverified' and not a['card_assessment']['trusted'] for a in c['assessments']); assert [a['card_assessment']['temporal_claim'] for a in p['assessments'][:2]]==['within_declared_interval','not_yet_effective']; assert [a['card_assessment']['temporal_claim'] for a in c['assessments'][:2]]==['expired','within_declared_interval']; assert not c['production_go_allowed'] and not c['client_release_allowed']"
+      - run: lexradar demo examples/input.json --output /tmp/report.json
+      - run: diff examples/result.json /tmp/report.json
+      - run: lexradar inspect-evidence examples/reading-dossier --evidence document-0003 --page 1 --output /tmp/lexradar-reading-template
+      - run: lexradar record-visual-review examples/reading-dossier --submission /tmp/lexradar-reading-template/observations.json --output /tmp/lexradar-reading-pending
+      - run: python -c "from pathlib import Path; from lexradar.collector.visual_review import verify_sidecar; r=verify_sidecar(Path('examples/reading-dossier'),Path('/tmp/lexradar-reading-pending')); assert r['trust_status']=='untrusted' and not r['production_go_allowed']"
+      - run: lexradar review-decision examples/analysis-dossier --finding examples/decision-finding.json --registry examples/legal-registry.json --output /tmp/lexradar-decision-review
+      - run: lexradar decide examples/analysis-dossier --finding examples/decision-finding.json --registry examples/legal-registry.json --output /tmp/lexradar-production-decision.json
+      - run: python -c "import json; d=json.load(open('/tmp/lexradar-production-decision.json')); assert d['decision_scope']=='production' and d['outcome']=='HOLD' and not d['legal_research_completed'] and not d['client_release_allowed']"
+      - run: lexradar analyze examples/analysis-dossier --output /tmp/lexradar-analysis
+      - run: lexradar preflight examples/analysis-dossier --output /tmp/lexradar-preflight
+      - run: lexradar verify examples/analysis-dossier --registry examples/legal-registry.json --output /tmp/lexradar-verifier-one
+      - run: lexradar verify-compare examples/analysis-dossier --registry examples/legal-registry.json --stage-one /tmp/lexradar-verifier-one --analysis /tmp/lexradar-analysis/analysis.json --output /tmp/lexradar-verifier-final
+      - run: lexradar verify-preflight examples/analysis-dossier --registry examples/legal-registry.json --output /tmp/lexradar-verifier-preflight
+      - run: lexradar benchmark --suite tests/benchmarks --output /tmp/lexradar-benchmark
+      - run: lexradar quality-report /tmp/lexradar-benchmark --format html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-quality-report
+          path: /tmp/lexradar-benchmark
+          retention-days: 7

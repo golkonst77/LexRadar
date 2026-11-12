@@ -1,0 +1,243 @@
+{
+  "audience": "internal_only",
+  "notice": "ВНУТРЕННЕЕ — НЕ ПЕРЕСЫЛАТЬ КЛИЕНТУ",
+  "source_dossier_sha256": "ab6517baed609464c08b87a550196c3c2388fd3d7ac30073349286c213778ebe",
+  "source_origin": {
+    "kind": "unknown",
+    "acquisition_method": null,
+    "declared_source": null,
+    "source_sha256": null,
+    "original_capture_at": null,
+    "reported_capture_date": null,
+    "imported_at": null,
+    "captured_at_role": "unknown",
+    "started_at_role": "unknown",
+    "http_response_at": null,
+    "origin_authenticated": false,
+    "limitations": [
+      "Acquisition origin/timestamp roles unknown; not authenticated"
+    ]
+  },
+  "materials": [
+    {
+      "evidence_id": "page-0001",
+      "origin": {
+        "kind": "unknown",
+        "acquisition_method": null,
+        "declared_source": null,
+        "source_sha256": null,
+        "original_capture_at": null,
+        "reported_capture_date": null,
+        "imported_at": null,
+        "captured_at_role": "unknown",
+        "started_at_role": "unknown",
+        "http_response_at": null,
+        "origin_authenticated": false,
+        "limitations": [
+          "Acquisition origin/timestamp roles unknown; not authenticated"
+        ]
+      },
+      "static_inspection": {
+        "status": "complete",
+        "diagnostics": [],
+        "text_spans": [
+          {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end_exclusive": {
+              "line": 15,
+              "column": 14
+            },
+            "status": "complete",
+            "limitations": [],
+            "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+          }
+        ],
+        "recovered_text_chars": 0,
+        "limitations": [],
+        "original_modified": false
+      }
+    }
+  ],
+  "client_release_allowed": false,
+  "rows": [
+    {
+      "id": "declaration-0001",
+      "declaration_type": "script_src",
+      "original_value": "https://mc.yandex.ru/metrika/tag.js",
+      "normalized_value": "https://mc.yandex.ru/metrika/tag.js",
+      "normalization": "reference",
+      "service_kind": "yandex_metrika",
+      "form_id": null,
+      "target_id": null,
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 1,
+            "column": 35
+          },
+          "end_exclusive": {
+            "line": 1,
+            "column": 76
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "script_src"
+      },
+      "completeness": "complete",
+      "limitations": [
+        "Static declaration; execution, display, cookies, recipient and legal adequacy unconfirmed"
+      ],
+      "literal_present_in_source": true,
+      "execution_confirmed": false,
+      "display_confirmed": false,
+      "redirect_confirmed": false,
+      "data_transfer_confirmed": false,
+      "actual_recipient": "unknown",
+      "legal_status": "not_confirmed"
+    },
+    {
+      "id": "declaration-0002",
+      "declaration_type": "script_src",
+      "original_value": "https://www.googletagmanager.com/gtag/js",
+      "normalized_value": "https://www.googletagmanager.com/gtag/js",
+      "normalization": "reference",
+      "service_kind": "google_analytics",
+      "form_id": null,
+      "target_id": null,
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 1,
+            "column": 94
+          },
+          "end_exclusive": {
+            "line": 1,
+            "column": 140
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "script_src"
+      },
+      "completeness": "complete",
+      "limitations": [
+        "Static declaration; execution, display, cookies, recipient and legal adequacy unconfirmed"
+      ],
+      "literal_present_in_source": true,
+      "execution_confirmed": false,
+      "display_confirmed": false,
+      "redirect_confirmed": false,
+      "data_transfer_confirmed": false,
+      "actual_recipient": "unknown",
+      "legal_status": "not_confirmed"
+    },
+    {
+      "id": "declaration-0003",
+      "declaration_type": "html_action",
+      "original_value": "/appointment",
+      "normalized_value": "https://clinic.example/appointment",
+      "normalization": "reference",
+      "service_kind": null,
+      "form_id": "form-0001",
+      "target_id": null,
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 4,
+            "column": 6
+          },
+          "end_exclusive": {
+            "line": 4,
+            "column": 27
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "html_action"
+      },
+      "completeness": "complete",
+      "limitations": [
+        "Static declaration; execution, display, cookies, recipient and legal adequacy unconfirmed"
+      ],
+      "literal_present_in_source": true,
+      "execution_confirmed": false,
+      "display_confirmed": false,
+      "redirect_confirmed": false,
+      "data_transfer_confirmed": false,
+      "actual_recipient": "unknown",
+      "legal_status": "not_confirmed"
+    },
+    {
+      "id": "declaration-0004",
+      "declaration_type": "html_action",
+      "original_value": "https://intake.example/submit",
+      "normalized_value": "https://intake.example/submit",
+      "normalization": "reference",
+      "service_kind": null,
+      "form_id": "form-0002",
+      "target_id": null,
+      "citation": {
+        "static_span": {
+          "start": {
+            "line": 9,
+            "column": 6
+          },
+          "end_exclusive": {
+            "line": 9,
+            "column": 44
+          },
+          "status": "complete",
+          "limitations": [],
+          "coordinate_scope": "decoded_utf8_line_1_based_column_0_based"
+        },
+        "evidence_id": "page-0001",
+        "url": "https://clinic.example/",
+        "artifact_path": "artifacts/page-0001.html",
+        "artifact_sha256": "5bf3fd0ee4445b6047913d8ec596609a1e19b7aba6f84ad0b39b2712462ac4f9",
+        "basis": "saved_html",
+        "quote": null,
+        "page": null,
+        "element": "html_action"
+      },
+      "completeness": "complete",
+      "limitations": [
+        "Static declaration; execution, display, cookies, recipient and legal adequacy unconfirmed"
+      ],
+      "literal_present_in_source": true,
+      "execution_confirmed": false,
+      "display_confirmed": false,
+      "redirect_confirmed": false,
+      "data_transfer_confirmed": false,
+      "actual_recipient": "unknown",
+      "legal_status": "not_confirmed"
+    }
+  ]
+}

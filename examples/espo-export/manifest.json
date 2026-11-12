@@ -1,0 +1,20 @@
+[
+  {
+    "id": "synthetic-1",
+    "company_name": "Fictional organization 1",
+    "website": "https://fictional-1.invalid",
+    "email": "operator1@example.invalid",
+    "pdf_path": "synthetic.pdf",
+    "recipient_verified": true,
+    "export_approved": true
+  },
+  {
+    "id": "synthetic-2",
+    "company_name": "Fictional organization 2",
+    "website": "https://fictional-2.invalid",
+    "email": "operator2@example.invalid",
+    "pdf_path": "synthetic.pdf",
+    "recipient_verified": true,
+    "export_approved": true
+  }
+]

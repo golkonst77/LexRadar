@@ -1,0 +1,6 @@
+{
+  "packet_sha256": "6c70345f4a59103fe744c706be2b351be4596a1419e1d0ca97df4cf31fe4b815",
+  "suspicions": [],
+  "limitation": "Heuristic screening cannot guarantee absence of personal or sensitive data; human review required",
+  "transfer_allowed": false
+}
